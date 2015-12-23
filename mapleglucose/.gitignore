@@ -1,0 +1,3 @@
+*.o
+simp/depend.mk
+simp/mapleglucose
