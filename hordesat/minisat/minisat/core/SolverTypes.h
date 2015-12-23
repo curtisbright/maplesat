@@ -144,7 +144,7 @@ class Clause {
         unsigned has_extra : 1;
         unsigned reloced   : 1;
         unsigned size      : 27; }                        header;
-    union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
+    union { Lit lit; int act; uint32_t abs; CRef rel; } data[0];
 
     friend class ClauseAllocator;
 
@@ -211,7 +211,7 @@ public:
     Lit          operator [] (int i) const   { return data[i].lit; }
     operator const Lit* (void) const         { return (Lit*)data; }
 
-    float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
+    int&         activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
 
     Lit          subsumes    (const Clause& other) const;

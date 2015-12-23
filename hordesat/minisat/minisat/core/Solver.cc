@@ -33,7 +33,9 @@ using namespace Minisat;
 
 static const char* _cat = "CORE";
 
-static DoubleOption  opt_var_decay         (_cat, "var-decay",   "The variable activity decay factor",            0.95,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_step_size         (_cat, "step-size",   "Initial step size",                             0.40,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_step_size_dec     (_cat, "step-size-dec","Step size decrement",                          0.000001, DoubleRange(0, false, 1, false));
+static DoubleOption  opt_min_step_size     (_cat, "min-step-size","Minimal step size",                            0.06,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_clause_decay      (_cat, "cla-decay",   "The clause activity decay factor",              0.999,    DoubleRange(0, false, 1, false));
 static DoubleOption  opt_random_var_freq   (_cat, "rnd-freq",    "The frequency with which the decision heuristic tries to choose a random variable", 0, DoubleRange(0, true, 1, true));
 static DoubleOption  opt_random_seed       (_cat, "rnd-seed",    "Used by the random variable selection",         91648253, DoubleRange(0, false, HUGE_VAL, false));
@@ -45,6 +47,7 @@ static IntOption     opt_restart_first     (_cat, "rfirst",      "The base resta
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 static IntOption     opt_min_learnts_lim   (_cat, "min-learnts", "Minimum learnt clause limit",  0, IntRange(0, INT32_MAX));
+static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 
 
 //=================================================================================================
@@ -57,7 +60,9 @@ Solver::Solver() :
     //
 	learnedClsCallback(0)
   , verbosity        (0)
-  , var_decay        (opt_var_decay)
+  , step_size        (opt_step_size)
+  , step_size_dec    (opt_step_size_dec)
+  , min_step_size    (opt_min_step_size)
   , clause_decay     (opt_clause_decay)
   , random_var_freq  (opt_random_var_freq)
   , random_seed      (opt_random_seed)
@@ -84,6 +89,10 @@ Solver::Solver() :
     //
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0)
   , dec_vars(0), num_clauses(0), num_learnts(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+
+  , lbd_calls(0)
+  , action(0)
+  , reward_multiplier(opt_reward_multiplier)
 
   , watches            (WatcherDeleted(ca))
   , order_heap         (VarOrderLt(activity))
@@ -136,6 +145,8 @@ Var Solver::newVar(lbool upol, bool dvar)
     user_pol .insert(v, upol);
     decision .reserve(v);
     trail    .capacity(v+1);
+    lbd_seen.push(0);
+    conflicted.push(0);
     setDecisionVar(v, dvar);
     return v;
 }
@@ -308,14 +319,15 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel)
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
 
-        if (c.learnt())
-            claBumpActivity(c);
+        if (c.learnt() && c.activity() > 2)
+            c.activity() = lbd(c);
 
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
 
             if (!seen[var(q)] && level(var(q)) > 0){
-                varBumpActivity(var(q));
+                //varBumpActivity(var(q));
+                conflicted[var(q)] = conflicts;
                 seen[var(q)] = 1;
                 if (level(var(q)) >= decisionLevel())
                     pathC++;
@@ -577,7 +589,7 @@ struct reduceDB_lt {
     ClauseAllocator& ca;
     reduceDB_lt(ClauseAllocator& ca_) : ca(ca_) {}
     bool operator () (CRef x, CRef y) { 
-        return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()); } 
+        return ca[x].activity() > ca[y].activity(); }
 };
 void Solver::reduceDB()
 {
@@ -589,7 +601,7 @@ void Solver::reduceDB()
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) && (i < learnts.size() / 2 || c.activity() < extra_lim))
+        if (c.activity() > 2 && !locked(c) && i < learnts.size() / 2)
             removeClause(learnts[i]);
         else
             learnts[j++] = learnts[i];
@@ -686,6 +698,18 @@ bool Solver::simplify()
     return true;
 }
 
+void Solver::updateQ(Var v, double multiplier) {
+    uint64_t age = conflicts - conflicted[v] + 1;
+    double reward = multiplier / age ;
+    double old_activity = activity[v];
+    activity[v] = step_size * reward + ((1 - step_size) * old_activity);
+    if (order_heap.inHeap(v)) {
+        if (activity[v] > old_activity)
+            order_heap.decrease(v);
+        else
+            order_heap.increase(v);
+    }
+}
 
 /*_________________________________________________________________________________________________
 |
@@ -710,9 +734,15 @@ lbool Solver::search(int nof_conflicts)
 
     for (;;){
         CRef confl = propagate();
+        for (int a = action; a < trail.size(); a++) {
+            Var v = var(trail[a]);
+            updateQ(v, confl == CRef_Undef ? reward_multiplier : 1.0);
+        }
         if (confl != CRef_Undef){
             // CONFLICT
             conflicts++; conflictC++;
+            if (step_size > min_step_size)
+                step_size -= step_size_dec;
             if (decisionLevel() == 0) return l_False;
 
             learnt_clause.clear();
@@ -724,18 +754,21 @@ lbool Solver::search(int nof_conflicts)
 
             cancelUntil(backtrack_level);
 
+            action = trail.size();
+
             if (learnt_clause.size() == 1){
                 uncheckedEnqueue(learnt_clause[0]);
             }else{
                 CRef cr = ca.alloc(learnt_clause, true);
                 learnts.push(cr);
                 attachClause(cr);
-                claBumpActivity(ca[cr]);
+                Clause& clause = ca[cr];
+                clause.activity() = lbd(clause);
                 uncheckedEnqueue(learnt_clause[0], cr);
             }
 
-            varDecayActivity();
-            claDecayActivity();
+            //varDecayActivity();
+            //claDecayActivity();
 
             if (--learntsize_adjust_cnt == 0){
                 learntsize_adjust_confl *= learntsize_adjust_inc;
@@ -794,6 +827,7 @@ lbool Solver::search(int nof_conflicts)
 
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
+            action = trail.size();
             uncheckedEnqueue(next);
         }
     }

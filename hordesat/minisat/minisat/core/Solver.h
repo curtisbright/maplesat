@@ -133,6 +133,9 @@ public:
     // Mode of operation:
     //
     int       verbosity;
+    double    step_size;
+    double    step_size_dec;
+    double    min_step_size;
     double    var_decay;
     double    clause_decay;
     double    random_var_freq;
@@ -157,6 +160,12 @@ public:
     //
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, num_clauses, num_learnts, clauses_literals, learnts_literals, max_literals, tot_literals;
+
+    uint64_t lbd_calls;
+    vec<uint64_t> lbd_seen;
+    int action;
+    double reward_multiplier;
+    vec<uint64_t> conflicted;
 
 protected:
 
@@ -255,6 +264,19 @@ protected:
     void     analyze          (CRef confl, vec<Lit>& out_learnt, int& out_btlevel);    // (bt = backtrack)
     void     analyzeFinal     (Lit p, LSet& out_conflict);                             // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p);                                                 // (helper method for 'analyze()')
+    void     updateQ (Var v, double multiplier);
+    template<class V> int lbd (const V& clause) {
+        lbd_calls++;
+        int lbd = 0;
+        for (int i = 0; i < clause.size(); i++) {
+            int l = level(var(clause[i]));
+            if (lbd_seen[l] != lbd_calls) {
+                lbd++;
+                lbd_seen[l] = lbd_calls;
+            }
+        }
+        return lbd;
+    }
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
