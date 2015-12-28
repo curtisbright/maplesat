@@ -33,6 +33,9 @@ namespace Minisat {
 //=================================================================================================
 // Solver -- the main class:
 
+typedef enum {LUBY, LINEAR, POW, FIXED} restart_type;
+#define NUM_RESTART_TYPES 4
+
 class Solver {
 public:
 
@@ -120,8 +123,8 @@ public:
     double    clause_decay;
     double    random_var_freq;
     double    random_seed;
-    bool      luby_restart;
-    bool      restart;
+    int       restart;
+    double    restart_step_size;
     int       ccmin_mode;         // Controls conflict clause minimization (0=none, 1=basic, 2=deep).
     int       phase_saving;       // Controls the level of phase saving (0=none, 1=limited, 2=full).
     bool      rnd_pol;            // Use random polarities for branching heuristics.
@@ -141,6 +144,7 @@ public:
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
+    uint64_t lbds;
     uint64_t lbd_calls;
     vec<uint64_t> lbd_seen;
     int action;
@@ -182,6 +186,7 @@ protected:
     vec<CRef>           learnts;          // List of learnt clauses.
     double              cla_inc;          // Amount to bump next clause with.
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
+    double              restart_activity[NUM_RESTART_TYPES];
     double              var_inc;          // Amount to bump next variable with.
     OccLists<Lit, vec<Watcher>, WatcherDeleted>
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
@@ -223,6 +228,7 @@ protected:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
     Lit      pickBranchLit    ();                                                      // Return the next decision variable.
+    restart_type pickRestart      ();
     void     newDecisionLevel ();                                                      // Begins a new decision level.
     void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef);                         // Enqueue a literal. Assumes value of literal is undefined.
     bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.

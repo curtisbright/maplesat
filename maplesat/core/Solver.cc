@@ -40,8 +40,8 @@ static DoubleOption  opt_random_seed       (_cat, "rnd-seed",    "Used by the ra
 static IntOption     opt_ccmin_mode        (_cat, "ccmin-mode",  "Controls conflict clause minimization (0=none, 1=basic, 2=deep)", 2, IntRange(0, 2));
 static IntOption     opt_phase_saving      (_cat, "phase-saving", "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
 static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the initial activity", false);
-static BoolOption    opt_luby_restart      (_cat, "luby",        "Use the Luby restart sequence", true);
-static BoolOption    opt_restart           (_cat, "restart",     "Use restarts", true);
+static IntOption     opt_restart           (_cat, "restart",     "Controls the restart strategy (0=luby, 1=linear, 2=pow, 3=fixed, 4=rl)", 4, IntRange(0, 4));
+static DoubleOption  opt_restart_step_size (_cat, "restart-step-size", "Initial restart step size",               0.95,     DoubleRange(0, false, 1, false));
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
@@ -63,8 +63,8 @@ Solver::Solver() :
   , clause_decay     (opt_clause_decay)
   , random_var_freq  (opt_random_var_freq)
   , random_seed      (opt_random_seed)
-  , luby_restart     (opt_luby_restart)
   , restart          (opt_restart)
+  , restart_step_size(opt_restart_step_size)
   , ccmin_mode       (opt_ccmin_mode)
   , phase_saving     (opt_phase_saving)
   , rnd_pol          (false)
@@ -87,6 +87,7 @@ Solver::Solver() :
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0)
   , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
 
+  , lbds(0)
   , lbd_calls(0)
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
@@ -107,7 +108,11 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+    for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+        restart_activity[i] = 0;
+    }
+}
 
 
 Solver::~Solver()
@@ -254,6 +259,31 @@ Lit Solver::pickBranchLit()
             next = order_heap.removeMin();
 
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
+}
+
+restart_type Solver::pickRestart() {
+    switch (restart) {
+        case 0:
+            return LUBY;
+        case 1:
+            return LINEAR;
+        case 2:
+            return POW;
+        case 3:
+            return FIXED;
+        default:
+            for (int i = 0; i < NUM_RESTART_TYPES - 1; i++) {
+                bool min = true;
+                for (int j = i + 1; j < NUM_RESTART_TYPES; j++) {
+                    if (restart_activity[i] > restart_activity[j]) {
+                        min = false;
+                        break;
+                    }
+                }
+                if (min) return (restart_type) i;
+            }
+            return (restart_type) (NUM_RESTART_TYPES - 1);
+    }
 }
 
 
@@ -526,6 +556,9 @@ CRef Solver::propagate()
     return confl;
 }
 
+int min(int a, int b) {
+    return a < b ? a : b;
+}
 
 /*_________________________________________________________________________________________________
 |
@@ -537,10 +570,16 @@ CRef Solver::propagate()
 |________________________________________________________________________________________________@*/
 struct reduceDB_lt { 
     ClauseAllocator& ca;
+#ifdef LBD_BASED_CLAUSE_DELETION
+    vec<double>& activity;
+    reduceDB_lt(ClauseAllocator& ca_,vec<double>& activity_) : ca(ca_), activity(activity_) {}
+#else
     reduceDB_lt(ClauseAllocator& ca_) : ca(ca_) {}
+#endif
     bool operator () (CRef x, CRef y) { 
 #ifdef LBD_BASED_CLAUSE_DELETION
-        return ca[x].activity() > ca[y].activity(); }
+        return ca[x].activity() > ca[y].activity();
+    }
 #else
         return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()); } 
 #endif
@@ -548,11 +587,13 @@ struct reduceDB_lt {
 void Solver::reduceDB()
 {
     int     i, j;
-#ifndef LBD_BASED_CLAUSE_DELETION
+#ifdef LBD_BASED_CLAUSE_DELETION
+    sort(learnts, reduceDB_lt(ca, activity));
+#else
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
+    sort(learnts, reduceDB_lt(ca));
 #endif
 
-    sort(learnts, reduceDB_lt(ca));
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
 #ifdef LBD_BASED_CLAUSE_DELETION
@@ -691,7 +732,9 @@ lbool Solver::search(int nof_conflicts)
                 attachClause(cr);
 #ifdef LBD_BASED_CLAUSE_DELETION
                 Clause& clause = ca[cr];
-                clause.activity() = lbd(clause);
+                int l = lbd(clause);
+                clause.activity() = l;
+                lbds += l;
 #else
                 claBumpActivity(ca[cr]);
 #endif
@@ -720,8 +763,7 @@ lbool Solver::search(int nof_conflicts)
             if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
                 // Reached bound on number of conflicts:
                 progress_estimate = progressEstimate();
-                if (restart)
-                    cancelUntil(0);
+                cancelUntil(0);
                 return l_Undef; }
 
             // Simplify the set of problem clauses:
@@ -831,12 +873,38 @@ lbool Solver::solve_()
     }
 
     // Search:
-    int curr_restarts = 0;
+    int luby_restarts = 0;
+    int linear_restarts = 0;
+    int pow_restarts = 0;
+    int fixed_restarts = 0;
     while (status == l_Undef){
-        double rest_base = luby_restart ? luby(restart_inc, curr_restarts) : pow(restart_inc, curr_restarts);
-        status = search(rest_base * restart_first);
+        double rest_base;
+        restart_type r = pickRestart();
+        printf("Using restart strategy: %d, activity[%f, %f, %f, %f]\n", r,restart_activity[0], restart_activity[1], restart_activity[2], restart_activity[3]);
+        switch (r) {
+            case LUBY:
+                rest_base = luby(restart_inc, luby_restarts);
+                luby_restarts++;
+                break;
+            case LINEAR:
+                rest_base = linear_restarts + 1;
+                linear_restarts++;
+                break;
+            case POW:
+                rest_base = pow(restart_inc, pow_restarts);
+                pow_restarts++;
+                break;
+            default:
+                rest_base = 1;
+                fixed_restarts++;
+                break;
+        }
+        lbds = 0;
+        int nof_conflicts = rest_base * restart_first;
+        status = search(nof_conflicts);
         if (!withinBudget()) break;
-        curr_restarts++;
+        double restart_reward = (double) lbds / nof_conflicts;
+        restart_activity[r] = restart_step_size * restart_activity[r] + (1.0 - restart_step_size) * restart_reward;
     }
 
     if (verbosity >= 1)
