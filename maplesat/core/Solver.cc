@@ -34,13 +34,16 @@ static const char* _cat = "CORE";
 static DoubleOption  opt_step_size         (_cat, "step-size",   "Initial step size",                             0.40,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_step_size_dec     (_cat, "step-size-dec","Step size decrement",                          0.000001, DoubleRange(0, false, 1, false));
 static DoubleOption  opt_min_step_size     (_cat, "min-step-size","Minimal step size",                            0.06,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_macd_short_step_size (_cat, "macd-short-step-size", "Initial step size for macd-short",  0.97,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_macd_long_step_size  (_cat, "macd-long-step-size",  "Initial step size for macd-long",   0.99,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_blocking_step_size   (_cat, "blocking-step-size",   "Initial step size for blocking",    0.999,    DoubleRange(0, false, 1, false));
 static DoubleOption  opt_clause_decay      (_cat, "cla-decay",   "The clause activity decay factor",              0.999,    DoubleRange(0, false, 1, false));
 static DoubleOption  opt_random_var_freq   (_cat, "rnd-freq",    "The frequency with which the decision heuristic tries to choose a random variable", 0, DoubleRange(0, true, 1, true));
 static DoubleOption  opt_random_seed       (_cat, "rnd-seed",    "Used by the random variable selection",         91648253, DoubleRange(0, false, HUGE_VAL, false));
 static IntOption     opt_ccmin_mode        (_cat, "ccmin-mode",  "Controls conflict clause minimization (0=none, 1=basic, 2=deep)", 2, IntRange(0, 2));
 static IntOption     opt_phase_saving      (_cat, "phase-saving", "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
 static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the initial activity", false);
-static IntOption     opt_restart           (_cat, "restart",     "Controls the restart strategy (0=luby, 1=linear, 2=pow, 3=fixed, 4=rl)", 4, IntRange(0, 4));
+static IntOption     opt_restart           (_cat, "restart",     "Controls the restart strategy (0=luby, 1=linear, 2=pow, 3=macd, 4=rl)", 4, IntRange(0, 4));
 static DoubleOption  opt_restart_step_size (_cat, "restart-step-size", "Initial restart step size",               0.95,     DoubleRange(0, false, 1, false));
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
@@ -60,6 +63,9 @@ Solver::Solver() :
   , step_size        (opt_step_size)
   , step_size_dec    (opt_step_size_dec)
   , min_step_size    (opt_min_step_size)
+  , macd_short_step_size (opt_macd_short_step_size)
+  , macd_long_step_size  (opt_macd_long_step_size)
+  , blocking_step_size (opt_blocking_step_size)
   , clause_decay     (opt_clause_decay)
   , random_var_freq  (opt_random_var_freq)
   , random_seed      (opt_random_seed)
@@ -270,7 +276,7 @@ restart_type Solver::pickRestart() {
         case 2:
             return POW;
         case 3:
-            return FIXED;
+            return MACD;
         default:
             for (int i = 0; i < NUM_RESTART_TYPES - 1; i++) {
                 bool min = true;
@@ -703,6 +709,9 @@ lbool Solver::search(int nof_conflicts)
     vec<Lit>    learnt_clause;
     starts++;
 
+    double macd_short = 0;
+    double macd_long = 0;
+    double blocking_long = 0;
     for (;;){
         CRef confl = propagate();
 
@@ -733,6 +742,15 @@ lbool Solver::search(int nof_conflicts)
 #ifdef LBD_BASED_CLAUSE_DELETION
                 Clause& clause = ca[cr];
                 int l = lbd(clause);
+                if (conflictC == 1) {
+                    macd_short = l;
+                    macd_long = l;
+                    blocking_long = nAssigns();
+                } else {
+                    macd_short = macd_short_step_size * macd_short + (1.0 - macd_short_step_size) * l;
+                    macd_long = macd_long_step_size * macd_long + (1.0 - macd_long_step_size) * l;
+                    blocking_long = blocking_step_size * blocking_long + (1.0 - blocking_step_size) * nAssigns();
+                }
                 clause.activity() = l;
                 lbds += l;
 #else
@@ -749,7 +767,7 @@ lbool Solver::search(int nof_conflicts)
             if (--learntsize_adjust_cnt == 0){
                 learntsize_adjust_confl *= learntsize_adjust_inc;
                 learntsize_adjust_cnt    = (int)learntsize_adjust_confl;
-                max_learnts             *= learntsize_inc;
+                //max_learnts             *= learntsize_inc;
 
                 if (verbosity >= 1)
                     printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", 
@@ -760,7 +778,7 @@ lbool Solver::search(int nof_conflicts)
 
         }else{
             // NO CONFLICT
-            if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
+            if (nof_conflicts >= 0 && conflictC >= nof_conflicts ||  nof_conflicts < 0 && conflictC > 50 && macd_short > 1.15 * macd_long && blocking_long * 1.4 > nAssigns() || !withinBudget()){
                 // Reached bound on number of conflicts:
                 progress_estimate = progressEstimate();
                 cancelUntil(0);
@@ -770,9 +788,11 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (learnts.size()-nAssigns() >= max_learnts)
+            if (learnts.size()-nAssigns() >= max_learnts) {
                 // Reduce the set of learnt clauses:
                 reduceDB();
+                max_learnts += 500;
+            }
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()){
@@ -860,7 +880,7 @@ lbool Solver::solve_()
 
     solves++;
 
-    max_learnts               = nClauses() * learntsize_factor;
+    max_learnts               = 2000;//nClauses() * learntsize_factor;
     learntsize_adjust_confl   = learntsize_adjust_start_confl;
     learntsize_adjust_cnt     = (int)learntsize_adjust_confl;
     lbool   status            = l_Undef;
@@ -876,7 +896,7 @@ lbool Solver::solve_()
     int luby_restarts = 0;
     int linear_restarts = 0;
     int pow_restarts = 0;
-    int fixed_restarts = 0;
+    int macd_restarts = 0;
     while (status == l_Undef){
         double rest_base;
         restart_type r = pickRestart();
@@ -895,15 +915,17 @@ lbool Solver::solve_()
                 pow_restarts++;
                 break;
             default:
-                rest_base = 1;
-                fixed_restarts++;
+                rest_base = -1;
+                macd_restarts++;
                 break;
         }
         lbds = 0;
         int nof_conflicts = rest_base * restart_first;
+        uint64_t start_conflicts = conflicts;
         status = search(nof_conflicts);
         if (!withinBudget()) break;
-        double restart_reward = (double) lbds / nof_conflicts;
+        printf("Restarted after %lu conflicts\n", conflicts - start_conflicts);
+        double restart_reward = (double) ((long double) lbds) / ((long double) (conflicts - start_conflicts));
         restart_activity[r] = restart_step_size * restart_activity[r] + (1.0 - restart_step_size) * restart_reward;
     }
 

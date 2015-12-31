@@ -33,7 +33,7 @@ namespace Minisat {
 //=================================================================================================
 // Solver -- the main class:
 
-typedef enum {LUBY, LINEAR, POW, FIXED} restart_type;
+typedef enum {LUBY, LINEAR, POW, MACD} restart_type;
 #define NUM_RESTART_TYPES 4
 
 class Solver {
@@ -120,6 +120,9 @@ public:
     double    step_size;
     double    step_size_dec;
     double    min_step_size;
+    double    macd_short_step_size;
+    double    macd_long_step_size;
+    double    blocking_step_size;
     double    clause_decay;
     double    random_var_freq;
     double    random_seed;
