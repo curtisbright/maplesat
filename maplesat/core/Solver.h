@@ -120,6 +120,8 @@ public:
     double    step_size;
     double    step_size_dec;
     double    min_step_size;
+    double    restart_xi;
+    double    restart_discount_factor;
     double    macd_short_step_size;
     double    macd_long_step_size;
     double    blocking_step_size;
@@ -190,6 +192,8 @@ protected:
     double              cla_inc;          // Amount to bump next clause with.
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
     double              restart_activity[NUM_RESTART_TYPES];
+    double              restart_ucb_X[NUM_RESTART_TYPES];
+    double              restart_ucb_N[NUM_RESTART_TYPES];
     double              var_inc;          // Amount to bump next variable with.
     OccLists<Lit, vec<Watcher>, WatcherDeleted>
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).

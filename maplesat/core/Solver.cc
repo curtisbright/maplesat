@@ -34,6 +34,8 @@ static const char* _cat = "CORE";
 static DoubleOption  opt_step_size         (_cat, "step-size",   "Initial step size",                             0.40,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_step_size_dec     (_cat, "step-size-dec","Step size decrement",                          0.000001, DoubleRange(0, false, 1, false));
 static DoubleOption  opt_min_step_size     (_cat, "min-step-size","Minimal step size",                            0.06,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_restart_xi (_cat, "restart-xi", "Initial step size for macd-short",  0.1,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_restart_discount_factor (_cat, "restart-discount-factor", "Restart discount factor",  0.95,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_macd_short_step_size (_cat, "macd-short-step-size", "Initial step size for macd-short",  0.97,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_macd_long_step_size  (_cat, "macd-long-step-size",  "Initial step size for macd-long",   0.99,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_blocking_step_size   (_cat, "blocking-step-size",   "Initial step size for blocking",    0.999,    DoubleRange(0, false, 1, false));
@@ -44,7 +46,7 @@ static IntOption     opt_ccmin_mode        (_cat, "ccmin-mode",  "Controls confl
 static IntOption     opt_phase_saving      (_cat, "phase-saving", "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
 static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the initial activity", false);
 static IntOption     opt_restart           (_cat, "restart",     "Controls the restart strategy (0=luby, 1=linear, 2=pow, 3=macd, 4=rl)", 4, IntRange(0, 4));
-static DoubleOption  opt_restart_step_size (_cat, "restart-step-size", "Initial restart step size",               0.95,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_restart_step_size (_cat, "restart-step-size", "Initial restart step size",               0.9,     DoubleRange(0, false, 1, false));
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
@@ -63,6 +65,8 @@ Solver::Solver() :
   , step_size        (opt_step_size)
   , step_size_dec    (opt_step_size_dec)
   , min_step_size    (opt_min_step_size)
+  , restart_xi       (opt_restart_xi)
+  , restart_discount_factor (opt_restart_discount_factor)
   , macd_short_step_size (opt_macd_short_step_size)
   , macd_long_step_size  (opt_macd_long_step_size)
   , blocking_step_size (opt_blocking_step_size)
@@ -117,6 +121,8 @@ Solver::Solver() :
 {
     for (int i = 0; i < NUM_RESTART_TYPES; i++) {
         restart_activity[i] = 0;
+        restart_ucb_X[i] = 0;
+        restart_ucb_N[i] = 0;
     }
 }
 
@@ -268,28 +274,37 @@ Lit Solver::pickBranchLit()
 }
 
 restart_type Solver::pickRestart() {
-    switch (restart) {
-        case 0:
-            return LUBY;
-        case 1:
-            return LINEAR;
-        case 2:
-            return POW;
-        case 3:
-            return MACD;
-        default:
-            for (int i = 0; i < NUM_RESTART_TYPES - 1; i++) {
-                bool min = true;
-                for (int j = i + 1; j < NUM_RESTART_TYPES; j++) {
-                    if (restart_activity[i] > restart_activity[j]) {
-                        min = false;
-                        break;
-                    }
-                }
-                if (min) return (restart_type) i;
-            }
-            return (restart_type) (NUM_RESTART_TYPES - 1);
+    double max = -1;
+    int index = -1;
+    double n = 0;
+    double B = 0;
+    for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+        if (restart_ucb_N[i] == 0) {
+            return (restart_type) i;
+        }
+        double X = restart_ucb_X[i] / restart_ucb_N[i];
+        if (X > B) {
+            B = X;
+        }
+        n += restart_ucb_N[i];
     }
+    B = 1;
+    double numerator = restart_xi * log(n);
+    for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+        double X = restart_ucb_X[i] / restart_ucb_N[i];
+        double c = 2 * B * sqrt(numerator / restart_ucb_N[i]);
+        double activity = X + c;
+        restart_activity[i] = activity;
+        if (activity > max) {
+            max = activity;
+            index = i;
+        }
+    }
+    if (index < 0) {
+        printf("pickRestart: index = %d\n", index);
+        exit(1);
+    }
+    return (restart_type) index;
 }
 
 
@@ -900,7 +915,7 @@ lbool Solver::solve_()
     while (status == l_Undef){
         double rest_base;
         restart_type r = pickRestart();
-        printf("Using restart strategy: %d, activity[%f, %f, %f, %f]\n", r,restart_activity[0], restart_activity[1], restart_activity[2], restart_activity[3]);
+        printf("Using restart strategy: %d, activity[%f, %f, %f, %f]\n", r, restart_activity[0], restart_activity[1], restart_activity[2], restart_activity[3]);
         switch (r) {
             case LUBY:
                 rest_base = luby(restart_inc, luby_restarts);
@@ -915,18 +930,28 @@ lbool Solver::solve_()
                 pow_restarts++;
                 break;
             default:
-                rest_base = -1;
+                rest_base = 1;
                 macd_restarts++;
                 break;
         }
+
         lbds = 0;
         int nof_conflicts = rest_base * restart_first;
         uint64_t start_conflicts = conflicts;
         status = search(nof_conflicts);
         if (!withinBudget()) break;
-        printf("Restarted after %lu conflicts\n", conflicts - start_conflicts);
-        double restart_reward = (double) ((long double) lbds) / ((long double) (conflicts - start_conflicts));
-        restart_activity[r] = restart_step_size * restart_activity[r] + (1.0 - restart_step_size) * restart_reward;
+        //printf("Restarted after %lu conflicts\n", conflicts - start_conflicts);
+        double restart_reward = (double) ((long double) (conflicts - start_conflicts)) / ((long double) lbds);
+
+        for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+            if (i == r) {
+                restart_ucb_X[i] = restart_discount_factor * restart_ucb_X[i] + restart_reward;
+                restart_ucb_N[i] = restart_discount_factor * restart_ucb_N[i] + 1.0;
+            } else {
+                restart_ucb_X[i] = restart_discount_factor * restart_ucb_X[i];
+                restart_ucb_N[i] = restart_discount_factor * restart_ucb_N[i];
+            }
+        }
     }
 
     if (verbosity >= 1)
