@@ -153,7 +153,9 @@ Var Solver::newVar(bool sign, bool dvar)
     decision .push();
     trail    .capacity(v+1);
     lbd_seen.push(0);
+    picked.push(0);
     conflicted.push(0);
+    canceled.push(0);
     setDecisionVar(v, dvar);
     return v;
 }
@@ -238,6 +240,19 @@ void Solver::cancelUntil(int level) {
     if (decisionLevel() > level){
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
+            uint64_t age = conflicts - picked[x];
+            if (age > 0) {
+                double reward = ((double) conflicted[x]) / ((double) age);
+                double old_activity = activity[x];
+                activity[x] = step_size * reward + ((1 - step_size) * old_activity);
+                if (order_heap.inHeap(x)) {
+                    if (activity[x] > old_activity)
+                        order_heap.decrease(x);
+                    else
+                        order_heap.increase(x);
+                }
+            }
+            canceled[x] = conflicts;
             assigns [x] = l_Undef;
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
@@ -267,13 +282,36 @@ Lit Solver::pickBranchLit()
         if (order_heap.empty()){
             next = var_Undef;
             break;
-        }else
+        } else {
+            next = order_heap[0];
+            uint64_t age = conflicts - canceled[next];
+            while (age > 0) {
+                double decay = pow(0.95, age);
+                activity[next] *= decay;
+                if (order_heap.inHeap(next)) {
+                    order_heap.increase(next);
+                }
+                canceled[next] = conflicts;
+                next = order_heap[0];
+                age = conflicts - canceled[next];
+            }
             next = order_heap.removeMin();
-
+        }
+    
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
 restart_type Solver::pickRestart() {
+    switch (restart) {
+        case 0:
+            return LUBY;
+        case 1:
+            return LINEAR;
+        case 2:
+            return POW;
+        case 3:
+            return MACD;
+    }
     double max = -1;
     int index = -1;
     double n = 0;
@@ -352,7 +390,7 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel)
 
             if (!seen[var(q)] && level(var(q)) > 0){
                 // varBumpActivity(var(q));
-                conflicted[var(q)] = conflicts;
+                conflicted[var(q)]++;
                 seen[var(q)] = 1;
                 if (level(var(q)) >= decisionLevel())
                     pathC++;
@@ -499,6 +537,16 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
     assert(value(p) == l_Undef);
+    picked[var(p)] = conflicts;
+    uint64_t age = conflicts - canceled[var(p)];
+    if (age > 0) {
+        double decay = pow(0.95, age);
+        activity[var(p)] *= decay;
+        if (order_heap.inHeap(var(p))) {
+            order_heap.increase(var(p));
+        }
+    }
+    conflicted[var(p)] = 0;
     assigns[var(p)] = lbool(!sign(p));
     vardata[var(p)] = mkVarData(from, decisionLevel());
     trail.push_(p);
@@ -730,10 +778,10 @@ lbool Solver::search(int nof_conflicts)
     for (;;){
         CRef confl = propagate();
 
-        for (int a = action; a < trail.size(); a++) {
+        /*for (int a = action; a < trail.size(); a++) {
             Var v = var(trail[a]);
             updateQ(v, confl == CRef_Undef ? reward_multiplier : 1.0);
-        }
+        }*/
         if (confl != CRef_Undef){
             // CONFLICT
             conflicts++; conflictC++;
@@ -915,7 +963,7 @@ lbool Solver::solve_()
     while (status == l_Undef){
         double rest_base;
         restart_type r = pickRestart();
-        printf("Using restart strategy: %d, activity[%f, %f, %f, %f]\n", r, restart_activity[0], restart_activity[1], restart_activity[2], restart_activity[3]);
+        //printf("Using restart strategy: %d, activity[%f, %f, %f, %f]\n", r, restart_activity[0], restart_activity[1], restart_activity[2], restart_activity[3]);
         switch (r) {
             case LUBY:
                 rest_base = luby(restart_inc, luby_restarts);

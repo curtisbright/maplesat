@@ -154,7 +154,9 @@ public:
     vec<uint64_t> lbd_seen;
     int action;
     double reward_multiplier;
+    vec<uint64_t> picked;
     vec<uint64_t> conflicted;
+    vec<uint64_t> canceled;
 
 protected:
 
