@@ -158,6 +158,16 @@ public:
     vec<uint64_t> conflicted;
     vec<uint64_t> canceled;
 
+    Var observing;
+    double expected_rewards;
+    int observed_count;
+    double observed_rewards;
+    long double total_expected_rewards;
+    int total_observed_count;
+    long double total_observed_rewards;
+    long double total_error;
+    long double total_square_error;
+
 protected:
 
     // Helper structures:

@@ -44,6 +44,11 @@ void printStats(Solver& solver)
     printf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
     printf("propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
     printf("conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
+    printf("expected reward       : %Lf\n", solver.total_expected_rewards / solver.total_observed_count);
+    printf("observed reward       : %Lf\n", solver.total_observed_rewards / solver.total_observed_count);
+    printf("observations          : %d\n", solver.total_observed_count);
+    printf("error                 : %Lf\n", solver.total_error / solver.total_observed_count);
+    printf("square error          : %Lf\n", solver.total_square_error / solver.total_observed_count);
     if (mem_used != 0) printf("Memory used           : %.2f MB\n", mem_used);
     printf("CPU time              : %g s\n", cpu_time);
 }

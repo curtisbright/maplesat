@@ -101,6 +101,13 @@ Solver::Solver() :
   , lbd_calls(0)
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
+  , observing(var_Undef)
+  , total_expected_rewards(0)
+  , total_observed_count(0)
+  , total_observed_rewards(0)
+  , total_error(0)
+  , total_square_error(0)
+
 
   , ok                 (true)
   , cla_inc            (1)
@@ -251,6 +258,19 @@ void Solver::cancelUntil(int level) {
                     else
                         order_heap.increase(x);
                 }
+                if (x == observing) {
+                    observed_count++;
+                    observed_rewards += reward;
+                    if (observed_count >= 10) {
+                        total_expected_rewards += expected_rewards;
+                        total_observed_count ++;
+                        total_observed_rewards += (observed_rewards / observed_count);
+                        double error = expected_rewards - (observed_rewards / observed_count);
+                        total_error += fabs(error);
+                        total_square_error += error * error;
+                        observing = var_Undef;
+                    }
+                }
             }
             canceled[x] = conflicts;
             assigns [x] = l_Undef;
@@ -297,7 +317,14 @@ Lit Solver::pickBranchLit()
             }
             next = order_heap.removeMin();
         }
-    
+
+    if (conflicts > 1000 && observing == var_Undef && next != var_Undef) {
+        observing = next;
+        expected_rewards = activity[next];
+        observed_count = 0;
+        observed_rewards = 0;
+    }
+
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
