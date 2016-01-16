@@ -49,6 +49,13 @@ void printStats(Solver& solver)
     printf("observations          : %d\n", solver.total_observed_count);
     printf("error                 : %Lf\n", solver.total_error / solver.total_observed_count);
     printf("square error          : %Lf\n", solver.total_square_error / solver.total_observed_count);
+    long double total_actual_rewards = 0;
+    long double total_actual_count = 0;
+    for (int i = 0; i < solver.nVars(); i++) {
+        total_actual_rewards += solver.total_actual_rewards[i];
+        total_actual_count += solver.total_actual_count[i];
+    }
+    printf("actual reward         : %Lf\n", total_actual_rewards / total_actual_count);
     if (mem_used != 0) printf("Memory used           : %.2f MB\n", mem_used);
     printf("CPU time              : %g s\n", cpu_time);
 }

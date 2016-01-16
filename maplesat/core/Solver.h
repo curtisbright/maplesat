@@ -167,6 +167,8 @@ public:
     long double total_observed_rewards;
     long double total_error;
     long double total_square_error;
+    vec<long double> total_actual_rewards;
+    vec<int> total_actual_count;
 
 protected:
 

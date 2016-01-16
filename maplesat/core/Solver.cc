@@ -163,6 +163,8 @@ Var Solver::newVar(bool sign, bool dvar)
     picked.push(0);
     conflicted.push(0);
     canceled.push(0);
+    total_actual_rewards.push(0);
+    total_actual_count.push(0);
     setDecisionVar(v, dvar);
     return v;
 }
@@ -258,6 +260,8 @@ void Solver::cancelUntil(int level) {
                     else
                         order_heap.increase(x);
                 }
+                total_actual_rewards[x] += reward;
+                total_actual_count[x] ++;
                 if (x == observing) {
                     observed_count++;
                     observed_rewards += reward;
