@@ -21,7 +21,36 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #ifndef Minisat_SolverTypes_h
 #define Minisat_SolverTypes_h
-#define LBD_BASED_CLAUSE_DELETION
+
+#define VSIDS 0
+#define CHB 1
+#define LRB 2
+
+#ifndef BRANCHING_HEURISTIC
+    #define BRANCHING_HEURISTIC LRB
+#endif
+
+#ifndef LBD_BASED_CLAUSE_DELETION
+    #define LBD_BASED_CLAUSE_DELETION true
+#endif
+
+#ifndef RAPID_DELETION
+    #define RAPID_DELETION true
+#endif
+
+#ifndef ALMOST_CONFLICT
+    #define ALMOST_CONFLICT true
+#endif
+#if ALMOST_CONFLICT && BRANCHING_HEURISTIC != LRB
+    #error ALMOST_CONFLICT requires BRANCHING_HEURISTIC == LRB
+#endif
+
+#ifndef ANTI_EXPLORATION
+    #define ANTI_EXPLORATION true
+#endif
+#if ANTI_EXPLORATION && BRANCHING_HEURISTIC != LRB
+    #error ANTI_EXPLORATION requires BRANCHING_HEURISTIC == LRB
+#endif
 
 #include <assert.h>
 
@@ -43,7 +72,7 @@ namespace Minisat {
 typedef int Var;
 #define var_Undef (-1)
 
-#ifdef LBD_BASED_CLAUSE_DELETION
+#if LBD_BASED_CLAUSE_DELETION
 typedef int Act;
 #else
 typedef float Act;
