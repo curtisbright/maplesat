@@ -33,9 +33,6 @@ namespace Minisat {
 //=================================================================================================
 // Solver -- the main class:
 
-typedef enum {LUBY, LINEAR, POW, MACD} restart_type;
-#define NUM_RESTART_TYPES 4
-
 class Solver {
 public:
 
@@ -117,19 +114,20 @@ public:
     // Mode of operation:
     //
     int       verbosity;
+#if BRANCHING_HEURISTIC == CHB || BRANCHING_HEURISTIC == LRB
     double    step_size;
     double    step_size_dec;
     double    min_step_size;
-    double    restart_xi;
-    double    restart_discount_factor;
-    double    macd_short_step_size;
-    double    macd_long_step_size;
-    double    blocking_step_size;
+#endif
+#if BRANCHING_HEURISTIC == VSIDS
+    double    var_decay;
+#endif
+#if ! LBD_BASED_CLAUSE_DELETION
     double    clause_decay;
+#endif
     double    random_var_freq;
     double    random_seed;
-    int       restart;
-    double    restart_step_size;
+    bool      luby_restart;
     int       ccmin_mode;         // Controls conflict clause minimization (0=none, 1=basic, 2=deep).
     int       phase_saving;       // Controls the level of phase saving (0=none, 1=limited, 2=full).
     bool      rnd_pol;            // Use random polarities for branching heuristics.
@@ -149,12 +147,24 @@ public:
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
-    uint64_t lbds;
     uint64_t lbd_calls;
     vec<uint64_t> lbd_seen;
+    vec<uint64_t> picked;
+    vec<uint64_t> conflicted;
+#if ALMOST_CONFLICT
+    vec<uint64_t> almost_conflicted;
+#endif
+#if ANTI_EXPLORATION
+    vec<uint64_t> canceled;
+#endif
+#if BRANCHING_HEURISTIC == CHB
+    vec<uint64_t> last_conflict;
     int action;
     double reward_multiplier;
-    vec<uint64_t> conflicted;
+#endif
+
+    vec<long double> total_actual_rewards;
+    vec<int> total_actual_count;
 
 protected:
 
@@ -189,11 +199,10 @@ protected:
     bool                ok;               // If FALSE, the constraints are already unsatisfiable. No part of the solver state may be used!
     vec<CRef>           clauses;          // List of problem clauses.
     vec<CRef>           learnts;          // List of learnt clauses.
+#if ! LBD_BASED_CLAUSE_DELETION
     double              cla_inc;          // Amount to bump next clause with.
+#endif
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
-    double              restart_activity[NUM_RESTART_TYPES];
-    double              restart_ucb_X[NUM_RESTART_TYPES];
-    double              restart_ucb_N[NUM_RESTART_TYPES];
     double              var_inc;          // Amount to bump next variable with.
     OccLists<Lit, vec<Watcher>, WatcherDeleted>
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
@@ -235,7 +244,6 @@ protected:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
     Lit      pickBranchLit    ();                                                      // Return the next decision variable.
-    restart_type pickRestart      ();
     void     newDecisionLevel ();                                                      // Begins a new decision level.
     void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef);                         // Enqueue a literal. Assumes value of literal is undefined.
     bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.
@@ -244,7 +252,7 @@ protected:
     void     analyze          (CRef confl, vec<Lit>& out_learnt, int& out_btlevel);    // (bt = backtrack)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
-    void     updateQ (Var v, double multiplier);
+
     template<class V> int lbd (const V& clause) {
         lbd_calls++;
         int lbd = 0;
@@ -265,8 +273,15 @@ protected:
 
     // Maintaining Variable/Clause activity:
     //
+#if BRANCHING_HEURISTIC == VSIDS
+    void     varDecayActivity ();                      // Decay all variables with the specified factor. Implemented by increasing the 'bump' value instead.
+    void     varBumpActivity  (Var v, double inc);     // Increase a variable with the current 'bump' value.
+    void     varBumpActivity  (Var v);                 // Increase a variable with the current 'bump' value.
+#endif
+#if ! LBD_BASED_CLAUSE_DELETION
     void     claDecayActivity ();                      // Decay all clauses with the specified factor. Implemented by increasing the 'bump' value instead.
     void     claBumpActivity  (Clause& c);             // Increase a clause with the current 'bump' value.
+#endif
 
     // Operations on clauses:
     //
@@ -312,6 +327,21 @@ inline int  Solver::level (Var x) const { return vardata[x].level; }
 inline void Solver::insertVarOrder(Var x) {
     if (!order_heap.inHeap(x) && decision[x]) order_heap.insert(x); }
 
+#if BRANCHING_HEURISTIC == VSIDS
+inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
+inline void Solver::varBumpActivity(Var v) { varBumpActivity(v, var_inc); }
+inline void Solver::varBumpActivity(Var v, double inc) {
+    if ( (activity[v] += inc) > 1e100 ) {
+        // Rescale:
+        for (int i = 0; i < nVars(); i++)
+            activity[i] *= 1e-100;
+        var_inc *= 1e-100; }
+
+    // Update order_heap with respect to new activity:
+    if (order_heap.inHeap(v))
+        order_heap.decrease(v); }
+#endif
+#if ! LBD_BASED_CLAUSE_DELETION
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
 inline void Solver::claBumpActivity (Clause& c) {
         if ( (c.activity() += cla_inc) > 1e20 ) {
@@ -319,6 +349,7 @@ inline void Solver::claBumpActivity (Clause& c) {
             for (int i = 0; i < learnts.size(); i++)
                 ca[learnts[i]].activity() *= 1e-20;
             cla_inc *= 1e-20; } }
+#endif
 
 inline void Solver::checkGarbage(void){ return checkGarbage(garbage_frac); }
 inline void Solver::checkGarbage(double gf){
