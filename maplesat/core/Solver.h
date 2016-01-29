@@ -33,6 +33,9 @@ namespace Minisat {
 //=================================================================================================
 // Solver -- the main class:
 
+typedef enum {LUBY, LINEAR, POW, MACD} restart_type;
+#define NUM_RESTART_TYPES 4
+
 class Solver {
 public:
 
@@ -119,6 +122,11 @@ public:
     double    step_size_dec;
     double    min_step_size;
 #endif
+    uint64_t  lbds;
+    double    restart_xi;
+    double    restart_discount_factor;
+    int       restart;
+    double    restart_step_size;
 #if BRANCHING_HEURISTIC == VSIDS
     double    var_decay;
 #endif
@@ -203,6 +211,9 @@ protected:
     double              cla_inc;          // Amount to bump next clause with.
 #endif
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
+    double              restart_activity[NUM_RESTART_TYPES];
+    double              restart_ucb_X[NUM_RESTART_TYPES];
+    double              restart_ucb_N[NUM_RESTART_TYPES];
     double              var_inc;          // Amount to bump next variable with.
     OccLists<Lit, vec<Watcher>, WatcherDeleted>
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
@@ -244,6 +255,7 @@ protected:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
     Lit      pickBranchLit    ();                                                      // Return the next decision variable.
+    restart_type pickRestart  ();
     void     newDecisionLevel ();                                                      // Begins a new decision level.
     void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef);                         // Enqueue a literal. Assumes value of literal is undefined.
     bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.

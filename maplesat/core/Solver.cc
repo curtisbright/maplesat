@@ -36,6 +36,10 @@ static DoubleOption  opt_step_size         (_cat, "step-size",   "Initial step s
 static DoubleOption  opt_step_size_dec     (_cat, "step-size-dec","Step size decrement",                          0.000001, DoubleRange(0, false, 1, false));
 static DoubleOption  opt_min_step_size     (_cat, "min-step-size","Minimal step size",                            0.06,     DoubleRange(0, false, 1, false));
 #endif
+static DoubleOption  opt_restart_xi        (_cat, "restart-xi", "Initial step size for macd-short",  0.1,     DoubleRange(0, false, 1, false));
+static DoubleOption  opt_restart_discount_factor (_cat, "restart-discount-factor", "Restart discount factor",  0.95,     DoubleRange(0, false, 1, false));
+static IntOption     opt_restart           (_cat, "restart",     "Controls the restart strategy (0=luby, 1=linear, 2=pow, 3=macd, 4=rl)", 4, IntRange(0, 4));
+static DoubleOption  opt_restart_step_size (_cat, "restart-step-size", "Initial restart step size",               0.9,     DoubleRange(0, false, 1, false));
 #if BRANCHING_HEURISTIC == VSIDS
 static DoubleOption  opt_var_decay         (_cat, "var-decay",   "The variable activity decay factor",            0.95,     DoubleRange(0, false, 1, false));
 #endif
@@ -70,6 +74,11 @@ Solver::Solver() :
   , step_size_dec    (opt_step_size_dec)
   , min_step_size    (opt_min_step_size)
 #endif
+  , lbds             (0)
+  , restart_xi       (opt_restart_xi)
+  , restart_discount_factor (opt_restart_discount_factor)
+  , restart          (opt_restart)
+  , restart_step_size(opt_restart_step_size)
 #if BRANCHING_HEURISTIC == VSIDS
   , var_decay        (opt_var_decay)
 #endif
@@ -127,7 +136,14 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+    for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+        restart_activity[i] = 0;
+        restart_ucb_X[i] = 0;
+        restart_ucb_N[i] = 0;
+    }
+}
+
 
 
 Solver::~Solver()
@@ -325,6 +341,40 @@ Lit Solver::pickBranchLit()
         }
 
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
+}
+
+restart_type Solver::pickRestart() {
+    double max = -1;
+    int index = -1;
+    double n = 0;
+    double B = 0;
+    for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+        if (restart_ucb_N[i] == 0) {
+            return (restart_type) i;
+        }
+        double X = restart_ucb_X[i] / restart_ucb_N[i];
+        if (X > B) {
+            B = X;
+        }
+        n += restart_ucb_N[i];
+    }
+    B = 1;
+    double numerator = restart_xi * log(n);
+    for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+        double X = restart_ucb_X[i] / restart_ucb_N[i];
+        double c = 2 * B * sqrt(numerator / restart_ucb_N[i]);
+        double activity = X + c;
+        restart_activity[i] = activity;
+        if (activity > max) {
+            max = activity;
+            index = i;
+        }
+    }
+    if (index < 0) {
+        printf("pickRestart: index = %d\n", index);
+        exit(1);
+    }
+    return (restart_type) index;
 }
 
 /*_________________________________________________________________________________________________
@@ -813,6 +863,7 @@ lbool Solver::search(int nof_conflicts)
 #if LBD_BASED_CLAUSE_DELETION
                 Clause& clause = ca[cr];
                 clause.activity() = lbd(clause);
+                lbds += clause.activity();
 #else
                 claBumpActivity(ca[cr]);
 #endif
@@ -969,12 +1020,49 @@ lbool Solver::solve_()
     }
 
     // Search:
-    int curr_restarts = 0;
+    int luby_restarts = 0;
+    int linear_restarts = 0;
+    int pow_restarts = 0;
+    int macd_restarts = 0;
     while (status == l_Undef){
-        double rest_base = luby_restart ? luby(restart_inc, curr_restarts) : pow(restart_inc, curr_restarts);
-        status = search(rest_base * restart_first);
+        double rest_base;
+        restart_type r = pickRestart();
+        printf("Using restart strategy: %d, activity[%f, %f, %f, %f]\n", r, restart_activity[0], restart_activity[1], restart_activity[2], restart_activity[3]);
+        switch (r) {
+            case LUBY:
+                rest_base = luby(restart_inc, luby_restarts);
+                luby_restarts++;
+                break;
+            case LINEAR:
+                rest_base = linear_restarts + 1;
+                linear_restarts++;
+                break;
+            case POW:
+                rest_base = pow(restart_inc, pow_restarts);
+                pow_restarts++;
+                break;
+            default:
+                rest_base = 1;
+                macd_restarts++;
+                break;
+        }
+
+        lbds = 0;
+        int nof_conflicts = rest_base * restart_first;
+        uint64_t start_conflicts = conflicts;
+        status = search(nof_conflicts);
         if (!withinBudget()) break;
-        curr_restarts++;
+        double restart_reward = (double) ((long double) (conflicts - start_conflicts)) / ((long double) lbds);
+
+        for (int i = 0; i < NUM_RESTART_TYPES; i++) {
+            if (i == r) {
+                restart_ucb_X[i] = restart_discount_factor * restart_ucb_X[i] + restart_reward;
+                restart_ucb_N[i] = restart_discount_factor * restart_ucb_N[i] + 1.0;
+            } else {
+                restart_ucb_X[i] = restart_discount_factor * restart_ucb_X[i];
+                restart_ucb_N[i] = restart_discount_factor * restart_ucb_N[i];
+            }
+        }
     }
 
     if (verbosity >= 1)
