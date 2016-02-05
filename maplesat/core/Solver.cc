@@ -31,6 +31,7 @@ using namespace Minisat;
 
 static const char* _cat = "CORE";
 
+static StringOption  opt_priority_file     (_cat, "priority-file", "A list of priorities");
 #if BRANCHING_HEURISTIC == CHB || BRANCHING_HEURISTIC == LRB
 static DoubleOption  opt_step_size         (_cat, "step-size",   "Initial step size",                             0.40,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_step_size_dec     (_cat, "step-size-dec","Step size decrement",                          0.000001, DoubleRange(0, false, 1, false));
@@ -262,6 +263,7 @@ void Solver::cancelUntil(int level) {
 #else
                 double adjusted_reward = reward;
 #endif
+                adjusted_reward *= multipliers[x];
                 double old_activity = activity[x];
                 activity[x] = step_size * adjusted_reward + ((1 - step_size) * old_activity);
                 if (order_heap.inHeap(x)) {
@@ -942,6 +944,22 @@ static double luby(double y, int x){
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    {
+        const char* file = opt_priority_file;
+        if (file != NULL) {
+            FILE* f = fopen(file, "r");
+            if (f == NULL)
+                fprintf(stderr, "could not open file %s\n", file), exit(1);
+            for (int i = 0; i < nVars(); i++) {
+                double priority;
+                if (fscanf(f, "%lf", &priority) != 1) {
+                    fprintf(stderr, "expected more numbers in %s\n", file), exit(1);
+                }
+                multipliers.push(priority);
+            }
+            fclose(f);
+        }
+    }
     model.clear();
     conflict.clear();
     if (!ok) return l_False;

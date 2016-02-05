@@ -162,6 +162,7 @@ public:
     int action;
     double reward_multiplier;
 #endif
+    vec<double> multipliers;
 
     vec<long double> total_actual_rewards;
     vec<int> total_actual_count;
