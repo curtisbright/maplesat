@@ -344,6 +344,16 @@ Lit Solver::pickBranchLit()
 }
 
 restart_type Solver::pickRestart() {
+    switch (restart) {
+        case 0:
+            return LUBY;
+        case 1:
+            return LINEAR;
+        case 2:
+            return POW;
+        case 3:
+            return MACD;
+    }
     double max = -1;
     int index = -1;
     double n = 0;
