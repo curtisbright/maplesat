@@ -38,7 +38,7 @@ static DoubleOption  opt_min_step_size     (_cat, "min-step-size","Minimal step 
 #endif
 static DoubleOption  opt_restart_xi        (_cat, "restart-xi", "Initial step size for macd-short",  0.1,     DoubleRange(0, false, 1, false));
 static DoubleOption  opt_restart_discount_factor (_cat, "restart-discount-factor", "Restart discount factor",  0.95,     DoubleRange(0, false, 1, false));
-static IntOption     opt_restart           (_cat, "restart",     "Controls the restart strategy (0=luby, 1=linear, 2=pow, 3=macd, 4=rl)", 4, IntRange(0, 4));
+static IntOption     opt_restart           (_cat, "restart",     "Controls the restart strategy (0=luby, 1=linear, 2=pow, 3=macd, 4=rl, 5=rand)", 4, IntRange(0, 5));
 static DoubleOption  opt_restart_step_size (_cat, "restart-step-size", "Initial restart step size",               0.9,     DoubleRange(0, false, 1, false));
 #if BRANCHING_HEURISTIC == VSIDS
 static DoubleOption  opt_var_decay         (_cat, "var-decay",   "The variable activity decay factor",            0.95,     DoubleRange(0, false, 1, false));
@@ -353,6 +353,8 @@ restart_type Solver::pickRestart() {
             return POW;
         case 3:
             return MACD;
+        case 5:
+            return (restart_type) irand(random_seed, 4);
     }
     double max = -1;
     int index = -1;
