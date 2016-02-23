@@ -297,7 +297,7 @@ class Searcher : public HyperEngine
         void cancelUntil(uint32_t level); ///<Backtrack until a certain level.
         void move_activity_from_to(const Var from, const Var to);
         bool check_order_heap_sanity() const;
-
+        virtual void enqueue_monitor(const Lit p);
     protected:
         void new_var(const bool bva, const Var orig_outer) override;
         void new_vars(const size_t n) override;
@@ -420,6 +420,11 @@ class Searcher : public HyperEngine
         /////////////////
         // Variable activity
         vector<double> activities;
+        vector<uint64_t> picked;
+        vector<uint64_t> conflicted;
+        vector<uint64_t> almost_conflicted;
+        vector<uint64_t> almost_seen;
+        vector<uint64_t> canceled;
         double var_inc;
         void              insertVarOrder(const Var x);  ///< Insert a variable in heap
 
@@ -538,6 +543,9 @@ class Searcher : public HyperEngine
         double   startTime; ///<When solve() was started
         Stats    stats;
         double   var_decay;
+        double   step_size;
+        double   step_size_dec;
+        double   min_step_size;
 };
 
 inline uint32_t Searcher::abstractLevel(const Var x) const
@@ -592,6 +600,24 @@ inline void Searcher::cancelUntil(uint32_t level)
             #endif
 
             const Var var = trail[sublevel].var();
+            const Var x = var;
+            uint64_t age = stats.conflStats.numConflicts - picked[x];
+            if (age > 0) {
+                /*if (conflicted[x] + almost_conflicted[x] > age) {
+                    printf("vlr + avlr > age: %lu %lu %lu\n", conflicted[x], almost_conflicted[x], age);
+                    exit(1);
+                }*/
+                double adjusted_reward = ((double) (conflicted[x] + almost_conflicted[x])) / ((double) age);
+                double old_activity = activities[x];
+                activities[x] = step_size * adjusted_reward + ((1 - step_size) * old_activity);
+                if (order_heap.in_heap(x)) {
+                    if (activities[x] > old_activity)
+                        order_heap.decrease(x);
+                    else
+                        order_heap.increase(x);
+                }
+            }
+            canceled[x] = stats.conflStats.numConflicts;
             assert(value(var) != l_Undef);
             assigns[var] = l_Undef;
             if (also_insert_varorder) {

@@ -64,6 +64,9 @@ Searcher::Searcher(const SolverConf *_conf, Solver* _solver, bool* _needToInterr
         , clauseActivityIncrease(1)
 {
     var_decay = conf.var_decay_start;
+    step_size = 0.40;
+    step_size_dec = 0.000001;
+    min_step_size = 0.06;
     var_inc = conf.var_inc_start;
     more_red_minim_limit_binary_actual = conf.more_red_minim_limit_binary;
     more_red_minim_limit_cache_actual = conf.more_red_minim_limit_cache;
@@ -81,6 +84,12 @@ void Searcher::new_var(const bool bva, const Var orig_outer)
     PropEngine::new_var(bva, orig_outer);
 
     activities.push_back(0);
+    picked.push_back(0);
+    conflicted.push_back(0);
+    almost_conflicted.push_back(0);
+    almost_seen.push_back(0);
+    canceled.push_back(0);
+
     insertVarOrder((int)nVars()-1);
 }
 
@@ -89,6 +98,11 @@ void Searcher::new_vars(size_t n)
     PropEngine::new_vars(n);
 
     activities.resize(activities.size() + n, 0);
+    picked.resize(activities.size() + n, 0);
+    conflicted.resize(activities.size() + n, 0);
+    almost_conflicted.resize(activities.size() + n, 0);
+    almost_seen.resize(activities.size() + n, 0);
+    canceled.resize(activities.size() + n, 0);
     for(int i = n-1; i >= 0; i--) {
         insertVarOrder((int)nVars()-i-1);
     }
@@ -135,7 +149,8 @@ void Searcher::add_lit_to_learnt(
     if (!seen[var]) {
         seen[var] = 1;
 
-        bump_var_activitiy(var);
+        conflicted[var]++;
+        //bump_var_activitiy(var);
         tmp_learnt_clause_size++;
         seen2[lit.toInt()] = 1;
         tmp_learnt_clause_abst |= abst_var(lit.var());
@@ -616,7 +631,7 @@ void Searcher::bump_var_activities_based_on_implied_by_learnts(const uint32_t gl
     for (const auto dat :implied_by_learnts) {
         const uint32_t v_glue = dat.second;
         if (v_glue < glue) {
-            bump_var_activitiy(dat.first.var());
+            //bump_var_activitiy(dat.first.var());
         }
     }
 }
@@ -694,8 +709,73 @@ Clause* Searcher::analyze_conflict(
     }
     implied_by_learnts.clear();
 
+    if (last_resolved_long_cl != NULL) {
+        for (uint32_t i = 0; i < last_resolved_long_cl->size(); i++) {
+            Var v = (*last_resolved_long_cl)[i].var();
+            almost_seen[v] = stats.conflStats.numConflicts;
+        }
+        for (uint32_t i = 0; i < last_resolved_long_cl->size(); i++) {
+            Var v = (*last_resolved_long_cl)[i].var();
+            const PropBy reason = varData[v].reason;
+            if (!reason.isNULL()) {
+                PropByType type = reason.getType();
+                Clause* cl = NULL;
+                Var v2;
+                Var v3;
+                switch (type) {
+                    case clause_t:
+                        cl = cl_alloc.ptr(reason.get_offset());
+                        for (uint32_t j = 0; j < cl->size(); j++) {
+                            Var v2 = (*cl)[j].var();
+                            if (almost_seen[v2] != stats.conflStats.numConflicts) {
+                                almost_seen[v2] = stats.conflStats.numConflicts;
+                                almost_conflicted[v2]++;
+                            }
+                        }
+                        break;
+
+                    case binary_t:
+                        v2 = reason.lit2().var();
+                        if (almost_seen[v2] != stats.conflStats.numConflicts) {
+                            almost_seen[v2] = stats.conflStats.numConflicts;
+                            almost_conflicted[v2]++;
+                        }
+                        break;
+
+                    case tertiary_t:
+                        v2 = reason.lit2().var();
+                        if (almost_seen[v2] != stats.conflStats.numConflicts) {
+                            almost_seen[v2] = stats.conflStats.numConflicts;
+                            almost_conflicted[v2]++;
+                        }
+                        v3 = reason.lit3().var();
+                        if (almost_seen[v3] != stats.conflStats.numConflicts) {
+                            almost_seen[v3] = stats.conflStats.numConflicts;
+                            almost_conflicted[v3]++;
+                        }
+                        break;
+                }
+            }
+        }
+    }
+
     return otf_subsume_last_resolved_clause(last_resolved_long_cl);
 
+}
+
+void Searcher::enqueue_monitor(const Lit p) {
+    Var v = p.var();
+    picked[v] = stats.conflStats.numConflicts;
+    uint64_t age = stats.conflStats.numConflicts - canceled[v];
+    if (age > 0) {
+        double decay = pow(0.95, age);
+        activities[v] *= decay;
+        if (order_heap.in_heap(v)) {
+            order_heap.increase(v);
+        }
+    }
+    conflicted[v] = 0;
+    almost_conflicted[v] = 0;
 }
 
 bool Searcher::litRedundant(const Lit p, uint32_t abstract_levels)
@@ -964,6 +1044,8 @@ lbool Searcher::search()
             ) {
                 var_decay += 0.01;
             }
+            if (step_size > min_step_size)
+                step_size -= step_size_dec;
 
             stats.conflStats.update(lastConflictCausedBy);
             print_restart_stat();
@@ -2060,6 +2142,18 @@ Lit Searcher::pickBranchLit()
                 break;
             }
 
+            next_var = order_heap.min();
+            uint64_t age = stats.conflStats.numConflicts - canceled[next_var];
+            while (age > 0) {
+                double decay = pow(0.95, age);                                                                                                                                                                                                                               
+                activities[next_var] *= decay;                                                                                                                                                                                                                                     
+                if (order_heap.in_heap(next_var)) {                                                                                                                                                                                                                               
+                    order_heap.increase(next_var);                                                                                                                                                                                                                               
+                }                                                                                                                                                                                                                                                            
+                canceled[next_var] = stats.conflStats.numConflicts;                                                                                                                                                                                                                                  
+                next_var = order_heap.min();                                                                                                                                                                                                                                        
+                age = stats.conflStats.numConflicts - canceled[next_var];                                                                                                                                                                                                                            
+            }
             next_var = order_heap.remove_min();
         }
 

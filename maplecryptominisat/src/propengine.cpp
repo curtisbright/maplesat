@@ -1218,7 +1218,11 @@ void PropEngine::enqueue(const Lit p, const PropBy from)
         varData[v].polarity = !sign;
     }
 
+    enqueue_monitor(p);
     #ifdef ANIMATE3D
     std::cerr << "s " << v << " " << p.sign() << endl;
     #endif
+}
+
+void PropEngine::enqueue_monitor(const Lit p) {
 }

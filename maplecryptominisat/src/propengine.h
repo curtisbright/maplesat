@@ -98,6 +98,7 @@ public:
     PropStats propStats;
     template<bool update_bogoprops = true>
     void enqueue(const Lit p, const PropBy from = PropBy());
+    virtual void enqueue_monitor(const Lit p);
     void new_decision_level();
     bool update_polarity_and_activity = true;
 

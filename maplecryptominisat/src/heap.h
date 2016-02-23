@@ -135,6 +135,11 @@ class Heap {
         percolate_up(indices[n]);
     }
 
+    void increase (uint32_t n) {
+        //assert(in_heap(n));
+        percolate_down(indices[n]);
+    }
+
     void insert(uint32_t n)
     {
         if (indices.size() <= n) {
@@ -147,6 +152,9 @@ class Heap {
         percolate_up(indices[n]);
     }
 
+    uint32_t min() {
+        return heap[1];
+    }
 
     uint32_t remove_min()
     {
