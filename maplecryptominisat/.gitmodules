@@ -1,0 +1,15 @@
+[submodule "utils/OutputCheck"]
+	path = utils/OutputCheck
+	url = https://github.com/stp/OutputCheck.git
+[submodule "utils/gtest"]
+	path = utils/gtest
+	url = https://github.com/stp/googletest.git
+[submodule "utils/cnf-utils"]
+	path = utils/cnf-utils
+	url = https://github.com/msoos/cnf-utils.git
+[submodule "utils/sha1-sat"]
+	path = utils/sha1-sat
+	url = https://github.com/msoos/sha1-sat.git
+[submodule "web/dygraphs"]
+	path = web/dygraphs
+	url = https://github.com/danvk/dygraphs
