@@ -155,6 +155,7 @@ public:
     int action;
     double reward_multiplier;
     vec<uint64_t> conflicted;
+    int order;
 
 protected:
 
@@ -242,6 +243,7 @@ protected:
     CRef     propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
     void     analyze          (CRef confl, vec<Lit>& out_learnt, int& out_btlevel);    // (bt = backtrack)
+    void     analyze          (vec<Lit>& confl, vec<Lit>& out_learnt, int& out_btlevel);    // (bt = backtrack)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
     void     updateQ (Var v, double multiplier);
@@ -257,6 +259,8 @@ protected:
         }
         return lbd;
     }
+    bool     programmatic_check(vec<Lit>& out_learnt, int& out_btlevel);
+    bool     callback_function(vec<Lit>& out_learnt, int& out_btlevel);
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
@@ -286,6 +290,8 @@ protected:
     int      level            (Var x) const;
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
+    unsigned int programmaticFreq;
+    unsigned int programmaticCount;
 
     // Static helpers:
     //

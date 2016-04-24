@@ -19,6 +19,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include <math.h>
+#include <cstdio>
+#include <complex>
+#include <fstream>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -52,6 +55,7 @@ static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interv
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 
+static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX)); 
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -101,6 +105,7 @@ Solver::Solver() :
   , lbd_calls(0)
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
+  , order(opt_order)
 
   , ok                 (true)
   , cla_inc            (1)
@@ -118,6 +123,8 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
+  , programmaticFreq   (1)
+  , programmaticCount  (0)
 {
     for (int i = 0; i < NUM_RESTART_TYPES; i++) {
         restart_activity[i] = 0;
@@ -307,6 +314,195 @@ restart_type Solver::pickRestart() {
     return (restart_type) index;
 }
 
+/*_________________________________________________________________________________________________
+|
+|  analyze : (confl : vec<Lit>&) (out_learnt : vec<Lit>&) (out_btlevel : int&)  ->  [void]
+|  
+|  Description:
+|    Analyze conflict and produce a reason clause.
+|  
+|    Pre-conditions:
+|      * 'out_learnt' is assumed to be cleared.
+|      * Current decision level must be greater than root level.
+|  
+|    Post-conditions:
+|      * 'out_learnt[0]' is the asserting literal at level 'out_btlevel'.
+|      * If out_learnt.size() > 1 then 'out_learnt[1]' has the greatest decision level of the 
+|        rest of literals. There may be others from the same level though.
+|  
+|________________________________________________________________________________________________@*/
+void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
+{
+    int pathC = 0;
+	CRef confl;
+    Lit p     = lit_Undef;
+
+    int cur_max = level(var(conflvec[0]));
+    for(int j=1; j < conflvec.size(); j++) {
+           if(level(var(conflvec[j])) > cur_max) {
+              cur_max = level(var(conflvec[j]));
+           }
+    }
+
+    // Generate conflict clause:
+    //
+    out_learnt.push();      // (leave room for the asserting literal)
+    int index   = trail.size() - 1;
+
+    for (int j = (p == lit_Undef) ? 0 : 1; j < conflvec.size(); j++){
+        Lit q = conflvec[j];
+
+        /*if (!seen[var(q)] && level(var(q)) > 0){
+#if BRANCHING_HEURISTIC == CHB
+            last_conflict[var(q)] = conflicts;
+#elif BRANCHING_HEURISTIC == VSIDS
+            varBumpActivity(var(q));
+#endif
+            conflicted[var(q)]++;
+            seen[var(q)] = 1;
+            if (level(var(q)) >= cur_max)
+                pathC++;
+            else
+                out_learnt.push(q);
+        }*/
+        if (!seen[var(q)] && level(var(q)) > 0){
+            // varBumpActivity(var(q));
+            conflicted[var(q)] = conflicts;
+            seen[var(q)] = 1;
+            if (level(var(q)) >= decisionLevel())
+                pathC++;
+            else
+                out_learnt.push(q);
+        }
+    }
+    
+    // Select next clause to look at:
+    while (!seen[var(trail[index--])]);
+    p     = trail[index+1];
+    confl = reason(var(p));
+    seen[var(p)] = 0;
+    pathC--;
+    while (pathC > 0) {
+        Clause& c = ca[confl];
+
+#ifdef LBD_BASED_CLAUSE_DELETION
+        if (c.learnt() && c.activity() > 2)
+            c.activity() = lbd(c);
+#else
+        if (c.learnt())
+            claBumpActivity(c);
+#endif
+
+        for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
+            Lit q = c[j];
+
+            /*if (!seen[var(q)] && level(var(q)) > 0){
+#if BRANCHING_HEURISTIC == CHB
+                last_conflict[var(q)] = conflicts;
+#elif BRANCHING_HEURISTIC == VSIDS
+                varBumpActivity(var(q));
+#endif
+                conflicted[var(q)]++;
+                seen[var(q)] = 1;
+                if (level(var(q)) >= cur_max)
+                    pathC++;
+                else
+                    out_learnt.push(q);
+            }*/
+            if (!seen[var(q)] && level(var(q)) > 0){
+                // varBumpActivity(var(q));
+                conflicted[var(q)] = conflicts;
+                seen[var(q)] = 1;
+                if (level(var(q)) >= decisionLevel())
+                    pathC++;
+                else
+                    out_learnt.push(q);
+            }
+        }
+        
+        // Select next clause to look at:
+        while (!seen[var(trail[index--])]);
+        p     = trail[index+1];
+        confl = reason(var(p));
+        seen[var(p)] = 0;
+        pathC--;
+	//printf("%d\n", confl);
+
+    }
+    out_learnt[0] = ~p;
+
+    // Simplify conflict clause:
+    //
+    int i, j;
+    out_learnt.copyTo(analyze_toclear);
+    if (ccmin_mode == 2){
+        uint32_t abstract_level = 0;
+        for (i = 1; i < out_learnt.size(); i++)
+            abstract_level |= abstractLevel(var(out_learnt[i])); // (maintain an abstraction of levels involved in conflict)
+
+        for (i = j = 1; i < out_learnt.size(); i++)
+            if (reason(var(out_learnt[i])) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level))
+                out_learnt[j++] = out_learnt[i];
+        
+    }else if (ccmin_mode == 1){
+        for (i = j = 1; i < out_learnt.size(); i++){
+            Var x = var(out_learnt[i]);
+
+            if (reason(x) == CRef_Undef)
+                out_learnt[j++] = out_learnt[i];
+            else{
+                Clause& c = ca[reason(var(out_learnt[i]))];
+                for (int k = 1; k < c.size(); k++)
+                    if (!seen[var(c[k])] && level(var(c[k])) > 0){
+                        out_learnt[j++] = out_learnt[i];
+                        break; }
+            }
+        }
+    }else
+        i = j = out_learnt.size();
+
+    max_literals += out_learnt.size();
+    out_learnt.shrink(i - j);
+    tot_literals += out_learnt.size();
+
+    // Find correct backtrack level:
+    //
+    if (out_learnt.size() == 1)
+        out_btlevel = 0;
+    else{
+        int max_i = 1;
+        // Find the first literal assigned at the next-highest level:
+        for (int i = 2; i < out_learnt.size(); i++)
+            if (level(var(out_learnt[i])) > level(var(out_learnt[max_i])))
+                max_i = i;
+        // Swap-in this literal at index 1:
+        Lit p             = out_learnt[max_i];
+        out_learnt[max_i] = out_learnt[1];
+        out_learnt[1]     = p;
+        out_btlevel       = level(var(p));
+    }
+
+#if ALMOST_CONFLICT
+    seen[var(p)] = true;
+    for(int i = out_learnt.size() - 1; i >= 0; i--) {
+        Var v = var(out_learnt[i]);
+        CRef rea = reason(v);
+        if (rea != CRef_Undef) {
+            Clause& reaC = ca[rea];
+            for (int i = 0; i < reaC.size(); i++) {
+                Lit l = reaC[i];
+                if (!seen[var(l)]) {
+                    seen[var(l)] = true;
+                    almost_conflicted[var(l)]++;
+                    analyze_toclear.push(l);
+                }
+            }
+        }
+    }
+#endif
+    for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+}
+
 
 /*_________________________________________________________________________________________________
 |
@@ -454,6 +650,173 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
     }
 
     return true;
+}
+
+std::complex<double> hall_eval(std::complex<double> seq[], int len,
+			       std::complex<double> value)
+{
+  std::complex<double> result(0.0,0.0);
+  for (int i = 0; i<len; ++i)
+  {
+    result += seq[i]*pow(value,i);
+  }
+  return result;
+}
+
+bool hall_check(std::complex<double> seq[], int len, int nchecks)
+{
+  double epsilon = 0.1;
+  double theta;
+  double v;
+  std::complex<double> imagConst(0.0,1.0);
+  for (int i = 0; i<nchecks; ++i)
+  {
+    theta = i*2*M_PI/nchecks;
+    v = std::abs(hall_eval(seq,len,std::exp(theta*imagConst)));
+    v*=v;
+    if (v>2*len+epsilon)
+      return false;
+  }
+  return true;
+}
+
+bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
+				out_btlevel)
+{
+  int golay_dimension = order;
+  int no_of_significant_vars = golay_dimension * 4;
+  std::complex<double> *a_fills =
+    (std::complex<double>*)malloc(golay_dimension*sizeof(std::complex<double>));
+  std::complex<double> *b_fills =
+    (std::complex<double>*)malloc(golay_dimension*sizeof(std::complex<double>));
+  bool a_complete = true;
+  bool b_complete = true;
+  for (int i = 0; i<golay_dimension*2; i+=2)
+  {
+    if (assigns[i]==l_Undef || assigns[i+1]==l_Undef)
+    {
+      a_complete = false;
+      break;
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_False)
+    {
+      a_fills[i/2] = std::complex<double>(1,0);
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_True)
+    {
+      a_fills[i/2] = std::complex<double>(-1,0);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_False)
+    {
+      a_fills[i/2] = std::complex<double>(0,1);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_True)
+    {
+      a_fills[i/2] = std::complex<double>(0,-1);
+    }
+  }
+  for (int i = golay_dimension*2;i<no_of_significant_vars; i+=2)
+  {
+    if (assigns[i]==l_Undef || assigns[i+1]==l_Undef)
+    {
+      b_complete = false;
+      break;
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_False)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(1,0);
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_True)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(-1,0);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_False)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(0,1);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_True)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(0,-1);
+    }
+  }
+  if (!a_complete && !b_complete)
+  {
+    free(a_fills);
+    free(b_fills);
+    return false;
+  }
+
+  vec<Lit> conflict;
+  out_learnt.clear();
+
+  if (a_complete)
+  {
+    if (!hall_check(a_fills,golay_dimension,100))
+    {
+      for (int i = 0; i<golay_dimension*2; i++)
+      {
+	if(assigns[i] == l_False)
+	  conflict.push(mkLit(i,true));
+	else
+	  conflict.push(mkLit(i,false));
+      }
+    }
+  }
+  else if (b_complete)
+  {
+    if (!hall_check(b_fills,golay_dimension,100))
+    {
+      for (int i = golay_dimension*2;i<no_of_significant_vars; i++)
+      {
+	if(assigns[i] == l_False)
+	  conflict.push(mkLit(i,true));
+	else
+	  conflict.push(mkLit(i,false));
+      }
+    }
+  }
+
+#ifdef PRINTCONF
+  printf("size %d\tconflict:", conflict.size());
+  for(int i=0; i<conflict.size(); i++)
+    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+  printf("\n");
+#endif
+  
+  if(conflict.size()==0)
+    return false;
+
+  if(conflict.size()==1)
+  { out_btlevel = 0;
+    conflict.copyTo(out_learnt);
+  }
+  else
+    analyze(conflict, out_learnt, out_btlevel);
+
+#ifdef PRINTCONF
+  printf("size %d\tout learnt:", out_learnt.size());
+  for(int i=0; i<out_learnt.size(); i++)
+    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+  printf("\n");
+#endif
+
+  free(a_fills); free(b_fills);
+  return true;
+}
+
+bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
+{
+
+  programmaticCount++;
+  bool result = false;
+  if(programmaticCount >= programmaticFreq)
+  {  programmaticCount = 0;
+     if(programmatic_check(out_learnt, out_btlevel))
+     {
+       result = true;
+     }
+  }
+  return result;
 }
 
 
@@ -809,7 +1172,7 @@ lbool Solver::search(int nof_conflicts)
                 max_learnts += 500;
             }
 
-            Lit next = lit_Undef;
+            /*Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()){
                 // Perform user provided assumption:
                 Lit p = assumptions[decisionLevel()];
@@ -823,22 +1186,87 @@ lbool Solver::search(int nof_conflicts)
                     next = p;
                     break;
                 }
+            }*/
+            learnt_clause.clear();
+
+            if(callback_function(learnt_clause, backtrack_level)) {
+                conflicts++; conflictC++;
+                if (decisionLevel() == 0) return l_False;
+
+                cancelUntil(backtrack_level);
+
+                if(learnt_clause.size() == 1)
+                    uncheckedEnqueue(learnt_clause[0]);
+                else {
+                    CRef cr = ca.alloc(learnt_clause, true);
+                    learnts.push(cr);
+                    attachClause(cr);
+                    uncheckedEnqueue(learnt_clause[0], cr);
+                }
+            } else {
+                Lit next = lit_Undef;
+                while (decisionLevel() < assumptions.size()) {
+                    // Perform user provided assumption:
+                    Lit p = assumptions[decisionLevel()];
+                    if (value(p) == l_True){
+                        // Dummy decision level:
+                        newDecisionLevel();
+                    } else if (value(p) == l_False) {
+                        analyzeFinal(~p, conflict);
+                        return l_False;
+                    } else {
+                        next = p;
+                        break;
+                    }
+                }
+
+                if (next == lit_Undef) {
+                    // New variable decision:
+                    decisions++;
+                    next = pickBranchLit();
+
+                    if (next == lit_Undef) {
+                        // Add call to python here
+                        learnt_clause.clear();
+                        programmaticCount = programmaticFreq;
+                        
+                        if(callback_function(learnt_clause, backtrack_level)) {
+                            conflicts++; conflictC++;
+                            if (decisionLevel() == 0) return l_False;
+
+                            cancelUntil(backtrack_level);
+
+                            if(learnt_clause.size() == 1)
+                                uncheckedEnqueue(learnt_clause[0]);
+                            else {
+                                CRef cr = ca.alloc(learnt_clause, true);
+                                learnts.push(cr);
+                                attachClause(cr);
+                                uncheckedEnqueue(learnt_clause[0], cr);
+                            }
+                        } else {
+                            // Model found:
+                            return l_True;
+                        }
+                    } else {
+                    // Increase decision level and enqueue 'next'
+                    newDecisionLevel();
+#if BRANCHING_HEURISTIC == CHB
+                    action = trail.size();
+#endif
+                    uncheckedEnqueue(next);
+                    }
+
+                } else {
+                    // Increase decision level and enqueue 'next'
+                    newDecisionLevel();
+#if BRANCHING_HEURISTIC == CHB
+                    action = trail.size();
+#endif
+                    uncheckedEnqueue(next);
+                }
+
             }
-
-            if (next == lit_Undef){
-                // New variable decision:
-                decisions++;
-                next = pickBranchLit();
-
-                if (next == lit_Undef)
-                    // Model found:
-                    return l_True;
-            }
-
-            // Increase decision level and enqueue 'next'
-            newDecisionLevel();
-            action = trail.size();
-            uncheckedEnqueue(next);
         }
     }
 }
