@@ -1200,6 +1200,23 @@ lbool Solver::search(int nof_conflicts)
                 else {
                     CRef cr = ca.alloc(learnt_clause, true);
                     learnts.push(cr);
+#ifdef LBD_BASED_CLAUSE_DELETION
+                    Clause& clause = ca[cr];
+                    int l = lbd(clause);
+                    if (conflictC == 1) {
+                        macd_short = l;
+                        macd_long = l;
+                        blocking_long = nAssigns();
+                    } else {
+                        macd_short = macd_short_step_size * macd_short + (1.0 - macd_short_step_size) * l;
+                        macd_long = macd_long_step_size * macd_long + (1.0 - macd_long_step_size) * l;
+                        blocking_long = blocking_step_size * blocking_long + (1.0 - blocking_step_size) * nAssigns();
+                    }
+                    clause.activity() = l;
+                    lbds += l;
+#else
+                    claBumpActivity(ca[cr]);
+#endif
                     attachClause(cr);
                     uncheckedEnqueue(learnt_clause[0], cr);
                 }
@@ -1241,6 +1258,23 @@ lbool Solver::search(int nof_conflicts)
                             else {
                                 CRef cr = ca.alloc(learnt_clause, true);
                                 learnts.push(cr);
+#ifdef LBD_BASED_CLAUSE_DELETION
+                                Clause& clause = ca[cr];
+                                int l = lbd(clause);
+                                if (conflictC == 1) {
+                                    macd_short = l;
+                                    macd_long = l;
+                                    blocking_long = nAssigns();
+                                } else {
+                                    macd_short = macd_short_step_size * macd_short + (1.0 - macd_short_step_size) * l;
+                                    macd_long = macd_long_step_size * macd_long + (1.0 - macd_long_step_size) * l;
+                                    blocking_long = blocking_step_size * blocking_long + (1.0 - blocking_step_size) * nAssigns();
+                                }
+                                clause.activity() = l;
+                                lbds += l;
+#else
+                                claBumpActivity(ca[cr]);
+#endif
                                 attachClause(cr);
                                 uncheckedEnqueue(learnt_clause[0], cr);
                             }
