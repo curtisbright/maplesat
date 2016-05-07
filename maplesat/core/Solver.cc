@@ -55,7 +55,8 @@ static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interv
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 
-static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX)); 
+static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_period    (_cat, "period",     "Period of programmatic check", 1, IntRange(1, INT32_MAX));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -123,7 +124,7 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-  , programmaticFreq   (1)
+  , programmaticPeriod (opt_period)
   , programmaticCount  (0)
 {
     for (int i = 0; i < NUM_RESTART_TYPES; i++) {
@@ -811,7 +812,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
 
   programmaticCount++;
   bool result = false;
-  if(programmaticCount >= programmaticFreq)
+  if(programmaticCount >= programmaticPeriod)
   {  programmaticCount = 0;
      if(programmatic_check(out_learnt, out_btlevel))
      {
@@ -1247,7 +1248,7 @@ lbool Solver::search(int nof_conflicts)
                     if (next == lit_Undef) {
                         // Add call to python here
                         learnt_clause.clear();
-                        programmaticCount = programmaticFreq;
+                        programmaticCount = programmaticPeriod;
                         
                         if(callback_function(learnt_clause, backtrack_level)) {
                             conflicts++; conflictC++;

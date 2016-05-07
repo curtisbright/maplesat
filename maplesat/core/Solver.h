@@ -290,7 +290,7 @@ protected:
     int      level            (Var x) const;
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
-    unsigned int programmaticFreq;
+    unsigned int programmaticPeriod;
     unsigned int programmaticCount;
 
     // Static helpers:
