@@ -367,9 +367,10 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
         }*/
         if (!seen[var(q)] && level(var(q)) > 0){
             // varBumpActivity(var(q));
+            // conflicted[var(q)]++;
             conflicted[var(q)] = conflicts;
             seen[var(q)] = 1;
-            if (level(var(q)) >= decisionLevel())
+            if (level(var(q)) >= cur_max)
                 pathC++;
             else
                 out_learnt.push(q);
@@ -411,9 +412,10 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
             }*/
             if (!seen[var(q)] && level(var(q)) > 0){
                 // varBumpActivity(var(q));
+                // conflicted[var(q)]++;
                 conflicted[var(q)] = conflicts;
                 seen[var(q)] = 1;
-                if (level(var(q)) >= decisionLevel())
+                if (level(var(q)) >= cur_max)
                     pathC++;
                 else
                     out_learnt.push(q);
