@@ -25,7 +25,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
-#define PRINTCONF
+//#define PRINTCONF
 
 using namespace Minisat;
 
@@ -733,7 +733,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         assert(num_reals + num_imags == golay_dimension);
         if((carda % 2 != num_reals % 2) || (cardb % 2 != num_imags % 2))
         {
-            for (int i = 0; i<golay_dimension*2; i++)
+            for (int i = 0; i<golay_dimension*2; i+=2)
             {
 	            if(assigns[i] == l_False)
     	            conflict.push(mkLit(i,true));
@@ -762,7 +762,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         int num_real_trues = (carda+num_reals)/2;
         if(real_true_count > num_real_trues || real_false_count > golay_dimension - num_real_trues)
         {
-            for (int i = 0; i<golay_dimension*2; i++)
+            for (int i = 0; i<golay_dimension*2; i+=2)
             {
 	            if(assigns[i] == l_False)
     	            conflict.push(mkLit(i,true));
@@ -795,7 +795,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         int num_imag_trues = (cardb+num_imags)/2;
         if(imag_true_count > num_imag_trues || imag_false_count > golay_dimension - num_imag_trues)
         {
-            for (int i = 0; i<golay_dimension*2; i++)
+            for (int i = 0; i<golay_dimension*2; i+=2)
             {
 	            if(assigns[i] == l_False)
     	            conflict.push(mkLit(i,true));
@@ -861,7 +861,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         assert(num_reals + num_imags == golay_dimension);
         if((cardc % 2 != num_reals % 2) || (cardd % 2 != num_imags % 2))
         {
-            for (int i=golay_dimension*2; i<no_of_significant_vars; i++)
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
             {
 	            if(assigns[i] == l_False)
     	            conflict.push(mkLit(i,true));
@@ -890,7 +890,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         int num_real_trues = (cardc+num_reals)/2;
         if(real_true_count > num_real_trues || real_false_count > golay_dimension - num_real_trues)
         {
-            for (int i=golay_dimension*2; i<no_of_significant_vars; i++)
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
             {
 	            if(assigns[i] == l_False)
     	            conflict.push(mkLit(i,true));
@@ -923,7 +923,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         int num_imag_trues = (cardd+num_imags)/2;
         if(imag_true_count > num_imag_trues || imag_false_count > golay_dimension - num_imag_trues)
         {
-            for (int i=golay_dimension*2; i<no_of_significant_vars; i++)
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
             {
 	            if(assigns[i] == l_False)
     	            conflict.push(mkLit(i,true));
