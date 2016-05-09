@@ -156,6 +156,7 @@ public:
     double reward_multiplier;
     vec<uint64_t> conflicted;
     int order;
+    int carda, cardb, cardc, cardd;
 
 protected:
 
@@ -260,6 +261,7 @@ protected:
         return lbd;
     }
     bool     programmatic_check(vec<Lit>& out_learnt, int& out_btlevel);
+    bool     cardinality_check(/*Lit isReal, Var start_var, Var end_var, int card,*/ vec<Lit>& out_learnt, int& out_btlevel);
     bool     callback_function(vec<Lit>& out_learnt, int& out_btlevel);
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').

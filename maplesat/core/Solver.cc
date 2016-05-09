@@ -56,6 +56,10 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 
 static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_carda     (_cat, "carda",      "Cardinality of row A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardb     (_cat, "cardb",      "Cardinality of row B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardc     (_cat, "cardc",      "Cardinality of row C", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_period    (_cat, "period",     "Period of programmatic check", 1, IntRange(1, INT32_MAX));
 
 //=================================================================================================
@@ -107,6 +111,10 @@ Solver::Solver() :
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
   , order(opt_order)
+  , carda (opt_carda)
+  , cardb (opt_cardb)
+  , cardc (opt_cardc)
+  , cardd (opt_cardd)
 
   , ok                 (true)
   , cla_inc            (1)
@@ -125,7 +133,6 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
   , programmaticPeriod (opt_period)
-  , programmaticCount  (0)
 {
     for (int i = 0; i < NUM_RESTART_TYPES; i++) {
         restart_activity[i] = 0;
@@ -683,6 +690,223 @@ bool hall_check(std::complex<double> seq[], int len, int nchecks)
   return true;
 }
 
+bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int card,*/
+                vec<Lit>& out_learnt, int& out_btlevel)
+{
+
+    vec<Lit> conflict;
+    int golay_dimension = order;
+    int no_of_significant_vars = golay_dimension * 4;
+
+    bool atype_complete = true;
+    int num_reals = 0;
+    int real_true_count = 0;
+    int real_false_count = 0;
+    int num_imags = 0;
+    int imag_true_count = 0;
+    int imag_false_count = 0;
+
+    for(int i=0; i<golay_dimension*2; i+=2)
+    {   if(assigns[i] == l_Undef)
+        {   atype_complete = false;
+            break;
+        }
+        else if(assigns[i] == l_False)
+        {   num_reals++;
+            if(assigns[i+1] == l_False)
+                real_false_count++;
+            else if(assigns[i+1] == l_True)
+                real_true_count++;
+        }
+        else if(assigns[i] == l_True)
+        {   num_imags++;
+            if(assigns[i+1] == l_False)
+                imag_false_count++;
+            else if(assigns[i+1] == l_True)
+                imag_true_count++;
+        }
+    }
+
+    if(atype_complete)
+    {   
+        assert(num_reals + num_imags == golay_dimension);
+        if((carda % 2 != num_reals % 2) || (cardb % 2 != num_imags % 2))
+        {
+            for (int i = 0; i<golay_dimension*2; i++)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,true));
+        	    else
+                    conflict.push(mkLit(i,false));
+            }
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+  printf("size %d\tconflict:", conflict.size());
+  for(int i=0; i<conflict.size(); i++)
+    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+  printf("\n");
+  printf("size %d\tout learnt:", out_learnt.size());
+  for(int i=0; i<out_learnt.size(); i++)
+    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+  printf("\n");
+            return true;
+        }
+        int num_real_trues = (carda+num_reals)/2;
+        if(real_true_count > num_real_trues || real_false_count > golay_dimension - num_real_trues)
+        {
+            for (int i = 0; i<golay_dimension*2; i++)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,true));
+        	    else
+                    conflict.push(mkLit(i,false));
+                if(real_true_count > num_real_trues && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,false));
+                else if(real_false_count > golay_dimension - num_real_trues && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,true));
+            }
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+  printf("size %d\tconflict:", conflict.size());
+  for(int i=0; i<conflict.size(); i++)
+    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+  printf("\n");
+  printf("size %d\tout learnt:", out_learnt.size());
+  for(int i=0; i<out_learnt.size(); i++)
+    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+  printf("\n");
+            return true;
+        }
+        int num_imag_trues = (cardb+num_imags)/2;
+        if(imag_true_count > num_imag_trues || imag_false_count > golay_dimension - num_imag_trues)
+        {
+            for (int i = 0; i<golay_dimension*2; i++)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,true));
+        	    else
+                    conflict.push(mkLit(i,false));
+                if(imag_true_count > num_imag_trues && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,false));
+                else if(imag_false_count > golay_dimension - num_imag_trues && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,true));
+            }
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+  printf("size %d\tconflict:", conflict.size());
+  for(int i=0; i<conflict.size(); i++)
+    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+  printf("\n");
+  printf("size %d\tout learnt:", out_learnt.size());
+  for(int i=0; i<out_learnt.size(); i++)
+    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+  printf("\n");
+            return true;
+        }
+    }
+
+    bool btype_complete = true;
+    num_reals = 0;
+    real_true_count = 0;
+    real_false_count = 0;
+    num_imags = 0;
+    imag_true_count = 0;
+    imag_false_count = 0;
+
+    for(int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+    {   if(assigns[i] == l_Undef)
+        {   btype_complete = false;
+            break;
+        }
+        else if(assigns[i] == l_False)
+        {   num_reals++;
+            if(assigns[i+1] == l_False)
+                real_false_count++;
+            else if(assigns[i+1] == l_True)
+                real_true_count++;
+        }
+        else if(assigns[i] == l_True)
+        {   num_imags++;
+            if(assigns[i+1] == l_False)
+                imag_false_count++;
+            else if(assigns[i+1] == l_True)
+                imag_true_count++;
+        }
+    }
+
+    if(btype_complete)
+    {
+        assert(num_reals + num_imags == golay_dimension);
+        if((cardc % 2 != num_reals % 2) || (cardd % 2 != num_imags % 2))
+        {
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i++)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,true));
+        	    else
+                    conflict.push(mkLit(i,false));
+            }
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+  printf("size %d\tconflict:", conflict.size());
+  for(int i=0; i<conflict.size(); i++)
+    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+  printf("\n");
+  printf("size %d\tout learnt:", out_learnt.size());
+  for(int i=0; i<out_learnt.size(); i++)
+    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+  printf("\n");
+            return true;
+        }
+        int num_real_trues = (cardc+num_reals)/2;
+        if(real_true_count > num_real_trues || real_false_count > golay_dimension - num_real_trues)
+        {
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i++)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,true));
+        	    else
+                    conflict.push(mkLit(i,false));
+                if(real_true_count > num_real_trues && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,false));
+                else if(real_false_count > golay_dimension - num_real_trues && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,true));
+            }
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+            return true;
+        }
+        int num_imag_trues = (cardd+num_imags)/2;
+        if(imag_true_count > num_imag_trues || imag_false_count > golay_dimension - num_imag_trues)
+        {
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i++)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,true));
+        	    else
+                    conflict.push(mkLit(i,false));
+                if(imag_true_count > num_imag_trues && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,false));
+                else if(imag_false_count > golay_dimension - num_imag_trues && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,true));
+            }
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+  printf("size %d\tconflict:", conflict.size());
+  for(int i=0; i<conflict.size(); i++)
+    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+  printf("\n");
+  printf("size %d\tout learnt:", out_learnt.size());
+  for(int i=0; i<out_learnt.size(); i++)
+    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+  printf("\n");
+            return true;
+        }
+    }
+
+    return false;    
+}
+
 bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
 				out_btlevel)
 {
@@ -750,7 +974,6 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
   }
 
   vec<Lit> conflict;
-  out_learnt.clear();
 
   if (a_complete)
   {
@@ -789,6 +1012,8 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
   if(conflict.size()==0)
     return false;
 
+  out_learnt.clear();
+
   if(conflict.size()==1)
   { out_btlevel = 0;
     conflict.copyTo(out_learnt);
@@ -816,6 +1041,11 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
   {  programmaticCount = 0;
      if(programmatic_check(out_learnt, out_btlevel))
      {
+       result = true;
+     }
+     else if(carda != -1 && cardb != -1 && cardc != -1 && cardd != -1 && cardinality_check(out_learnt, out_btlevel))
+     {
+        //printf("carda: %d, cardb: %d, cardc: %d, cardd: %d\n", carda, cardb, cardc, cardd);
        result = true;
      }
   }
