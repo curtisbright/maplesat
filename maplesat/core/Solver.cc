@@ -21,10 +21,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <math.h>
 #include <cstdio>
 #include <complex>
-#include <fstream>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
+
+#define PRINTCONF
 
 using namespace Minisat;
 
@@ -739,16 +740,23 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         	    else
                     conflict.push(mkLit(i,false));
             }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of reals/imags in A\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+            printf("\n");
+#endif
+
             out_learnt.clear();
             analyze(conflict, out_learnt, out_btlevel);
-  printf("size %d\tconflict:", conflict.size());
-  for(int i=0; i<conflict.size(); i++)
-    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
-  printf("\n");
-  printf("size %d\tout learnt:", out_learnt.size());
-  for(int i=0; i<out_learnt.size(); i++)
-    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
-  printf("\n");
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+            printf("\n");
+#endif
             return true;
         }
         int num_real_trues = (carda+num_reals)/2;
@@ -765,16 +773,23 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
                 else if(real_false_count > golay_dimension - num_real_trues && assigns[i+1] == l_False)
                     conflict.push(mkLit(i+1,true));
             }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of real trues in A\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+            printf("\n");
+#endif
+
             out_learnt.clear();
             analyze(conflict, out_learnt, out_btlevel);
-  printf("size %d\tconflict:", conflict.size());
-  for(int i=0; i<conflict.size(); i++)
-    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
-  printf("\n");
-  printf("size %d\tout learnt:", out_learnt.size());
-  for(int i=0; i<out_learnt.size(); i++)
-    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
-  printf("\n");
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+            printf("\n");
+#endif
             return true;
         }
         int num_imag_trues = (cardb+num_imags)/2;
@@ -791,16 +806,23 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
                 else if(imag_false_count > golay_dimension - num_imag_trues && assigns[i+1] == l_False)
                     conflict.push(mkLit(i+1,true));
             }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of imag trues in A\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+            printf("\n");
+#endif
+
             out_learnt.clear();
             analyze(conflict, out_learnt, out_btlevel);
-  printf("size %d\tconflict:", conflict.size());
-  for(int i=0; i<conflict.size(); i++)
-    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
-  printf("\n");
-  printf("size %d\tout learnt:", out_learnt.size());
-  for(int i=0; i<out_learnt.size(); i++)
-    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
-  printf("\n");
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+            printf("\n");
+#endif
             return true;
         }
     }
@@ -846,16 +868,23 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         	    else
                     conflict.push(mkLit(i,false));
             }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of reals/imags in B\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+            printf("\n");
+#endif
+
             out_learnt.clear();
             analyze(conflict, out_learnt, out_btlevel);
-  printf("size %d\tconflict:", conflict.size());
-  for(int i=0; i<conflict.size(); i++)
-    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
-  printf("\n");
-  printf("size %d\tout learnt:", out_learnt.size());
-  for(int i=0; i<out_learnt.size(); i++)
-    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
-  printf("\n");
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+            printf("\n");
+#endif
             return true;
         }
         int num_real_trues = (cardc+num_reals)/2;
@@ -872,8 +901,23 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
                 else if(real_false_count > golay_dimension - num_real_trues && assigns[i+1] == l_False)
                     conflict.push(mkLit(i+1,true));
             }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of real trues in B\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+            printf("\n");
+#endif
+
             out_learnt.clear();
             analyze(conflict, out_learnt, out_btlevel);
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+            printf("\n");
+#endif
             return true;
         }
         int num_imag_trues = (cardd+num_imags)/2;
@@ -890,16 +934,22 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
                 else if(imag_false_count > golay_dimension - num_imag_trues && assigns[i+1] == l_False)
                     conflict.push(mkLit(i+1,true));
             }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of imag trues in B\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
+#endif
+
             out_learnt.clear();
             analyze(conflict, out_learnt, out_btlevel);
-  printf("size %d\tconflict:", conflict.size());
-  for(int i=0; i<conflict.size(); i++)
-    printf(" %c%d", sign(conflict[i]) ? '+' : '-', var(conflict[i])+1);
-  printf("\n");
-  printf("size %d\tout learnt:", out_learnt.size());
-  for(int i=0; i<out_learnt.size(); i++)
-    printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
-  printf("\n");
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d", sign(out_learnt[i]) ? '+' : '-', var(out_learnt[i])+1);
+            printf("\n");
+#endif
             return true;
         }
     }
@@ -1045,7 +1095,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
      }
      else if(carda != -1 && cardb != -1 && cardc != -1 && cardd != -1 && cardinality_check(out_learnt, out_btlevel))
      {
-        //printf("carda: %d, cardb: %d, cardc: %d, cardd: %d\n", carda, cardb, cardc, cardd);
+       //printf("carda: %d, cardb: %d, cardc: %d, cardd: %d\n", carda, cardb, cardc, cardd);
        result = true;
      }
   }
