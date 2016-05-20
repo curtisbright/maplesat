@@ -691,7 +691,7 @@ bool hall_check(std::complex<double> seq[], int len, int nchecks)
   return true;
 }
 
-#define PRINTCONF
+//#define PRINTCONF
 
 bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int card,*/
                 vec<Lit>& out_learnt, int& out_btlevel)
@@ -709,10 +709,12 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
     int imag_true_count = 0;
     int imag_false_count = 0;
 
+#ifdef PRINTCONF
     int real_A = 0;
     int imag_A = 0;
     int real_B = 0;
     int imag_B = 0;
+#endif
 
     for(int i=0; i<golay_dimension*2; i+=2)
     {   if(assigns[i] == l_Undef)
@@ -932,8 +934,10 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         }
     }
 
+#ifdef PRINTCONF
     real_A = -real_true_count + real_false_count;
     imag_A = -imag_true_count + imag_false_count;
+#endif
 
     bool btype_complete = true;
     num_reals = 0;
@@ -1156,6 +1160,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         }
     }
 
+#ifdef PRINTCONF
     real_B = -real_true_count + real_false_count;
     imag_B = -imag_true_count + imag_false_count;
 
@@ -1226,6 +1231,7 @@ bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int car
         }
         printf(")\n");
     }
+#endif
 
     return false;    
 }
