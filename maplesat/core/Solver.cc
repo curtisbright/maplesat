@@ -25,6 +25,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
+#include <assert.h>
 //#define PRINTCONF
 
 using namespace Minisat;
@@ -62,6 +63,8 @@ static IntOption     opt_cardb     (_cat, "cardb",      "Cardinality of row B", 
 static IntOption     opt_cardc     (_cat, "cardc",      "Cardinality of row C", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_period    (_cat, "period",     "Period of programmatic check", 1, IntRange(1, INT32_MAX));
+
+static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -116,6 +119,7 @@ Solver::Solver() :
   , cardb (opt_cardb)
   , cardc (opt_cardc)
   , cardd (opt_cardd)
+  , prodvars (opt_prodvars)
 
   , ok                 (true)
   , cla_inc            (1)
@@ -691,12 +695,166 @@ bool hall_check(std::complex<double> seq[], int len, int nchecks)
   return true;
 }
 
-//#define PRINTCONF
+bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
+{
+    FILE* prodvar_file = fopen(prodvars, "r");
+    if(prodvar_file == NULL)
+      printf("ERROR! Could not open file: %s\n", prodvars), exit(1);
 
-bool Solver::cardinality_check(/*Lit isReal, Var start_var, Var end_var, int card,*/
-                vec<Lit>& out_learnt, int& out_btlevel)
-{   //return false;
+    std::complex<double> zero (0, 0);
+    std::complex<double> one (1, 0);
+    std::complex<double> neg_one (-1, 0);
+    std::complex<double> imag_unit (0, 1);
+    std::complex<double> neg_imag_unit (0, -1);
+    std::complex<double> Ae[order], Be[order];
+    int A[order][order], B[order][order];
+    char seq = '\0';
+    int i = 0, j = 0, var = 0;
+    while(fscanf(prodvar_file, "%c %d %d %d\n", &seq, &i, &j, &var) == 4)
+    { //printf("%c %d %d %d\n", seq, i, j, var);
+      if(seq == 'A')
+      {
+        A[i][j] = var-1;
+      }
+      else if(seq == 'B')
+      {
+        B[i][j] = var-1;
+      }
+      else
+        printf("ERROR! Unknown seq type: %c\n", seq), exit(1);
+    }
 
+    fclose(prodvar_file);
+
+    printf("A assigns: ");
+    for(i = 0; i<order*2; i+=2)
+    {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+            printf("1 "), Ae[i/2].real(1), Ae[i/2].imag(0);
+        else if(assigns[i] == l_False && assigns[i+1] == l_True)
+            printf("-1 "), Ae[i/2].real(-1), Ae[i/2].imag(0);
+        else if(assigns[i] == l_True && assigns[i+1] == l_False)
+            printf("i "), Ae[i/2].real(0), Ae[i/2].imag(1);
+        else if(assigns[i] == l_True && assigns[i+1] == l_True)
+            printf("-i "), Ae[i/2].real(0), Ae[i/2].imag(-1);
+        else if(assigns[i] == l_False)
+            printf("R ");
+        else if(assigns[i] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+    }
+    printf("\n");
+
+    printf("A product assigns:\n");
+    for(i=0; i<order; i++)
+    { for(j=i+1; j<order; j++)
+      { /*if(assigns[A[i][j]]==l_False)
+          printf("F");
+        else if(assigns[A[i][j]]==l_True)
+          printf("T");
+        else if(assigns[A[i][j]]==l_Undef)
+          printf("?");
+        if(assigns[A[i][j]+1]==l_False)
+          printf("F");
+        else if(assigns[A[i][j]+1]==l_True)
+          printf("T");
+        else if(assigns[A[i][j]+1]==l_Undef)
+          printf("?");*/
+        //printf("%d ", A[i][j]);
+        int var = A[i][j];
+        if(assigns[var] == l_False && assigns[var+1] == l_False)
+        {   printf("1 ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == one);
+        }
+        else if(assigns[var] == l_False && assigns[var+1] == l_True)
+        {   printf("-1 ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == neg_one);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_False)
+        {   printf("i ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == imag_unit);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_True)
+        {   printf("-i ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == neg_imag_unit);
+        }
+        else if(assigns[var] == l_False)
+            printf("R ");
+        else if(assigns[var] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+      }
+      printf("\n");
+    }
+
+    printf("B assigns: ");
+    for(i = order*2; i<order*4; i+=2)
+    {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+            printf("1 "), Be[(i-2*order)/2].real(1), Be[(i-2*order)/2].imag(0);
+        else if(assigns[i] == l_False && assigns[i+1] == l_True)
+            printf("-1 "), Be[(i-2*order)/2].real(-1), Be[(i-2*order)/2].imag(0);
+        else if(assigns[i] == l_True && assigns[i+1] == l_False)
+            printf("i "), Be[(i-2*order)/2].real(0), Be[(i-2*order)/2].imag(1);
+        else if(assigns[i] == l_True && assigns[i+1] == l_True)
+            printf("-i "), Be[(i-2*order)/2].real(0), Be[(i-2*order)/2].imag(-1);
+        else if(assigns[i] == l_False)
+            printf("R ");
+        else if(assigns[i] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+    }
+    printf("\n");
+
+    printf("B product assigns:\n");
+    for(i=0; i<order; i++)
+    { for(j=i+1; j<order; j++)
+      { /*if(assigns[B[i][j]]==l_False)
+          printf("F");
+        else if(assigns[B[i][j]]==l_True)
+          printf("T");
+        else if(assigns[B[i][j]]==l_Undef)
+          printf("?");
+        if(assigns[B[i][j]+1]==l_False)
+          printf("F");
+        else if(assigns[B[i][j]+1]==l_True)
+          printf("T");
+        else if(assigns[B[i][j]+1]==l_Undef)
+          printf("?");*/
+        //printf("%d ", B[i][j]);
+        int var = B[i][j];
+        if(assigns[var] == l_False && assigns[var+1] == l_False)
+        {   printf("1 ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == one);
+        }
+        else if(assigns[var] == l_False && assigns[var+1] == l_True)
+        {   printf("-1 ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == neg_one);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_False)
+        {   printf("i ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == imag_unit);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_True)
+        {   printf("-i ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == neg_imag_unit);
+        }
+        else if(assigns[var] == l_False)
+            printf("R ");
+        else if(assigns[var] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+      }
+      printf("\n");
+    }
+
+    return false;
+}
+
+bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
+{
     vec<Lit> conflict;
     int golay_dimension = order;
     int no_of_significant_vars = golay_dimension * 4;
@@ -1379,23 +1537,11 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
        result = true;
      }
      else if(carda != -1 && cardb != -1 && cardc != -1 && cardd != -1 && cardinality_check(out_learnt, out_btlevel))
-     { 
-        /*if(carda == 1 and cardb == 1 and cardc == 1 and cardd == 3 and order == 6)
-        {
-           char* onesol = "FFTFFFFTFTFFTTTFTFTFFFTF";
-           bool at_least_one_true = false;
-           for(int i=0; i<out_learnt.size(); i++)
-           {    if(sign(out_learnt[i]) && onesol[var(out_learnt[i])] == 'T')
-                    at_least_one_true = true;
-                else if(!sign(out_learnt[i]) && onesol[var(out_learnt[i])] == 'F')
-                    at_least_one_true = true;
-           }
-           if(!at_least_one_true)
-           {    printf("CONFLICT CLAUSE PROBLEM\n");
-                exit(0);
-           }
-        }*/
-
+     {
+        result = true;
+     }
+     else if(prodvars != NULL && autocorrelation_check(out_learnt, out_btlevel))
+     {
         result = true;
      }
   }
