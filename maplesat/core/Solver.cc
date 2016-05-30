@@ -850,6 +850,17 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
       printf("\n");
     }
 
+    bool complete = true;
+    for(i=0; i<order*4; i++)
+    {   if(assigns[i] == l_Undef)
+        {   complete = false;
+            break;
+        }
+    }
+
+    if(complete)
+        printf("complete!\n");
+
     return false;
 }
 
