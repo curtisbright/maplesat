@@ -701,13 +701,22 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
     if(prodvar_file == NULL)
       printf("ERROR! Could not open file: %s\n", prodvars), exit(1);
 
+#ifdef PRINTCONF
     std::complex<double> zero (0, 0);
     std::complex<double> one (1, 0);
     std::complex<double> neg_one (-1, 0);
     std::complex<double> imag_unit (0, 1);
     std::complex<double> neg_imag_unit (0, -1);
     std::complex<double> Ae[order], Be[order];
+#endif
     int A[order][order], B[order][order];
+
+    /*for(int i = 0; i < order; i++)
+      for(int j = i+1; j < order; j++)
+      { A[i][j] = 0;
+        B[i][j] = 0;
+      }*/
+
     char seq = '\0';
     int i = 0, j = 0, var = 0;
     while(fscanf(prodvar_file, "%c %d %d %d\n", &seq, &i, &j, &var) == 4)
@@ -726,6 +735,13 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
 
     fclose(prodvar_file);
 
+    /*for(i = 0; i < order; i++)
+      for(j = i+1; j < order; j++)
+      { assert(A[i][j] > 0);
+        assert(B[i][j] > 0);
+      }*/
+
+#ifdef PRINTCONF
     printf("A assigns: ");
     for(i = 0; i<order*2; i+=2)
     {   if(assigns[i] == l_False && assigns[i+1] == l_False)
@@ -849,17 +865,131 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
       }
       printf("\n");
     }
+#endif
 
-    bool complete = true;
-    for(i=0; i<order*4; i++)
-    {   if(assigns[i] == l_Undef)
-        {   complete = false;
-            break;
+    vec<Lit> conflict;
+
+    for(j = 1; j < order; j++)
+    {
+        bool complete = true;
+        int num_reals = 0;
+        int num_imags = 0;
+        int real_true_count = 0;
+        int real_false_count = 0;
+        int imag_true_count = 0;
+        int imag_false_count = 0;
+
+        for(i = 0; i < order-j; i++)
+        {   for(int k = 0; k < 2; k++)
+            {   if(k==0)
+                    var = A[i][i+j];
+                else
+                    var = B[i][i+j];
+                if(assigns[var] == l_Undef)
+                {   complete = false;
+                    break;
+                }
+                else if(assigns[var] == l_False)
+                {   num_reals++;
+                    if(assigns[var+1] == l_False)
+                        real_false_count++;
+                    else if(assigns[var+1] == l_True)
+                        real_true_count++;
+                }
+                else if(assigns[var] == l_True)
+                {   num_imags++;
+                    if(assigns[var+1] == l_False)
+                        imag_false_count++;
+                    else if(assigns[var+1] == l_True)
+                        imag_true_count++;
+                }
+            }
+            if(complete == false)
+              break;
         }
-    }
+        if(complete == false)
+          continue;
 
-    if(complete)
-        printf("complete!\n");
+        if(num_reals % 2 != 0 || num_imags % 2 != 0)
+        {
+            for(i = 0; i < order-j; i++)
+            {   for(int k = 0; k < 2; k++)
+                {   if(k==0)
+                        var = A[i][i+j];
+                    else
+                        var = B[i][i+j];
+
+                    assert(assigns[var] != l_Undef);
+                    if(assigns[var] == l_False)
+                        conflict.push(mkLit(var, false));
+                    else
+                        conflict.push(mkLit(var, true));
+                }
+            }
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+
+            return true;
+        }
+
+        if(real_false_count > num_reals/2 || real_true_count > num_reals/2)
+        {
+            for(i = 0; i < order-j; i++)
+            {   for(int k = 0; k < 2; k++)
+                {   if(k==0)
+                        var = A[i][i+j];
+                    else
+                        var = B[i][i+j];
+
+                    assert(assigns[var] != l_Undef);
+                    if(assigns[var] == l_False)
+                        conflict.push(mkLit(var, false));
+                    else
+                        conflict.push(mkLit(var, true));
+
+                    if(real_false_count > num_reals/2 && assigns[var+1] == l_False)
+                        conflict.push(mkLit(var+1, false));
+                    else if(real_true_count > num_reals/2 && assigns[var+1] == l_True)
+                        conflict.push(mkLit(var+1, true));
+                }
+            }
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+
+            return true;
+        }
+
+        if(imag_false_count > num_imags/2 || imag_true_count > num_imags/2)
+        {
+            for(i = 0; i < order-j; i++)
+            {   for(int k = 0; k < 2; k++)
+                {   if(k==0)
+                        var = A[i][i+j];
+                    else
+                        var = B[i][i+j];
+
+                    assert(assigns[var] != l_Undef);
+                    if(assigns[var] == l_False)
+                        conflict.push(mkLit(var, false));
+                    else
+                        conflict.push(mkLit(var, true));
+
+                    if(imag_false_count > num_imags/2 && assigns[var+1] == l_False)
+                        conflict.push(mkLit(var+1, false));
+                    else if(imag_true_count > num_imags/2 && assigns[var+1] == l_True)
+                        conflict.push(mkLit(var+1, true));
+                }
+            }
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel);
+
+            return true;
+        }
+
+    }
 
     return false;
 }
