@@ -33,6 +33,9 @@ using namespace Minisat;
 //=================================================================================================
 // Options:
 
+#ifndef NDEBUG
+#define PRINTCONF
+#endif
 
 static const char* _cat = "CORE";
 
@@ -329,7 +332,7 @@ restart_type Solver::pickRestart() {
 
 /*_________________________________________________________________________________________________
 |
-|  analyze : (confl : vec<Lit>&) (out_learnt : vec<Lit>&) (out_btlevel : int&)  ->  [void]
+|  analyze : (conflvec : vec<Lit>&) (out_learnt : vec<Lit>&) (out_btlevel : int&)  ->  [void]
 |  
 |  Description:
 |    Analyze conflict and produce a reason clause.
@@ -357,12 +360,25 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
            }
     }
 
+#ifdef PRINTCONF
+    printf("cur_max: %d\tdecisionLevel: %d\t%s\ntrail: ", cur_max, decisionLevel(), cur_max != decisionLevel() ? "NOT EQUAL!" : "");
+
+    for(int j=0; j < trail.size(); j++)
+    {   printf("%c%d (%d) ", sign(trail[j]) ? '-' : '+', var(trail[j])+1, level(var(trail[j])));
+    }
+    printf("\n");
+#endif
+
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
     int index   = trail.size() - 1;
 
-    for (int j = (p == lit_Undef) ? 0 : 1; j < conflvec.size(); j++){
+    assert(p == lit_Undef);
+#ifdef PRINTCONF
+    printf("conflicts: %ld\n", conflicts);
+#endif
+    for (int j = 0; j < conflvec.size(); j++){
         Lit q = conflvec[j];
 
         /*if (!seen[var(q)] && level(var(q)) > 0){
@@ -407,6 +423,9 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
             claBumpActivity(c);
 #endif
 
+#ifdef PRINTCONF
+        printf("conflicts: %ld\n", conflicts);
+#endif
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
 
@@ -1083,7 +1102,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
         printf(")\n");
             printf("size %d\tconflict:", conflict.size());
             for(int i=0; i<conflict.size(); i++)
-                printf(" %c%d", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1);
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
             printf("\n");
 #endif
 
@@ -1093,7 +1112,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
 #ifdef PRINTCONF
             printf("size %d\tout learnt:", out_learnt.size());
             for(int i=0; i<out_learnt.size(); i++)
-                printf(" %c%d", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1);
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
             printf("\n");
 #endif
             return true;
@@ -1152,7 +1171,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
         printf(")\n");
             printf("size %d\tconflict:", conflict.size());
             for(int i=0; i<conflict.size(); i++)
-                printf(" %c%d", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1);
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
             printf("\n");
 #endif
 
@@ -1162,7 +1181,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
 #ifdef PRINTCONF
             printf("size %d\tout learnt:", out_learnt.size());
             for(int i=0; i<out_learnt.size(); i++)
-                printf(" %c%d", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1);
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
             printf("\n");
 #endif
             return true;
@@ -1216,7 +1235,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
         printf(")\n");
             printf("size %d\tconflict:", conflict.size());
             for(int i=0; i<conflict.size(); i++)
-                printf(" %c%d", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1);
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
             printf("\n");
 #endif
 
@@ -1226,7 +1245,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
 #ifdef PRINTCONF
             printf("size %d\tout learnt:", out_learnt.size());
             for(int i=0; i<out_learnt.size(); i++)
-                printf(" %c%d", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1);
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
             printf("\n");
 #endif
             return true;
@@ -1314,7 +1333,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
         printf(")\n");
             printf("size %d\tconflict:", conflict.size());
             for(int i=0; i<conflict.size(); i++)
-                printf(" %c%d", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1);
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
             printf("\n");
 #endif
 
@@ -1324,7 +1343,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
 #ifdef PRINTCONF
             printf("size %d\tout learnt:", out_learnt.size());
             for(int i=0; i<out_learnt.size(); i++)
-                printf(" %c%d", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1);
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
             printf("\n");
 #endif
             return true;
@@ -1378,7 +1397,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
         printf(")\n");
             printf("size %d\tconflict:", conflict.size());
             for(int i=0; i<conflict.size(); i++)
-                printf(" %c%d", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1);
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
             printf("\n");
 #endif
 
@@ -1388,7 +1407,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
 #ifdef PRINTCONF
             printf("size %d\tout learnt:", out_learnt.size());
             for(int i=0; i<out_learnt.size(); i++)
-                printf(" %c%d", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1);
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
             printf("\n");
 #endif
             return true;
@@ -1442,7 +1461,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
         printf(")\n");
             printf("size %d\tconflict:", conflict.size());
             for(int i=0; i<conflict.size(); i++)
-                printf(" %c%d", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1);
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
             printf("\n");
 #endif
 
@@ -1452,7 +1471,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
 #ifdef PRINTCONF
             printf("size %d\tout learnt:", out_learnt.size());
             for(int i=0; i<out_learnt.size(); i++)
-                printf(" %c%d", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1);
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
             printf("\n");
 #endif
             return true;
