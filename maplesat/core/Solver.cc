@@ -1176,7 +1176,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel)
     	            conflict.push(mkLit(i,false));
         	    else
                     conflict.push(mkLit(i,true));
-                if(imag_false_count > num_imags && assigns[i+1] == l_False)
+                if(imag_false_count > num_imag_falses && assigns[i+1] == l_False)
                     conflict.push(mkLit(i+1,false));
                 else if(imag_true_count > num_imags - num_imag_falses && assigns[i+1] == l_True)
                     conflict.push(mkLit(i+1,true));
