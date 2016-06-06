@@ -69,6 +69,9 @@ static IntOption     opt_period    (_cat, "period",     "Period of programmatic 
 
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 
+int** A;
+int** B;
+
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -721,9 +724,7 @@ bool hall_check(std::complex<double> seq[], int len, int nchecks)
 
 bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
 {
-    FILE* prodvar_file = fopen(prodvars, "r");
-    if(prodvar_file == NULL)
-      printf("ERROR! Could not open file: %s\n", prodvars), exit(1);
+    int i = 0, j = 0, var = 0;
 
 #ifdef PRINTCONF
     std::complex<double> zero (0, 0);
@@ -732,40 +733,7 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
     std::complex<double> imag_unit (0, 1);
     std::complex<double> neg_imag_unit (0, -1);
     std::complex<double> Ae[order], Be[order];
-#endif
-    int A[order][order], B[order][order];
 
-    /*for(int i = 0; i < order; i++)
-      for(int j = i+1; j < order; j++)
-      { A[i][j] = 0;
-        B[i][j] = 0;
-      }*/
-
-    char seq = '\0';
-    int i = 0, j = 0, var = 0;
-    while(fscanf(prodvar_file, "%c %d %d %d\n", &seq, &i, &j, &var) == 4)
-    { //printf("%c %d %d %d\n", seq, i, j, var);
-      if(seq == 'A')
-      {
-        A[i][j] = var-1;
-      }
-      else if(seq == 'B')
-      {
-        B[i][j] = var-1;
-      }
-      else
-        printf("ERROR! Unknown seq type: %c\n", seq), exit(1);
-    }
-
-    fclose(prodvar_file);
-
-    /*for(i = 0; i < order; i++)
-      for(j = i+1; j < order; j++)
-      { assert(A[i][j] > 0);
-        assert(B[i][j] > 0);
-      }*/
-
-#ifdef PRINTCONF
     printf("A assigns: ");
     for(i = 0; i<order*2; i+=2)
     {   if(assigns[i] == l_False && assigns[i+1] == l_False)
@@ -2245,6 +2213,39 @@ static double luby(double y, int x){
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    if(prodvars != NULL)
+    {
+        A = new int*[order];
+        B = new int*[order];
+        for(int i=0; i<order; i++)
+        {
+            A[i] = new int[order];
+            B[i] = new int[order];
+        }
+ 
+        FILE* prodvar_file = fopen(prodvars, "r");
+        if(prodvar_file == NULL)
+          printf("ERROR! Could not open file: %s\n", prodvars), exit(1);
+
+        char seq = '\0';
+        int i = 0, j = 0, var = 0;
+        while(fscanf(prodvar_file, "%c %d %d %d\n", &seq, &i, &j, &var) == 4)
+        { //printf("%c %d %d %d\n", seq, i, j, var);
+          if(seq == 'A')
+          {
+            A[i][j] = var-1;
+          }
+          else if(seq == 'B')
+          {
+            B[i][j] = var-1;
+          }
+          else
+            printf("ERROR! Unknown seq type: %c\n", seq), exit(1);
+        }
+
+        fclose(prodvar_file);
+    }
+
     model.clear();
     conflict.clear();
     if (!ok) return l_False;
@@ -2313,6 +2314,16 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
 
+    if(prodvars != NULL)
+    {
+        for(int i=0; i<order; i++)
+        {
+            delete [] A[i];
+            delete [] B[i];
+        }
+        delete [] A;
+        delete [] B;
+    }
 
     if (status == l_True){
         // Extend & copy model:
