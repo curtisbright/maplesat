@@ -369,6 +369,11 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
     printf("\n");
 #endif
 
+    if(cur_max == 0)
+    {   out_btlevel = -1;
+        return;
+    }
+
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
@@ -2080,7 +2085,7 @@ lbool Solver::search(int nof_conflicts)
 
             if(callback_function(learnt_clause, backtrack_level)) {
                 conflicts++; conflictC++;
-                if (decisionLevel() == 0) return l_False;
+                if (decisionLevel() == 0 || backtrack_level == -1) return l_False;
 
                 cancelUntil(backtrack_level);
 
@@ -2138,7 +2143,7 @@ lbool Solver::search(int nof_conflicts)
                         
                         if(callback_function(learnt_clause, backtrack_level)) {
                             conflicts++; conflictC++;
-                            if (decisionLevel() == 0) return l_False;
+                            if (decisionLevel() == 0 || backtrack_level == -1) return l_False;
 
                             cancelUntil(backtrack_level);
 
