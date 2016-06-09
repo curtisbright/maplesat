@@ -570,7 +570,7 @@ Solver::Solver() :
         B = new int*[order/2+1];
         C = new int*[order/2+1];
         D = new int*[order/2+1];
-        for(int i=0; i<order; i++)
+        for(int i=0; i<order/2+1; i++)
         {
             A[i] = new int[order/2+1];
             B[i] = new int[order/2+1];
