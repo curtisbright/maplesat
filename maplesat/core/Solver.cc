@@ -620,7 +620,7 @@ Solver::Solver() :
 Solver::~Solver()
 {   if(prodvars != NULL)
     {
-        for(int i=0; i<order; i++)
+        for(int i=0; i<order/2+1; i++)
         {
             delete [] A[i];
             delete [] B[i];
