@@ -27,6 +27,27 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <assert.h>
 
+#include <sys/time.h>
+typedef unsigned long long timestamp_t;
+
+static timestamp_t
+get_timestamp ()
+{
+  struct timeval now;
+  gettimeofday (&now, NULL);
+  return  now.tv_usec + (timestamp_t)now.tv_sec * 1000000;
+}
+
+int calls1 = 0;
+int calls2 = 0;
+int calls3 = 0;
+int success1 = 0;
+int success2 = 0;
+int success3 = 0;
+double time1 = 0;
+double time2 = 0;
+double time3 = 0;
+
 using namespace Minisat;
 
 //=================================================================================================
@@ -79,7 +100,7 @@ int compB[2][99];
 int compC[2][99];
 int compD[2][99];
 
-#ifdef PRINTCONF
+//#ifdef PRINTCONF
 void printclause(vec<Lit>& cl)
 { printf("clause size %d: ", cl.size());
   for(int i=0; i<cl.size(); i++)
@@ -87,11 +108,13 @@ void printclause(vec<Lit>& cl)
   }
   printf("\n");
 }
-#endif
+//#endif
 
 bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
 {
-  bool result = false;
+  bool result1 = false;
+  bool result2 = false;
+  bool result3 = false;
   /*programmaticCount++;
   if(programmaticCount >= programmaticPeriod)
   {  programmaticCount = 0;*/
@@ -100,21 +123,60 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
     result = true;
   }
   else*/
-  if(order != -1 && cardinality_check(out_learnt, out_btlevel))
-  {
-    result = true;
-  }
-  else if(prodvars != NULL && autocorrelation_check(out_learnt, out_btlevel))
-  {
-    result = true;
-  }
-  else if(compsums != NULL && compression_check(out_learnt, out_btlevel))
-  {
-    result = true;
-  }
-  /*}*/
   
-  return result;
+  vec<Lit> out_learnt1;
+  vec<Lit> out_learnt2;
+  vec<Lit> out_learnt3;
+  int out_btlevel1;
+  int out_btlevel2;
+  int out_btlevel3;
+  
+  if(order != -1)
+  { calls1++;
+    timestamp_t t0 = get_timestamp();
+    if(cardinality_check(out_learnt1, out_btlevel1))
+      success1++, result1 = true;
+    timestamp_t t1 = get_timestamp();
+    time1 += (t1 - t0) / 1000000.0L;
+  }
+  
+  if(prodvars != NULL)
+  { calls2++;
+    timestamp_t t0 = get_timestamp();
+    if(autocorrelation_check(out_learnt2, out_btlevel2))
+      success2++, result2 = true;
+    timestamp_t t1 = get_timestamp();
+    time2 += (t1 - t0) / 1000000.0L;
+  }
+
+  if(compsums != NULL)
+  { calls3++;
+    timestamp_t t0 = get_timestamp();
+    if(compression_check(out_learnt3, out_btlevel3))
+      success3++, result3 = true;
+    timestamp_t t1 = get_timestamp();
+    time3 += (t1 - t0) / 1000000.0L;
+  }
+  
+  if(result1)
+  { out_learnt1.copyTo(out_learnt);
+    out_btlevel = out_btlevel1;
+    return true;
+  }
+  
+  if(result2)
+  { out_learnt2.copyTo(out_learnt);
+    out_btlevel = out_btlevel2;
+    return true;
+  }
+  
+  if(result3)
+  { out_learnt3.copyTo(out_learnt);
+    out_btlevel = out_btlevel3;
+    return true;
+  }
+  
+  return false;
 }
 
 bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
@@ -567,16 +629,8 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
     //if(j==0)
     //  target = 2*n+(carda+cardb+cardc+cardd)/2;
     
-    int Aused[dim][dim];
-    int Bused[dim][dim];
-    int Cused[dim][dim];
-    int Dused[dim][dim];
     int true_sum = 0;
     int false_sum = 0;
-    
-    for(int i=0; i<dim; i++)
-      for(int k=i; k<dim; k++)
-        Aused[i][k] = 0, Bused[i][k] = 0, Cused[i][k] = 0, Dused[i][k] = 0;
     
     for(int i=0; i<n; i++)
     { 
@@ -593,67 +647,59 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
       }
       
       if(assigns[A[index1][index2]] == l_True)
-        true_sum++, Aused[index1][index2] = 1;
+        true_sum++;
       else if(assigns[A[index1][index2]] == l_False)
-        false_sum++, Aused[index1][index2] = -1;
+        false_sum++;
       if(assigns[B[index1][index2]] == l_True)
-        true_sum++, Bused[index1][index2] = 1;
+        true_sum++;
       else if(assigns[B[index1][index2]] == l_False)
-        false_sum++, Bused[index1][index2] = -1;
+        false_sum++;
       if(assigns[C[index1][index2]] == l_True)
-        true_sum++, Cused[index1][index2] = 1;
+        true_sum++;
       else if(assigns[C[index1][index2]] == l_False)
-        false_sum++, Cused[index1][index2] = -1;
+        false_sum++;
       if(assigns[D[index1][index2]] == l_True)
-        true_sum++, Dused[index1][index2] = 1;
+        true_sum++;
       else if(assigns[D[index1][index2]] == l_False)
-        false_sum++, Dused[index1][index2] = -1;
+        false_sum++;
     }
-    
+       
     if(true_sum > target)
-    { for(int i=0; i<dim; i++)
-        for(int k=i; k<dim; k++)
-        { if(Aused[i][k] == 1)
-            conflict.push(mkLit(A[i][k], true));
-          if(Bused[i][k] == 1)
-            conflict.push(mkLit(B[i][k], true));
-          if(Cused[i][k] == 1)
-            conflict.push(mkLit(C[i][k], true));
-          if(Dused[i][k] == 1)
-            conflict.push(mkLit(D[i][k], true));
+    { bool used_vars[nVars()];
+      for(int i=0; i<nVars(); i++)
+        used_vars[i] = false;
+        
+      for(int i=0; i<n; i++)
+      { 
+        int index1 = i % n;
+        if(index1 > n/2)
+          index1 = n - index1;
+        int index2 = (i+j) % n;
+        if(index2 > n/2)
+          index2 = n - index2;
+        if(index1 > index2)
+        { int temp = index1;
+          index1 = index2;
+          index2 = temp;
         }
-      
-      /*printf("Aused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Aused[i][k]);
-        printf("\n");
+        
+        if(assigns[A[index1][index2]] == l_True)
+        { if(!used_vars[A[index1][index2]])
+            used_vars[A[index1][index2]] = true, conflict.push(mkLit(A[index1][index2], true));
+        }
+        if(assigns[B[index1][index2]] == l_True)
+        { if(!used_vars[B[index1][index2]])
+            used_vars[B[index1][index2]] = true, conflict.push(mkLit(B[index1][index2], true));
+        }
+        if(assigns[C[index1][index2]] == l_True)
+        { if(!used_vars[C[index1][index2]])
+            used_vars[C[index1][index2]] = true, conflict.push(mkLit(C[index1][index2], true));
+        }
+        if(assigns[D[index1][index2]] == l_True)
+        { if(!used_vars[D[index1][index2]])
+            used_vars[D[index1][index2]] = true, conflict.push(mkLit(D[index1][index2], true));
+        }
       }
-      printf("\n");
-      
-      printf("Bused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Bused[i][k]);
-        printf("\n");
-      }
-      printf("\n");
-      
-      printf("Cused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Cused[i][k]);
-        printf("\n");
-      }
-      printf("\n");
-      
-      printf("Dused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Dused[i][k]);
-        printf("\n");
-      }
-      printf("\n");*/    
       
       out_learnt.clear();
       if(conflict.size()==1)
@@ -668,49 +714,41 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
       return true;
     }
     else if(false_sum > 4*n - target)
-    { for(int i=0; i<dim; i++)
-        for(int k=i; k<dim; k++)
-        { if(Aused[i][k] == -1)
-            conflict.push(mkLit(A[i][k], false));
-          if(Bused[i][k] == -1)
-            conflict.push(mkLit(B[i][k], false));
-          if(Cused[i][k] == -1)
-            conflict.push(mkLit(C[i][k], false));
-          if(Dused[i][k] == -1)
-            conflict.push(mkLit(D[i][k], false));
+    { bool used_vars[nVars()];
+      for(int i=0; i<nVars(); i++)
+        used_vars[i] = false;
+
+      for(int i=0; i<n; i++)
+      { 
+        int index1 = i % n;
+        if(index1 > n/2)
+          index1 = n - index1;
+        int index2 = (i+j) % n;
+        if(index2 > n/2)
+          index2 = n - index2;
+        if(index1 > index2)
+        { int temp = index1;
+          index1 = index2;
+          index2 = temp;
         }
-      
-      /*printf("Aused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Aused[i][k]);
-        printf("\n");
+        
+        if(assigns[A[index1][index2]] == l_False)
+        { if(!used_vars[A[index1][index2]])
+            used_vars[A[index1][index2]] = true, conflict.push(mkLit(A[index1][index2], false));
+        }
+        if(assigns[B[index1][index2]] == l_False)
+        { if(!used_vars[B[index1][index2]])
+            used_vars[B[index1][index2]] = true, conflict.push(mkLit(B[index1][index2], false));
+        }
+        if(assigns[C[index1][index2]] == l_False)
+        { if(!used_vars[C[index1][index2]])
+            used_vars[C[index1][index2]] = true, conflict.push(mkLit(C[index1][index2], false));
+        }
+        if(assigns[D[index1][index2]] == l_False)
+        { if(!used_vars[D[index1][index2]])
+            used_vars[D[index1][index2]] = true, conflict.push(mkLit(D[index1][index2], false));
+        }
       }
-      printf("\n");
-      
-      printf("Bused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Bused[i][k]);
-        printf("\n");
-      }
-      printf("\n");
-      
-      printf("Cused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Cused[i][k]);
-        printf("\n");
-      }
-      printf("\n");
-      
-      printf("Dused:\n");  
-      for(int i=0; i<dim; i++)
-      { for(int k=i; k<dim; k++)
-          printf("%d ", Dused[i][k]);
-        printf("\n");
-      }
-      printf("\n");*/
       
       out_learnt.clear();
       if(conflict.size()==1)
@@ -1138,6 +1176,10 @@ Solver::~Solver()
         delete [] C;
         delete [] D;
     }
+    
+    printf("cardinality     checks: %d successes, %d total, %.2f total time\n", success1, calls1, time1);
+    printf("autocorrelation checks: %d successes, %d total, %.2f total time\n", success2, calls2, time2);
+    printf("compression     checks: %d successes, %d total, %.2f total time\n", success3, calls3, time3);
 }
 
 
@@ -2277,6 +2319,10 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
+        
+    printf("cardinality     checks: %d successes, %d total, %.2f total time\n", success1, calls1, time1);
+    printf("autocorrelation checks: %d successes, %d total, %.2f total time\n", success2, calls2, time2);
+    printf("compression     checks: %d successes, %d total, %.2f total time\n", success3, calls3, time3);
 
     if (status == l_True){
         // Extend & copy model:
