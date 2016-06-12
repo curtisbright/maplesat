@@ -665,10 +665,7 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
     }
        
     if(true_sum > target)
-    { bool used_vars[nVars()];
-      for(int i=0; i<nVars(); i++)
-        used_vars[i] = false;
-        
+    {         
       for(int i=0; i<n; i++)
       { 
         int index1 = i % n;
@@ -684,20 +681,36 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
         }
         
         if(assigns[A[index1][index2]] == l_True)
-        { if(!used_vars[A[index1][index2]])
-            used_vars[A[index1][index2]] = true, conflict.push(mkLit(A[index1][index2], true));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==A[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(A[index1][index2], true));
         }
         if(assigns[B[index1][index2]] == l_True)
-        { if(!used_vars[B[index1][index2]])
-            used_vars[B[index1][index2]] = true, conflict.push(mkLit(B[index1][index2], true));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==B[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(B[index1][index2], true));
         }
         if(assigns[C[index1][index2]] == l_True)
-        { if(!used_vars[C[index1][index2]])
-            used_vars[C[index1][index2]] = true, conflict.push(mkLit(C[index1][index2], true));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==C[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(C[index1][index2], true));
         }
         if(assigns[D[index1][index2]] == l_True)
-        { if(!used_vars[D[index1][index2]])
-            used_vars[D[index1][index2]] = true, conflict.push(mkLit(D[index1][index2], true));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==A[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(D[index1][index2], true));
         }
       }
       
@@ -714,10 +727,7 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
       return true;
     }
     else if(false_sum > 4*n - target)
-    { bool used_vars[nVars()];
-      for(int i=0; i<nVars(); i++)
-        used_vars[i] = false;
-
+    { 
       for(int i=0; i<n; i++)
       { 
         int index1 = i % n;
@@ -733,20 +743,36 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
         }
         
         if(assigns[A[index1][index2]] == l_False)
-        { if(!used_vars[A[index1][index2]])
-            used_vars[A[index1][index2]] = true, conflict.push(mkLit(A[index1][index2], false));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==A[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(A[index1][index2], false));
         }
         if(assigns[B[index1][index2]] == l_False)
-        { if(!used_vars[B[index1][index2]])
-            used_vars[B[index1][index2]] = true, conflict.push(mkLit(B[index1][index2], false));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==B[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(B[index1][index2], false));
         }
         if(assigns[C[index1][index2]] == l_False)
-        { if(!used_vars[C[index1][index2]])
-            used_vars[C[index1][index2]] = true, conflict.push(mkLit(C[index1][index2], false));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==C[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(C[index1][index2], false));
         }
         if(assigns[D[index1][index2]] == l_False)
-        { if(!used_vars[D[index1][index2]])
-            used_vars[D[index1][index2]] = true, conflict.push(mkLit(D[index1][index2], false));
+        { bool used = false;
+          for(int j=0; j<conflict.size(); j++)
+            if(var(conflict[i])==D[index1][index2])
+              used = true;
+          if(!used)
+            conflict.push(mkLit(D[index1][index2], false));
         }
       }
       
