@@ -266,6 +266,7 @@ protected:
     bool     cardinality_check(vec<Lit>& out_learnt, int& out_btlevel);
     bool     autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel);
     bool     compression_check(vec<Lit>& out_learnt, int& out_btlevel);
+    bool     filtering_check(vec<Lit>& out_learnt, int& out_btlevel);
     bool     callback_function(vec<Lit>& out_learnt, int& out_btlevel);
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
