@@ -94,6 +94,7 @@ static IntOption     opt_period    (_cat, "period",     "Period of programmatic 
 
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
+static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
 
 int** A;
 int** B;
@@ -157,7 +158,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
     time2 += (t1 - t0) / 1000000.0L;
   }
 
-  if(true)
+  if(order != -1)
   { calls3++;
     timestamp_t t0 = get_timestamp();
     if(filtering_check(out_learnt3, out_btlevel3))
@@ -927,8 +928,8 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel)
   for(int j=1; j<dim; j++)
   { 
     int target = n+(carda+cardb+cardc+cardd)/2;
-    //if(j==0)
-    //  target = 2*n+(carda+cardb+cardc+cardd)/2;
+    if(xnormult)
+      target = 2*n;
     
     int true_sum = 0;
     int false_sum = 0;
@@ -1346,6 +1347,7 @@ Solver::Solver() :
   , cardd (opt_cardd)
   , prodvars (opt_prodvars)
   , compsums (opt_compsums)
+  , xnormult (opt_xnormult)
 
   , ok                 (true)
   , cla_inc            (1)

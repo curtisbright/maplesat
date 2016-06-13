@@ -159,6 +159,7 @@ public:
     int carda, cardb, cardc, cardd;
     const char* prodvars;
     const char* compsums;
+    bool xnormult;
 
 protected:
 
