@@ -160,6 +160,7 @@ public:
     const char* prodvars;
     const char* compsums;
     bool xnormult;
+    bool filtering;
 
 protected:
 

@@ -95,6 +95,7 @@ static IntOption     opt_period    (_cat, "period",     "Period of programmatic 
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
 static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
+static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering", false);
 
 int** A;
 int** B;
@@ -106,7 +107,7 @@ int compB[2][99];
 int compC[2][99];
 int compD[2][99];
 
-//#ifdef PRINTCONF
+#ifdef PRINTCONF
 void printclause(vec<Lit>& cl)
 { printf("clause size %d: ", cl.size());
   for(int i=0; i<cl.size(); i++)
@@ -114,7 +115,7 @@ void printclause(vec<Lit>& cl)
   }
   printf("\n");
 }
-//#endif
+#endif
 
 bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
 {
@@ -158,7 +159,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
     time2 += (t1 - t0) / 1000000.0L;
   }
 
-  if(order != -1)
+  if(filtering && order != -1)
   { calls3++;
     timestamp_t t0 = get_timestamp();
     if(filtering_check(out_learnt3, out_btlevel3))
@@ -1348,6 +1349,7 @@ Solver::Solver() :
   , prodvars (opt_prodvars)
   , compsums (opt_compsums)
   , xnormult (opt_xnormult)
+  , filtering (opt_filtering)
 
   , ok                 (true)
   , cla_inc            (1)
