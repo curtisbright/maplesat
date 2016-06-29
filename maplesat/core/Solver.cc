@@ -95,7 +95,7 @@ static IntOption     opt_period    (_cat, "period",     "Period of programmatic 
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
 static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
-static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering", false);
+static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);
 
 int** A;
 int** B;
@@ -141,7 +141,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
   int out_btlevel3;
   int out_btlevel4;
   
-  if(order != -1)
+  if(cardinality && order != -1)
   { calls1++;
     timestamp_t t0 = get_timestamp();
     if(cardinality_check(out_learnt1, out_btlevel1))
@@ -159,10 +159,10 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
     time2 += (t1 - t0) / 1000000.0L;
   }
 
-  if(filtering && order != -1)
+  if(order != -1)
   { calls3++;
     timestamp_t t0 = get_timestamp();
-    if(filtering_check(out_learnt3, out_btlevel3))
+    if(ordering_check(out_learnt3, out_btlevel3))
       success3++, result3 = true;
     timestamp_t t1 = get_timestamp();
     time3 += (t1 - t0) / 1000000.0L;
@@ -204,282 +204,14 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
   return false;
 }
 
-bool Solver::filtering_check(vec<Lit>& out_learnt, int& out_btlevel)
+bool Solver::ordering_check(vec<Lit>& out_learnt, int& out_btlevel)
 {
   int n = order;
   int dim = n/2+1;
   vec<Lit> conflict;
   
-  double signal[n];
-  fftw_complex result[n];
-  fftw_plan plan = fftw_plan_dft_r2c_1d(n, signal, result, FFTW_ESTIMATE);
-  
-  double psds[dim];
-  for(int i=0; i<dim; i++)
-    psds[i] = 0;
-  bool Acomplete = true;
-  bool Bcomplete = true;
-  bool Ccomplete = true;
-  bool Dcomplete = true;
-  
-  for(int i=0; i<dim; i++)
-  { if(assigns[i] == l_Undef)
-    { Acomplete = false;
-      break;
-    }
-  }
-  
-  for(int i=dim; i<2*dim; i++)
-  { if(assigns[i] == l_Undef)
-    { Bcomplete = false;
-      break;
-    }
-  }
-  
-  for(int i=2*dim; i<3*dim; i++)
-  { if(assigns[i] == l_Undef)
-    { Ccomplete = false;
-      break;
-    }
-  }
-  
-  for(int i=3*dim; i<4*dim; i++)
-  { if(assigns[i] == l_Undef)
-    { Dcomplete = false;
-      break;
-    }
-  }
-  
-  if(Acomplete)
-  { for(int i=0; i<dim; i++)
-      signal[i] = (assigns[i] == l_True) ? 1 : -1;
-    fftw_execute(plan);
-    for(int i=0; i<dim; i++)
-    { double psd = result[i][0]*result[i][0];
-      psds[i] += psd;
-      if(psd > 4*n+0.01)
-      { for(int i=0; i<dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-        out_learnt.clear();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnt);
-        else
-          analyze(conflict, out_learnt, out_btlevel);
-  #ifdef PRINTCONF
-        printf("conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnt);
-  #endif
-        fftw_destroy_plan(plan);
-        return true;
-      }
-    }
-  }
-  
-  if(Bcomplete)
-  { for(int i=0; i<dim; i++)
-      signal[i] = (assigns[i+dim] == l_True) ? 1 : -1;
-    fftw_execute(plan);
-    for(int i=0; i<dim; i++)
-    { double psd = result[i][0]*result[i][0];
-      psds[i] += psd;
-      if(psd > 4*n+0.01)
-      { for(int i=dim; i<2*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-        out_learnt.clear();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnt);
-        else
-          analyze(conflict, out_learnt, out_btlevel);
-  #ifdef PRINTCONF
-        printf("conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnt);
-  #endif
-        fftw_destroy_plan(plan);
-        return true;
-      }
-      else if(psds[i] > 4*n+0.01)
-      { if(Acomplete)
-        { for(int i=0; i<dim; i++)
-          { if(assigns[i] == l_True)
-              conflict.push(mkLit(i, true));
-            else if(assigns[i] == l_False)
-              conflict.push(mkLit(i, false));
-          }
-        }
-        for(int i=dim; i<2*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-        out_learnt.clear();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnt);
-        else
-          analyze(conflict, out_learnt, out_btlevel);
-  #ifdef PRINTCONF
-        printf("conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnt);
-  #endif
-        fftw_destroy_plan(plan);
-        return true;      
-      }
-    }
-  }
-  
-  if(Ccomplete)
-  { for(int i=0; i<dim; i++)
-      signal[i] = (assigns[i+2*dim] == l_True) ? 1 : -1;
-    fftw_execute(plan);
-    for(int i=0; i<dim; i++)
-    { double psd = result[i][0]*result[i][0];
-      psds[i] += psd;
-      if(psd > 4*n+0.01)
-      { for(int i=2*dim; i<3*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-        out_learnt.clear();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnt);
-        else
-          analyze(conflict, out_learnt, out_btlevel);
-  #ifdef PRINTCONF
-        printf("conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnt);
-  #endif
-        fftw_destroy_plan(plan);
-        return true; 
-      }
-      else if(psds[i] > 4*n+0.01)
-      { if(Acomplete)
-        { for(int i=0; i<dim; i++)
-          { if(assigns[i] == l_True)
-              conflict.push(mkLit(i, true));
-            else if(assigns[i] == l_False)
-              conflict.push(mkLit(i, false));
-          }
-        }
-        if(Bcomplete)
-        { for(int i=dim; i<2*dim; i++)
-          { if(assigns[i] == l_True)
-              conflict.push(mkLit(i, true));
-            else if(assigns[i] == l_False)
-              conflict.push(mkLit(i, false));
-          }
-        }
-        for(int i=2*dim; i<3*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-        out_learnt.clear();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnt);
-        else
-          analyze(conflict, out_learnt, out_btlevel);
-  #ifdef PRINTCONF
-        printf("conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnt);
-  #endif
-        fftw_destroy_plan(plan);
-        return true; 
-      }
-    }
-  }
-  
-  if(Dcomplete)
-  { for(int i=0; i<dim; i++)
-      signal[i] = (assigns[i+3*dim] == l_True) ? 1 : -1;
-    fftw_execute(plan);
-    for(int i=0; i<dim; i++)
-    { double psd = result[i][0]*result[i][0];
-      psds[i] += psd;
-      if(psd > 4*n+0.01)
-      { for(int i=3*dim; i<4*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnt);
-        else
-          analyze(conflict, out_learnt, out_btlevel);
-  #ifdef PRINTCONF
-        printf("conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnt);
-  #endif
-        fftw_destroy_plan(plan);
-        return true; 
-      }
-    }
-  }
-  
-  fftw_destroy_plan(plan);
-  
-  for(int i=0; i<dim; i++)
-  { if(psds[i] > 4*n+0.01)
-    { if(Acomplete)
-      { for(int i=0; i<dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-      }
-      if(Bcomplete)
-      { for(int i=dim; i<2*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-      }
-      if(Ccomplete)
-      { for(int i=2*dim; i<3*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-      }
-      if(Dcomplete)
-      { for(int i=3*dim; i<4*dim; i++)
-        { if(assigns[i] == l_True)
-            conflict.push(mkLit(i, true));
-          else if(assigns[i] == l_False)
-            conflict.push(mkLit(i, false));
-        }
-      }
-      
-      out_learnt.clear();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnt);
-      else
-        analyze(conflict, out_learnt, out_btlevel);
-#ifdef PRINTCONF
-      printf("conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnt);
-#endif
-
-      return true;
-    }
-  }
-  
+    
   return false;
-  
 }
 
 bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
@@ -1349,7 +1081,7 @@ Solver::Solver() :
   , prodvars (opt_prodvars)
   , compsums (opt_compsums)
   , xnormult (opt_xnormult)
-  , filtering (opt_filtering)
+  , cardinality (opt_cardinality)
 
   , ok                 (true)
   , cla_inc            (1)
@@ -2653,7 +2385,7 @@ lbool Solver::solve_()
         
     printf("cardinality     checks: %d successes, %d total, %.2f total time\n", success1, calls1, time1);
     printf("autocorrelation checks: %d successes, %d total, %.2f total time\n", success2, calls2, time2);
-    printf("filtering       checks: %d successes, %d total, %.2f total time\n", success3, calls3, time3);
+    printf("ordering        checks: %d successes, %d total, %.2f total time\n", success3, calls3, time3);
     printf("compression     checks: %d successes, %d total, %.2f total time\n", success4, calls4, time4);
 
     if (status == l_True){
