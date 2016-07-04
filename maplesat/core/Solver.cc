@@ -339,7 +339,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -359,7 +359,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -391,7 +391,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -411,7 +411,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -443,7 +443,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -463,7 +463,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -495,7 +495,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -515,7 +515,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
       else
         analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
-      printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
       printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -554,7 +554,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -574,7 +574,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -606,7 +606,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -626,7 +626,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -658,7 +658,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -678,7 +678,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -710,7 +710,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -730,7 +730,7 @@ bool Solver::compression_check(vec<Lit>& out_learnt, int& out_btlevel)
         else
           analyze(conflict, out_learnt, out_btlevel);
   #ifdef PRINTCONF
-        printf("j:%d, target:%d, true_sum:%d, false_sum:%d\n", j, target, true_sum, false_sum);
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
         printf("out_learnt "), printclause(out_learnt);
   #endif
@@ -1563,7 +1563,7 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
 
     assert(p == lit_Undef);
 #ifdef PRINTCONF
-    printf("conflicts: %ld\n", conflicts);
+    printf("conflicts: %lld\n", conflicts);
 #endif
     for (int j = 0; j < conflvec.size(); j++){
         Lit q = conflvec[j];
@@ -1611,7 +1611,7 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
 #endif
 
 #ifdef PRINTCONF
-        printf("conflicts: %ld\n", conflicts);
+        printf("conflicts: %lld\n", conflicts);
 #endif
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
