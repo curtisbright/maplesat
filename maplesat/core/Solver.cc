@@ -209,8 +209,99 @@ bool Solver::ordering_check(vec<Lit>& out_learnt, int& out_btlevel)
   int n = order;
   int dim = n/2+1;
   vec<Lit> conflict;
-  
-    
+  if(carda==cardb)
+  {  for(int i=0; i<dim; i++)
+     {  if(assigns[i]==l_Undef || assigns[dim+i]==l_Undef)
+          break;
+        else if(assigns[i]==l_True && assigns[dim+i]==l_False)
+          break;
+        else if(assigns[i]==l_False && assigns[dim+i]==l_True)
+        { for(int j=0; j<=i; j++)
+          { if(assigns[j] == l_True)
+              conflict.push(mkLit(j, true));
+            else if(assigns[j] == l_False)
+              conflict.push(mkLit(j, false));
+            if(assigns[dim+j] == l_True)
+              conflict.push(mkLit(dim+j, true));
+            else if(assigns[dim+j] == l_False)
+              conflict.push(mkLit(dim+j, false));
+          }
+          out_learnt.clear();
+          if(conflict.size()==1)
+            out_btlevel = 0, conflict.copyTo(out_learnt);
+          else
+            analyze(conflict, out_learnt, out_btlevel);
+#ifdef PRINTCONF
+          printf("a/b order_conflict "), printclause(conflict);
+          printf("out_learnt "), printclause(out_learnt);
+#endif
+          return true;
+        }
+     }
+  }
+
+  if(cardb==cardc)
+  {  for(int i=dim; i<2*dim; i++)
+     {  if(assigns[i]==l_Undef || assigns[dim+i]==l_Undef)
+          break;
+        else if(assigns[i]==l_True && assigns[dim+i]==l_False)
+          break;
+        else if(assigns[i]==l_False && assigns[dim+i]==l_True)
+        { for(int j=dim; j<=i; j++)
+          { if(assigns[j] == l_True)
+              conflict.push(mkLit(j, true));
+            else if(assigns[j] == l_False)
+              conflict.push(mkLit(j, false));
+            if(assigns[dim+j] == l_True)
+              conflict.push(mkLit(dim+j, true));
+            else if(assigns[dim+j] == l_False)
+              conflict.push(mkLit(dim+j, false));
+          }
+          out_learnt.clear();
+          if(conflict.size()==1)
+            out_btlevel = 0, conflict.copyTo(out_learnt);
+          else
+            analyze(conflict, out_learnt, out_btlevel);
+#ifdef PRINTCONF
+          printf("b/c order_conflict "), printclause(conflict);
+          printf("out_learnt "), printclause(out_learnt);
+#endif
+         return true;
+        }
+     }
+  }
+
+  if(cardc==cardd)
+  {  for(int i=2*dim; i<3*dim; i++)
+     {  if(assigns[i]==l_Undef || assigns[dim+i]==l_Undef)
+          break;
+        else if(assigns[i]==l_True && assigns[dim+i]==l_False)
+          break;
+        else if(assigns[i]==l_False && assigns[dim+i]==l_True)
+        { for(int j=2*dim; j<=i; j++)
+          { if(assigns[j] == l_True)
+              conflict.push(mkLit(j, true));
+            else if(assigns[j] == l_False)
+              conflict.push(mkLit(j, false));
+            if(assigns[dim+j] == l_True)
+              conflict.push(mkLit(dim+j, true));
+            else if(assigns[dim+j] == l_False)
+              conflict.push(mkLit(dim+j, false));
+          }
+          out_learnt.clear();
+          if(conflict.size()==1)
+            out_btlevel = 0, conflict.copyTo(out_learnt);
+          else
+            analyze(conflict, out_learnt, out_btlevel);
+#ifdef PRINTCONF
+          printf("c/d order_conflict "), printclause(conflict);
+          printf("out_learnt "), printclause(out_learnt);
+#endif
+         return true;
+        }
+     }
+  }
+
   return false;
 }
 
