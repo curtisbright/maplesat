@@ -235,6 +235,18 @@ bool Solver::ordering_check(vec<Lit>& out_learnt, int& out_btlevel)
           else
             analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
+          for(int j=0; j < dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=dim; j < 2*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=2*dim; j < 3*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=3*dim; j < 4*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf("\n");
           printf("a/b order_conflict "), printclause(conflict);
           printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -266,6 +278,18 @@ bool Solver::ordering_check(vec<Lit>& out_learnt, int& out_btlevel)
           else
             analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
+          for(int j=0; j < dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=dim; j < 2*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=2*dim; j < 3*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=3*dim; j < 4*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf("\n");
           printf("b/c order_conflict "), printclause(conflict);
           printf("out_learnt "), printclause(out_learnt);
 #endif
@@ -297,6 +321,18 @@ bool Solver::ordering_check(vec<Lit>& out_learnt, int& out_btlevel)
           else
             analyze(conflict, out_learnt, out_btlevel);
 #ifdef PRINTCONF
+          for(int j=0; j < dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=dim; j < 2*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=2*dim; j < 3*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf(" ");
+          for(int j=3*dim; j < 4*dim; j++)
+            printf("%c", assigns[j]==l_True ? '+' : assigns[j]==l_False ? '-' : '?');
+          printf("\n");
           printf("c/d order_conflict "), printclause(conflict);
           printf("out_learnt "), printclause(out_learnt);
 #endif
