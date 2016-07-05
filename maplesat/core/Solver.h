@@ -161,6 +161,7 @@ public:
     const char* compsums;
     bool xnormult;
     bool cardinality;
+    bool ordering;
 
 protected:
 
