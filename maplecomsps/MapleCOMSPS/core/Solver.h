@@ -189,6 +189,9 @@ public:
 
     vec<uint32_t> picked;
     vec<uint32_t> conflicted;
+    int order;
+    int carda, cardb, cardc, cardd;
+    const char* prodvars;
     vec<uint32_t> almost_conflicted;
 #ifdef ANTI_EXPLORATION
     vec<uint32_t> canceled;
@@ -296,7 +299,10 @@ protected:
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
 
-	bool     callback_function(vec<Lit>& out_learnt, int& out_btlevel);
+    bool     programmatic_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
+    bool     cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
+    bool     autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
+    bool     callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     lbool    search           (int& nof_conflicts);                                    // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.

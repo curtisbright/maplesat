@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <math.h>
 #include <signal.h>
 #include <unistd.h>
+#include <complex>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -55,6 +56,16 @@ static IntOption     opt_restart_first     (_cat, "rfirst",      "The base resta
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
+static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_carda     (_cat, "carda",      "Cardinality of row A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardb     (_cat, "cardb",      "Cardinality of row B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardc     (_cat, "cardc",      "Cardinality of row C", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", -1, IntRange(-1, INT32_MAX));
+
+static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
+
+int** A;
+int** B;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -96,6 +107,13 @@ Solver::Solver() :
     //
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), conflicts_VSIDS(0)
   , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+
+  , order(opt_order)
+  , carda (opt_carda)
+  , cardb (opt_cardb)
+  , cardc (opt_cardc)
+  , cardd (opt_cardd)
+  , prodvars (opt_prodvars)
 
   , ok                 (true)
   , cla_inc            (1)
@@ -1106,10 +1124,988 @@ bool Solver::simplify()
     return true;
 }
 
-
-bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel)
+std::complex<double> hall_eval(std::complex<double> seq[], int len,
+			       std::complex<double> value)
 {
-	return false;
+  std::complex<double> result(0.0,0.0);
+  for (int i = 0; i<len; ++i)
+  {
+    result += seq[i]*pow(value,i);
+  }
+  return result;
+}
+
+bool hall_check(std::complex<double> seq[], int len, int nchecks)
+{
+  double epsilon = 0.1;
+  double theta;
+  double v;
+  std::complex<double> imagConst(0.0,1.0);
+  for (int i = 0; i<nchecks; ++i)
+  {
+    theta = i*2*M_PI/nchecks;
+    v = std::abs(hall_eval(seq,len,std::exp(theta*imagConst)));
+    v*=v;
+    if (v>2*len+epsilon)
+      return false;
+  }
+  return true;
+}
+
+bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
+{
+    int i = 0, j = 0, var = 0;
+
+#ifdef PRINTCONF
+    std::complex<double> zero (0, 0);
+    std::complex<double> one (1, 0);
+    std::complex<double> neg_one (-1, 0);
+    std::complex<double> imag_unit (0, 1);
+    std::complex<double> neg_imag_unit (0, -1);
+    std::complex<double> Ae[order], Be[order];
+
+    printf("A assigns: ");
+    for(i = 0; i<order*2; i+=2)
+    {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+            printf("1 "), Ae[i/2].real(1), Ae[i/2].imag(0);
+        else if(assigns[i] == l_False && assigns[i+1] == l_True)
+            printf("-1 "), Ae[i/2].real(-1), Ae[i/2].imag(0);
+        else if(assigns[i] == l_True && assigns[i+1] == l_False)
+            printf("i "), Ae[i/2].real(0), Ae[i/2].imag(1);
+        else if(assigns[i] == l_True && assigns[i+1] == l_True)
+            printf("-i "), Ae[i/2].real(0), Ae[i/2].imag(-1);
+        else if(assigns[i] == l_False)
+            printf("R ");
+        else if(assigns[i] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+    }
+    printf("\n");
+
+    printf("A product assigns:\n");
+    for(i=0; i<order; i++)
+    { for(j=i+1; j<order; j++)
+      { /*if(assigns[A[i][j]]==l_False)
+          printf("F");
+        else if(assigns[A[i][j]]==l_True)
+          printf("T");
+        else if(assigns[A[i][j]]==l_Undef)
+          printf("?");
+        if(assigns[A[i][j]+1]==l_False)
+          printf("F");
+        else if(assigns[A[i][j]+1]==l_True)
+          printf("T");
+        else if(assigns[A[i][j]+1]==l_Undef)
+          printf("?");*/
+        //printf("%d ", A[i][j]);
+        int var = A[i][j];
+        if(assigns[var] == l_False && assigns[var+1] == l_False)
+        {   printf("1 ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == one);
+        }
+        else if(assigns[var] == l_False && assigns[var+1] == l_True)
+        {   printf("-1 ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == neg_one);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_False)
+        {   printf("i ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == imag_unit);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_True)
+        {   printf("-i ");
+            assert(Ae[i]*Ae[j] == zero || Ae[i]*conj(Ae[j]) == neg_imag_unit);
+        }
+        else if(assigns[var] == l_False)
+            printf("R ");
+        else if(assigns[var] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+      }
+      printf("\n");
+    }
+
+    printf("B assigns: ");
+    for(i = order*2; i<order*4; i+=2)
+    {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+            printf("1 "), Be[(i-2*order)/2].real(1), Be[(i-2*order)/2].imag(0);
+        else if(assigns[i] == l_False && assigns[i+1] == l_True)
+            printf("-1 "), Be[(i-2*order)/2].real(-1), Be[(i-2*order)/2].imag(0);
+        else if(assigns[i] == l_True && assigns[i+1] == l_False)
+            printf("i "), Be[(i-2*order)/2].real(0), Be[(i-2*order)/2].imag(1);
+        else if(assigns[i] == l_True && assigns[i+1] == l_True)
+            printf("-i "), Be[(i-2*order)/2].real(0), Be[(i-2*order)/2].imag(-1);
+        else if(assigns[i] == l_False)
+            printf("R ");
+        else if(assigns[i] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+    }
+    printf("\n");
+
+    printf("B product assigns:\n");
+    for(i=0; i<order; i++)
+    { for(j=i+1; j<order; j++)
+      { /*if(assigns[B[i][j]]==l_False)
+          printf("F");
+        else if(assigns[B[i][j]]==l_True)
+          printf("T");
+        else if(assigns[B[i][j]]==l_Undef)
+          printf("?");
+        if(assigns[B[i][j]+1]==l_False)
+          printf("F");
+        else if(assigns[B[i][j]+1]==l_True)
+          printf("T");
+        else if(assigns[B[i][j]+1]==l_Undef)
+          printf("?");*/
+        //printf("%d ", B[i][j]);
+        int var = B[i][j];
+        if(assigns[var] == l_False && assigns[var+1] == l_False)
+        {   printf("1 ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == one);
+        }
+        else if(assigns[var] == l_False && assigns[var+1] == l_True)
+        {   printf("-1 ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == neg_one);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_False)
+        {   printf("i ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == imag_unit);
+        }
+        else if(assigns[var] == l_True && assigns[var+1] == l_True)
+        {   printf("-i ");
+            assert(Be[i]*Be[j] == zero || Be[i]*conj(Be[j]) == neg_imag_unit);
+        }
+        else if(assigns[var] == l_False)
+            printf("R ");
+        else if(assigns[var] == l_True)
+            printf("I ");
+        else
+            printf("? ");
+      }
+      printf("\n");
+    }
+#endif
+
+    vec<Lit> conflict;
+
+    for(j = 1; j < order; j++)
+    {
+        bool complete = true;
+        int num_reals = 0;
+        int num_imags = 0;
+        int real_true_count = 0;
+        int real_false_count = 0;
+        int imag_true_count = 0;
+        int imag_false_count = 0;
+
+        for(i = 0; i < order-j; i++)
+        {   for(int k = 0; k < 2; k++)
+            {   if(k==0)
+                    var = A[i][i+j];
+                else
+                    var = B[i][i+j];
+                if(assigns[var] == l_Undef)
+                {   complete = false;
+                    break;
+                }
+                else if(assigns[var] == l_False)
+                {   num_reals++;
+                    if(assigns[var+1] == l_False)
+                        real_false_count++;
+                    else if(assigns[var+1] == l_True)
+                        real_true_count++;
+                }
+                else if(assigns[var] == l_True)
+                {   num_imags++;
+                    if(assigns[var+1] == l_False)
+                        imag_false_count++;
+                    else if(assigns[var+1] == l_True)
+                        imag_true_count++;
+                }
+            }
+            if(complete == false)
+              break;
+        }
+        if(complete == false)
+          continue;
+
+        if(num_reals % 2 != 0 || num_imags % 2 != 0)
+        {
+            for(i = 0; i < order-j; i++)
+            {   for(int k = 0; k < 2; k++)
+                {   if(k==0)
+                        var = A[i][i+j];
+                    else
+                        var = B[i][i+j];
+
+                    assert(assigns[var] != l_Undef);
+                    if(assigns[var] == l_False)
+                        conflict.push(mkLit(var, false));
+                    else
+                        conflict.push(mkLit(var, true));
+                }
+            }
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+            return true;
+        }
+
+        if(real_false_count > num_reals/2 || real_true_count > num_reals/2)
+        {
+            for(i = 0; i < order-j; i++)
+            {   for(int k = 0; k < 2; k++)
+                {   if(k==0)
+                        var = A[i][i+j];
+                    else
+                        var = B[i][i+j];
+
+                    assert(assigns[var] != l_Undef);
+                    if(assigns[var] == l_False)
+                        conflict.push(mkLit(var, false));
+                    else
+                        conflict.push(mkLit(var, true));
+
+                    if(real_false_count > num_reals/2 && assigns[var+1] == l_False)
+                        conflict.push(mkLit(var+1, false));
+                    else if(real_true_count > num_reals/2 && assigns[var+1] == l_True)
+                        conflict.push(mkLit(var+1, true));
+                }
+            }
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+            return true;
+        }
+
+        if(imag_false_count > num_imags/2 || imag_true_count > num_imags/2)
+        {
+            for(i = 0; i < order-j; i++)
+            {   for(int k = 0; k < 2; k++)
+                {   if(k==0)
+                        var = A[i][i+j];
+                    else
+                        var = B[i][i+j];
+
+                    assert(assigns[var] != l_Undef);
+                    if(assigns[var] == l_False)
+                        conflict.push(mkLit(var, false));
+                    else
+                        conflict.push(mkLit(var, true));
+
+                    if(imag_false_count > num_imags/2 && assigns[var+1] == l_False)
+                        conflict.push(mkLit(var+1, false));
+                    else if(imag_true_count > num_imags/2 && assigns[var+1] == l_True)
+                        conflict.push(mkLit(var+1, true));
+                }
+            }
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+            return true;
+        }
+
+    }
+
+    return false;
+}
+
+bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
+{
+    vec<Lit> conflict;
+    int golay_dimension = order;
+    int no_of_significant_vars = golay_dimension * 4;
+
+    bool atype_complete = true;
+    int num_reals = 0;
+    int real_true_count = 0;
+    int real_false_count = 0;
+    int num_imags = 0;
+    int imag_true_count = 0;
+    int imag_false_count = 0;
+
+#ifdef PRINTCONF
+    int real_A = 0;
+    int imag_A = 0;
+    int real_B = 0;
+    int imag_B = 0;
+#endif
+
+    for(int i=0; i<golay_dimension*2; i+=2)
+    {   if(assigns[i] == l_Undef)
+        {   atype_complete = false;
+            break;
+        }
+        else if(assigns[i] == l_False)
+        {   num_reals++;
+            if(assigns[i+1] == l_False)
+                real_false_count++;
+            else if(assigns[i+1] == l_True)
+                real_true_count++;
+        }
+        else if(assigns[i] == l_True)
+        {   num_imags++;
+            if(assigns[i+1] == l_False)
+                imag_false_count++;
+            else if(assigns[i+1] == l_True)
+                imag_true_count++;
+        }
+    }
+
+    if(atype_complete)
+    {   
+        assert(num_reals + num_imags == golay_dimension);
+        if((carda % 2 != num_reals % 2) || (cardb % 2 != num_imags % 2))
+        {
+            for (int i = 0; i<golay_dimension*2; i+=2)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,false));
+        	    else
+                    conflict.push(mkLit(i,true));
+            }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of reals/imags in A\n");
+        printf("A: ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
+            printf("\n");
+#endif
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
+            printf("\n");
+#endif
+            return true;
+        }
+        int num_real_falses = (carda+num_reals)/2;
+        /*printf("carda: %d\n", carda);
+        printf("num_reals: %d\n", num_reals);
+        printf("real_false_count: %d\n", real_false_count);
+        printf("num_real_falses: %d\n", num_real_falses);
+        printf("real_true_count: %d\n", real_true_count);*/
+        if(real_false_count > num_real_falses || real_true_count > num_reals - num_real_falses)
+        {
+            for (int i = 0; i<golay_dimension*2; i+=2)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,false));
+        	    else
+                    conflict.push(mkLit(i,true));
+                if(real_false_count > num_real_falses && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,false));
+                else if(real_true_count > num_reals - num_real_falses && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,true));
+            }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of real falses in A\n");
+        printf("A: ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
+            printf("\n");
+#endif
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
+            printf("\n");
+#endif
+            return true;
+        }
+        int num_imag_falses = (cardb+num_imags)/2;
+        if(imag_false_count > num_imag_falses || imag_true_count > num_imags - num_imag_falses)
+        {
+            for (int i = 0; i<golay_dimension*2; i+=2)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,false));
+        	    else
+                    conflict.push(mkLit(i,true));
+                if(imag_false_count > num_imag_falses && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,false));
+                else if(imag_true_count > num_imags - num_imag_falses && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,true));
+            }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of imag falses in A\n");
+        printf("A: ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
+            printf("\n");
+#endif
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
+            printf("\n");
+#endif
+            return true;
+        }
+    }
+
+#ifdef PRINTCONF
+    real_A = -real_true_count + real_false_count;
+    imag_A = -imag_true_count + imag_false_count;
+#endif
+
+    bool btype_complete = true;
+    num_reals = 0;
+    real_true_count = 0;
+    real_false_count = 0;
+    num_imags = 0;
+    imag_true_count = 0;
+    imag_false_count = 0;
+
+    for(int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+    {   if(assigns[i] == l_Undef)
+        {   btype_complete = false;
+            break;
+        }
+        else if(assigns[i] == l_False)
+        {   num_reals++;
+            if(assigns[i+1] == l_False)
+                real_false_count++;
+            else if(assigns[i+1] == l_True)
+                real_true_count++;
+        }
+        else if(assigns[i] == l_True)
+        {   num_imags++;
+            if(assigns[i+1] == l_False)
+                imag_false_count++;
+            else if(assigns[i+1] == l_True)
+                imag_true_count++;
+        }
+    }
+
+    if(btype_complete)
+    {
+        assert(num_reals + num_imags == golay_dimension);
+        if((cardc % 2 != num_reals % 2) || (cardd % 2 != num_imags % 2))
+        {
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,false));
+        	    else
+                    conflict.push(mkLit(i,true));
+            }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of reals/imags in B\n");
+        printf("B: ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
+            printf("\n");
+#endif
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
+            printf("\n");
+#endif
+            return true;
+        }
+        int num_real_falses = (cardc+num_reals)/2;
+        if(real_false_count > num_real_falses || real_true_count > num_reals - num_real_falses)
+        {
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,false));
+        	    else
+                    conflict.push(mkLit(i,true));
+                if(real_true_count > num_reals - num_real_falses && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,true));
+                else if(real_false_count > num_real_falses && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,false));
+            }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of real falses in B\n");
+        printf("B: ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
+            printf("\n");
+#endif
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
+            printf("\n");
+#endif
+            return true;
+        }
+        int num_imag_falses = (cardd+num_imags)/2;
+        if(imag_false_count > num_imag_falses || imag_true_count > num_imags - num_imag_falses)
+        {
+            for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+            {
+	            if(assigns[i] == l_False)
+    	            conflict.push(mkLit(i,false));
+        	    else
+                    conflict.push(mkLit(i,true));
+                if(imag_true_count > num_imags - num_imag_falses && assigns[i+1] == l_True)
+                    conflict.push(mkLit(i+1,true));
+                else if(imag_false_count > num_imag_falses && assigns[i+1] == l_False)
+                    conflict.push(mkLit(i+1,false));
+            }
+#ifdef PRINTCONF
+            printf("conflict: incorrect number of imag falses in B\n");
+        printf("B: ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+            printf("size %d\tconflict:", conflict.size());
+            for(int i=0; i<conflict.size(); i++)
+                printf(" %c%d (%d)", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1, level(var(conflict[i])));
+            printf("\n");
+#endif
+
+            out_learnt.clear();
+            analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+#ifdef PRINTCONF
+            printf("size %d\tout learnt:", out_learnt.size());
+            for(int i=0; i<out_learnt.size(); i++)
+                printf(" %c%d (%d)", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1, level(var(out_learnt[i])));
+            printf("\n");
+#endif
+            return true;
+        }
+    }
+
+#ifdef PRINTCONF
+    real_B = -real_true_count + real_false_count;
+    imag_B = -imag_true_count + imag_false_count;
+
+    if(atype_complete && btype_complete)
+    {   printf("%d %d %d %d\n", real_A, imag_A, real_B, imag_B);
+
+        printf("A: ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i = 0; i<golay_dimension*2; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+
+        printf("B: ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("1 ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("-1 ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("i ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("-i ");
+            else if(assigns[i] == l_False)
+                printf("R ");
+            else if(assigns[i] == l_True)
+                printf("I ");
+        }
+        printf("( ");
+        for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
+        {   if(assigns[i] == l_False && assigns[i+1] == l_False)
+                printf("FF ");
+            else if(assigns[i] == l_False && assigns[i+1] == l_True)
+                printf("FT ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_False)
+                printf("TF ");
+            else if(assigns[i] == l_True && assigns[i+1] == l_True)
+                printf("TT ");
+            else if(assigns[i] == l_False)
+                printf("F? ");
+            else if(assigns[i] == l_True)
+                printf("T? ");
+        }
+        printf(")\n");
+    }
+#endif
+
+    return false;    
+}
+
+bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
+				out_btlevel, int& out_lbd)
+{
+  int golay_dimension = order;
+  int no_of_significant_vars = golay_dimension * 4;
+  std::complex<double> *a_fills =
+    (std::complex<double>*)malloc(golay_dimension*sizeof(std::complex<double>));
+  std::complex<double> *b_fills =
+    (std::complex<double>*)malloc(golay_dimension*sizeof(std::complex<double>));
+  bool a_complete = true;
+  bool b_complete = true;
+  for (int i = 0; i<golay_dimension*2; i+=2)
+  {
+    if (assigns[i]==l_Undef || assigns[i+1]==l_Undef)
+    {
+      a_complete = false;
+      break;
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_False)
+    {
+      a_fills[i/2] = std::complex<double>(1,0);
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_True)
+    {
+      a_fills[i/2] = std::complex<double>(-1,0);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_False)
+    {
+      a_fills[i/2] = std::complex<double>(0,1);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_True)
+    {
+      a_fills[i/2] = std::complex<double>(0,-1);
+    }
+  }
+  for (int i = golay_dimension*2;i<no_of_significant_vars; i+=2)
+  {
+    if (assigns[i]==l_Undef || assigns[i+1]==l_Undef)
+    {
+      b_complete = false;
+      break;
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_False)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(1,0);
+    }
+    if(assigns[i] == l_False && assigns[i+1] == l_True)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(-1,0);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_False)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(0,1);
+    }
+    if(assigns[i] == l_True && assigns[i+1] == l_True)
+    {
+      b_fills[(i-golay_dimension*2)/2] = std::complex<double>(0,-1);
+    }
+  }
+  if (!a_complete && !b_complete)
+  {
+    free(a_fills);
+    free(b_fills);
+    return false;
+  }
+
+  vec<Lit> conflict;
+
+  if (a_complete)
+  {
+    if (!hall_check(a_fills,golay_dimension,100))
+    {
+#ifdef PRINTCONF
+      printf("conflict: filtering theorem for sequence A\n");
+#endif
+      for (int i = 0; i<golay_dimension*2; i++)
+      {
+	if(assigns[i] == l_False)
+	  conflict.push(mkLit(i,false));
+	else
+	  conflict.push(mkLit(i,true));
+      }
+    }
+  }
+  else if (b_complete)
+  {
+#ifdef PRINTCONF
+      printf("conflict: filtering theorem for sequence B\n");
+#endif
+    if (!hall_check(b_fills,golay_dimension,100))
+    {
+      for (int i = golay_dimension*2;i<no_of_significant_vars; i++)
+      {
+	if(assigns[i] == l_False)
+	  conflict.push(mkLit(i,false));
+	else
+	  conflict.push(mkLit(i,true));
+      }
+    }
+  }
+
+#ifdef PRINTCONF
+  printf("size %d\tconflict:", conflict.size());
+  for(int i=0; i<conflict.size(); i++)
+    printf(" %c%d", sign(conflict[i]) ? '-' : '+', var(conflict[i])+1);
+  printf("\n");
+#endif
+  
+  if(conflict.size()==0)
+    return false;
+
+  out_learnt.clear();
+
+  if(conflict.size()==1)
+  { out_btlevel = 0;
+    conflict.copyTo(out_learnt);
+  }
+  else
+    analyze(conflict, out_learnt, out_btlevel, out_lbd);
+
+#ifdef PRINTCONF
+  printf("size %d\tout learnt:", out_learnt.size());
+  for(int i=0; i<out_learnt.size(); i++)
+    printf(" %c%d", sign(out_learnt[i]) ? '-' : '+', var(out_learnt[i])+1);
+  printf("\n");
+#endif
+
+  free(a_fills); free(b_fills);
+  return true;
+}
+
+bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
+{
+     bool result = false;
+
+     if(programmatic_check(out_learnt, out_btlevel, out_lbd))
+     {
+       result = true;
+     }
+     else if(carda != -1 && cardb != -1 && cardc != -1 && cardd != -1 && cardinality_check(out_learnt, out_btlevel, out_lbd))
+     {
+        result = true;
+     }
+     else if(prodvars != NULL && autocorrelation_check(out_learnt, out_btlevel, out_lbd))
+     {
+        result = true;
+     }
+
+     return result;
 }
 
 /*_________________________________________________________________________________________________
@@ -1232,7 +2228,7 @@ lbool Solver::search(int& nof_conflicts)
 
 			learnt_clause.clear();
 
-            if(callback_function(learnt_clause, backtrack_level)) {
+            if(callback_function(learnt_clause, backtrack_level, lbd)) {
 				conflicts++; //conflictC++;
                 if (decisionLevel() == 0 || backtrack_level == -1) return l_False;
 
@@ -1282,7 +2278,7 @@ lbool Solver::search(int& nof_conflicts)
 					{
 						// Add call to python here
                         learnt_clause.clear();
-                        if(callback_function(learnt_clause, backtrack_level)) {
+                        if(callback_function(learnt_clause, backtrack_level, lbd)) {
 							conflicts++; //conflictC++;
 						    if (decisionLevel() == 0 || backtrack_level == -1) return l_False;
 
@@ -1374,6 +2370,39 @@ static void SIGALRM_switch(int signum) { switch_mode = true; }
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    if(prodvars != NULL)
+    {
+        A = new int*[order];
+        B = new int*[order];
+        for(int i=0; i<order; i++)
+        {
+            A[i] = new int[order];
+            B[i] = new int[order];
+        }
+ 
+        FILE* prodvar_file = fopen(prodvars, "r");
+        if(prodvar_file == NULL)
+          printf("ERROR! Could not open file: %s\n", prodvars), exit(1);
+
+        char seq = '\0';
+        int i = 0, j = 0, var = 0;
+        while(fscanf(prodvar_file, "%c %d %d %d\n", &seq, &i, &j, &var) == 4)
+        { //printf("%c %d %d %d\n", seq, i, j, var);
+          if(seq == 'A')
+          {
+            A[i][j] = var-1;
+          }
+          else if(seq == 'B')
+          {
+            B[i][j] = var-1;
+          }
+          else
+            printf("ERROR! Unknown seq type: %c\n", seq), exit(1);
+        }
+
+        fclose(prodvar_file);
+    }
+
     signal(SIGALRM, SIGALRM_switch);
     alarm(2500);
 
@@ -1433,6 +2462,17 @@ lbool Solver::solve_()
 #ifdef BIN_DRUP
     if (drup_file && status == l_False) binDRUP_flush(drup_file);
 #endif
+
+    if(prodvars != NULL)
+    {
+        for(int i=0; i<order; i++)
+        {
+            delete [] A[i];
+            delete [] B[i];
+        }
+        delete [] A;
+        delete [] B;
+    }
 
     if (status == l_True){
         // Extend & copy model:
