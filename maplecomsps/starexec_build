@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cd MapleCOMSPS/simp
+MROOT=.. make clean rs
+cp -f ./minisat_static ../../bin/MapleCOMSPS

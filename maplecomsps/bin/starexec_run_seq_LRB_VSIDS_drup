@@ -1,0 +1,3 @@
+#!/bin/sh
+
+./MapleCOMSPS -drup-file=$2/proof.out $1
