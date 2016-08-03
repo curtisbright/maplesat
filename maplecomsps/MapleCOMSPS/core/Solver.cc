@@ -28,6 +28,30 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
+#include <sys/time.h>
+typedef unsigned long long timestamp_t;
+
+static timestamp_t
+get_timestamp ()
+{
+  struct timeval now;
+  gettimeofday (&now, NULL);
+  return  now.tv_usec + (timestamp_t)now.tv_sec * 1000000;
+}
+
+int calls1 = 0;
+int calls2 = 0;
+int calls3 = 0;
+int calls4 = 0;
+int success1 = 0;
+int success2 = 0;
+int success3 = 0;
+int success4 = 0;
+double time1 = 0;
+double time2 = 0;
+double time3 = 0;
+double time4 = 0;
+
 using namespace Minisat;
 
 #ifdef BIN_DRUP
@@ -2090,22 +2114,74 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
 
 bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
 {
-     bool result = false;
+	bool result1 = false;
+	bool result2 = false;
+	bool result3 = false;
+	vec<Lit> out_learnt1;
+	vec<Lit> out_learnt2;
+	vec<Lit> out_learnt3;
+	int out_btlevel1;
+	int out_btlevel2;
+	int out_btlevel3;
+	int out_lbd1;
+	int out_lbd2;
+	int out_lbd3;
 
-     if(programmatic_check(out_learnt, out_btlevel, out_lbd))
-     {
-       result = true;
-     }
-     else if(carda != -1 && cardb != -1 && cardc != -1 && cardd != -1 && cardinality_check(out_learnt, out_btlevel, out_lbd))
-     {
-        result = true;
-     }
-     else if(prodvars != NULL && autocorrelation_check(out_learnt, out_btlevel, out_lbd))
-     {
-        result = true;
-     }
+	if(order != -1)
+	{	
+		calls2++;
+		timestamp_t t0 = get_timestamp();
+		if(cardinality_check(out_learnt2, out_btlevel2, out_lbd2))
+			success2++, result2 = true;
+		timestamp_t t1 = get_timestamp();
+		time2 += (t1 - t0) / 1000000.0L;
+	}
 
-     return result;
+	if(result2)
+	{
+		out_learnt2.copyTo(out_learnt);
+		out_btlevel = out_btlevel2;
+		out_lbd = out_lbd2;
+		return true;
+	}
+
+	if(true)
+	{
+		calls1++;
+		timestamp_t t0 = get_timestamp();
+		if(programmatic_check(out_learnt1, out_btlevel1, out_lbd1))
+			success1++, result1 = true;
+		timestamp_t t1 = get_timestamp();
+		time1 += (t1 - t0) / 1000000.0L;
+	}
+
+	if(result1)
+	{
+		out_learnt1.copyTo(out_learnt);
+		out_btlevel = out_btlevel1;
+		out_lbd = out_lbd1;
+		return true;
+	}
+
+	if(prodvars != NULL)
+	{
+		calls3++;
+		timestamp_t t0 = get_timestamp();
+		if(autocorrelation_check(out_learnt3, out_btlevel3, out_lbd3))
+			success3++, result3 = true;
+		timestamp_t t1 = get_timestamp();
+		time3 += (t1 - t0) / 1000000.0L;
+	}
+  
+	if(result3)
+	{
+		out_learnt3.copyTo(out_learnt);
+		out_btlevel = out_btlevel3;
+		out_lbd = out_lbd3;
+		return true;
+	}
+
+	return false;
 }
 
 /*_________________________________________________________________________________________________
@@ -2473,6 +2549,10 @@ lbool Solver::solve_()
         delete [] A;
         delete [] B;
     }
+
+    printf("filtering       checks: %d successes, %d total, %.2f total time\n", success1, calls1, time1);
+    printf("cardinality     checks: %d successes, %d total, %.2f total time\n", success2, calls2, time2);
+    printf("autocorrelation checks: %d successes, %d total, %.2f total time\n", success3, calls3, time3);
 
     if (status == l_True){
         // Extend & copy model:
