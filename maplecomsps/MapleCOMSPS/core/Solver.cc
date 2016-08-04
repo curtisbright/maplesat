@@ -81,10 +81,12 @@ static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interv
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
 static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_carda     (_cat, "carda",      "Cardinality of row A", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_cardb     (_cat, "cardb",      "Cardinality of row B", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_cardc     (_cat, "cardc",      "Cardinality of row C", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_carda     (_cat, "carda",      "Sum of real entries of A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardb     (_cat, "cardb",      "Sum of imaginary entries of A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardc     (_cat, "cardc",      "Sum of real entries of B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_cardd     (_cat, "cardd",      "Sum of imaginary entries of B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_numreala  (_cat, "numreala",   "Number of real entries of A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_numrealb  (_cat, "numrealb",   "Number of real entries of B", -1, IntRange(-1, INT32_MAX));
 
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 
@@ -137,6 +139,8 @@ Solver::Solver() :
   , cardb (opt_cardb)
   , cardc (opt_cardc)
   , cardd (opt_cardd)
+  , numreala (opt_numreala)
+  , numrealb (opt_numrealb)
   , prodvars (opt_prodvars)
 
   , ok                 (true)
@@ -1461,32 +1465,38 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
     int imag_B = 0;
 #endif
 
-    for(int i=0; i<golay_dimension*2; i+=2)
+	for(int i=0; i<golay_dimension*2; i+=2)
     {   if(assigns[i] == l_Undef)
-        {   atype_complete = false;
-            break;
-        }
-        else if(assigns[i] == l_False)
-        {   num_reals++;
-            if(assigns[i+1] == l_False)
-                real_false_count++;
-            else if(assigns[i+1] == l_True)
-                real_true_count++;
-        }
-        else if(assigns[i] == l_True)
-        {   num_imags++;
-            if(assigns[i+1] == l_False)
-                imag_false_count++;
-            else if(assigns[i+1] == l_True)
-                imag_true_count++;
-        }
-    }
+		{   atype_complete = false;
+		    break;
+		}
+		else if(assigns[i] == l_False)
+		{   num_reals++;
+		    if(assigns[i+1] == l_False)
+		        real_false_count++;
+		    else if(assigns[i+1] == l_True)
+		        real_true_count++;
+		}
+		else if(assigns[i] == l_True)
+		{   num_imags++;
+		    if(assigns[i+1] == l_False)
+		        imag_false_count++;
+		    else if(assigns[i+1] == l_True)
+		        imag_true_count++;
+		}
+	}
 
-    if(atype_complete)
+	if(numreala != -1)
+	{	num_reals = numreala;
+		num_imags = order - num_reals;
+	}
+
+    if(atype_complete || numreala != -1)
     {   
         assert(num_reals + num_imags == golay_dimension);
         if((carda % 2 != num_reals % 2) || (cardb % 2 != num_imags % 2))
-        {
+        {   if(numreala != -1)
+                printf("ERROR!!\n");
             for (int i = 0; i<golay_dimension*2; i+=2)
             {
 	            if(assigns[i] == l_False)
@@ -1553,11 +1563,12 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
         if(real_false_count > num_real_falses || real_true_count > num_reals - num_real_falses)
         {
             for (int i = 0; i<golay_dimension*2; i+=2)
-            {
-	            if(assigns[i] == l_False)
-    	            conflict.push(mkLit(i,false));
-        	    else
-                    conflict.push(mkLit(i,true));
+            {   if(numreala == -1)
+                {  if(assigns[i] == l_False)
+                      conflict.push(mkLit(i,false));
+                    else if(assigns[i] == l_True)
+                      conflict.push(mkLit(i,true));
+                }
                 if(real_false_count > num_real_falses && assigns[i+1] == l_False)
                     conflict.push(mkLit(i+1,false));
                 else if(real_true_count > num_reals - num_real_falses && assigns[i+1] == l_True)
@@ -1617,11 +1628,12 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
         if(imag_false_count > num_imag_falses || imag_true_count > num_imags - num_imag_falses)
         {
             for (int i = 0; i<golay_dimension*2; i+=2)
-            {
-	            if(assigns[i] == l_False)
-    	            conflict.push(mkLit(i,false));
-        	    else
-                    conflict.push(mkLit(i,true));
+            {   if(numreala == -1)
+                {  if(assigns[i] == l_False)
+                     conflict.push(mkLit(i,false));
+                   else if(assigns[i] == l_True)
+                     conflict.push(mkLit(i,true));
+                }
                 if(imag_false_count > num_imag_falses && assigns[i+1] == l_False)
                     conflict.push(mkLit(i+1,false));
                 else if(imag_true_count > num_imags - num_imag_falses && assigns[i+1] == l_True)
@@ -1713,11 +1725,17 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
         }
     }
 
-    if(btype_complete)
+	if(numrealb != -1)
+	{	num_reals = numrealb;
+		num_imags = order - num_reals;
+	}
+
+    if(btype_complete || numrealb != -1)
     {
         assert(num_reals + num_imags == golay_dimension);
         if((cardc % 2 != num_reals % 2) || (cardd % 2 != num_imags % 2))
-        {
+        {   if(numrealb != -1)
+                printf("ERROR!!\n");
             for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
             {
 	            if(assigns[i] == l_False)
@@ -1779,11 +1797,12 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
         if(real_false_count > num_real_falses || real_true_count > num_reals - num_real_falses)
         {
             for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
-            {
-	            if(assigns[i] == l_False)
-    	            conflict.push(mkLit(i,false));
-        	    else
-                    conflict.push(mkLit(i,true));
+            {   if(numrealb == -1)
+                {   if(assigns[i] == l_False)
+                      conflict.push(mkLit(i,false));
+                    else if(assigns[i] == l_True)
+                      conflict.push(mkLit(i,true));
+                }
                 if(real_true_count > num_reals - num_real_falses && assigns[i+1] == l_True)
                     conflict.push(mkLit(i+1,true));
                 else if(real_false_count > num_real_falses && assigns[i+1] == l_False)
@@ -1843,11 +1862,12 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
         if(imag_false_count > num_imag_falses || imag_true_count > num_imags - num_imag_falses)
         {
             for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
-            {
-	            if(assigns[i] == l_False)
-    	            conflict.push(mkLit(i,false));
-        	    else
-                    conflict.push(mkLit(i,true));
+            {   if(numrealb == -1)
+                {   if(assigns[i] == l_False)
+                      conflict.push(mkLit(i,false));
+                    else if(assigns[i] == l_True)
+                      conflict.push(mkLit(i,true));
+                }
                 if(imag_true_count > num_imags - num_imag_falses && assigns[i+1] == l_True)
                     conflict.push(mkLit(i+1,true));
                 else if(imag_false_count > num_imag_falses && assigns[i+1] == l_False)
@@ -2127,7 +2147,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 	int out_lbd2;
 	int out_lbd3;
 
-	if(order != -1)
+	if(carda != -1)
 	{	
 		calls2++;
 		timestamp_t t0 = get_timestamp();
@@ -2145,7 +2165,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 		return true;
 	}
 
-	if(true)
+	if(order != -1)
 	{
 		calls1++;
 		timestamp_t t0 = get_timestamp();
