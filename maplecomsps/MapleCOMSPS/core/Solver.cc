@@ -1566,13 +1566,21 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
             {   if(numreala == -1)
                 {  if(assigns[i] == l_False)
                       conflict.push(mkLit(i,false));
-                    else if(assigns[i] == l_True)
+                   else if(assigns[i] == l_True)
                       conflict.push(mkLit(i,true));
                 }
-                if(real_false_count > num_real_falses && assigns[i+1] == l_False)
-                    conflict.push(mkLit(i+1,false));
-                else if(real_true_count > num_reals - num_real_falses && assigns[i+1] == l_True)
-                    conflict.push(mkLit(i+1,true));
+                if(real_false_count > num_real_falses && assigns[i] == l_False && assigns[i+1] == l_False)
+                {   
+                   if(numreala != -1)
+                      conflict.push(mkLit(i,false));
+                   conflict.push(mkLit(i+1,false));
+                }
+                else if(real_true_count > num_reals - num_real_falses && assigns[i] == l_False && assigns[i+1] == l_True)
+                {   
+                   if(numreala != -1)
+                      conflict.push(mkLit(i,false));
+                   conflict.push(mkLit(i+1,true));
+                }
             }
 #ifdef PRINTCONF
             printf("conflict: incorrect number of real falses in A\n");
@@ -1630,14 +1638,22 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
             for (int i = 0; i<golay_dimension*2; i+=2)
             {   if(numreala == -1)
                 {  if(assigns[i] == l_False)
-                     conflict.push(mkLit(i,false));
+                      conflict.push(mkLit(i,false));
                    else if(assigns[i] == l_True)
-                     conflict.push(mkLit(i,true));
+                      conflict.push(mkLit(i,true));
                 }
-                if(imag_false_count > num_imag_falses && assigns[i+1] == l_False)
-                    conflict.push(mkLit(i+1,false));
-                else if(imag_true_count > num_imags - num_imag_falses && assigns[i+1] == l_True)
-                    conflict.push(mkLit(i+1,true));
+                if(imag_false_count > num_imag_falses && assigns[i] == l_True && assigns[i+1] == l_False)
+                {   
+                   if(numreala != -1)
+                      conflict.push(mkLit(i,true));
+                   conflict.push(mkLit(i+1,false));
+                }
+                else if(imag_true_count > num_imags - num_imag_falses && assigns[i] == l_True && assigns[i+1] == l_True)
+                {   
+                   if(numreala != -1)
+                      conflict.push(mkLit(i,true));
+                   conflict.push(mkLit(i+1,true));
+                }
             }
 #ifdef PRINTCONF
             printf("conflict: incorrect number of imag falses in A\n");
@@ -1798,15 +1814,23 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
         {
             for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
             {   if(numrealb == -1)
-                {   if(assigns[i] == l_False)
+                {  if(assigns[i] == l_False)
                       conflict.push(mkLit(i,false));
-                    else if(assigns[i] == l_True)
+                   else if(assigns[i] == l_True)
                       conflict.push(mkLit(i,true));
                 }
-                if(real_true_count > num_reals - num_real_falses && assigns[i+1] == l_True)
-                    conflict.push(mkLit(i+1,true));
-                else if(real_false_count > num_real_falses && assigns[i+1] == l_False)
-                    conflict.push(mkLit(i+1,false));
+                if(real_true_count > num_reals - num_real_falses && assigns[i] == l_False && assigns[i+1] == l_True)
+                {    
+                   if(numrealb != -1)
+                      conflict.push(mkLit(i,false));
+                   conflict.push(mkLit(i+1,true));
+                }
+                else if(real_false_count > num_real_falses && assigns[i] == l_False && assigns[i+1] == l_False)
+                {   
+                   if(numrealb != -1)
+                      conflict.push(mkLit(i,false));
+                   conflict.push(mkLit(i+1,false));
+                }
             }
 #ifdef PRINTCONF
             printf("conflict: incorrect number of real falses in B\n");
@@ -1863,15 +1887,23 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
         {
             for (int i=golay_dimension*2; i<no_of_significant_vars; i+=2)
             {   if(numrealb == -1)
-                {   if(assigns[i] == l_False)
+                {  if(assigns[i] == l_False)
                       conflict.push(mkLit(i,false));
-                    else if(assigns[i] == l_True)
+                   else if(assigns[i] == l_True)
                       conflict.push(mkLit(i,true));
                 }
-                if(imag_true_count > num_imags - num_imag_falses && assigns[i+1] == l_True)
-                    conflict.push(mkLit(i+1,true));
-                else if(imag_false_count > num_imag_falses && assigns[i+1] == l_False)
-                    conflict.push(mkLit(i+1,false));
+                if(imag_true_count > num_imags - num_imag_falses && assigns[i] == l_True && assigns[i+1] == l_True)
+                {   
+                   if(numrealb != -1)
+                      conflict.push(mkLit(i,true));
+                   conflict.push(mkLit(i+1,true));
+                }
+                else if(imag_false_count > num_imag_falses && assigns[i] == l_True && assigns[i+1] == l_False)
+                {   
+                   if(numrealb != -1)
+                      conflict.push(mkLit(i,true));
+                   conflict.push(mkLit(i+1,false));
+                }
             }
 #ifdef PRINTCONF
             printf("conflict: incorrect number of imag falses in B\n");
