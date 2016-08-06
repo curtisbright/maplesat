@@ -87,6 +87,14 @@ static IntOption     opt_cardc     (_cat, "cardc",      "Sum of real entries of 
 static IntOption     opt_cardd     (_cat, "cardd",      "Sum of imaginary entries of B", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_numreala  (_cat, "numreala",   "Number of real entries of A", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_numrealb  (_cat, "numrealb",   "Number of real entries of B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_ua  (_cat, "ua",   "Number of 1s in A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_va  (_cat, "va",   "Number of -1s in A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_xa  (_cat, "xa",   "Number of is in A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_ya  (_cat, "ya",   "Number of -is in A", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_ub  (_cat, "ub",   "Number of 1s in B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_vb  (_cat, "vb",   "Number of -1s in B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_xb  (_cat, "xb",   "Number of is in B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_yb  (_cat, "yb",   "Number of -is in B", -1, IntRange(-1, INT32_MAX));
 
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 
@@ -141,6 +149,14 @@ Solver::Solver() :
   , cardd (opt_cardd)
   , numreala (opt_numreala)
   , numrealb (opt_numrealb)
+  , ua (opt_ua)
+  , va (opt_va)
+  , xa (opt_xa)
+  , ya (opt_ya)
+  , ub (opt_ub)
+  , vb (opt_vb)
+  , xb (opt_xb)
+  , yb (opt_yb)
   , prodvars (opt_prodvars)
 
   , ok                 (true)
@@ -1444,6 +1460,165 @@ bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel, int& 
     return false;
 }
 
+bool Solver::decomposition_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
+{
+    vec<Lit> conflict;
+
+	int ucount = 0;
+	int vcount = 0;
+	int xcount = 0;
+	int ycount = 0;
+
+	for(int i=0; i<order; i++)
+	{	if(assigns[2*i] == l_False && assigns[2*i+1] == l_False)
+		{	ucount++;
+			// Too many 1s in A
+			if(ucount > ua)
+			{	// Construct conflict clause
+				for(int j=0; j<=i; j++)
+				{	if(assigns[2*j] == l_False && assigns[2*j+1] == l_False)
+					{	conflict.push(mkLit(2*j, false));
+						conflict.push(mkLit(2*j+1, false));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+		if(assigns[2*i] == l_False && assigns[2*i+1] == l_True)
+		{	vcount++;
+			// Too many -1s in A
+			if(vcount > va)
+			{	// Construct conflict clause
+				for(int j=0; j<=i; j++)
+				{	if(assigns[2*j] == l_False && assigns[2*j+1] == l_True)
+					{	conflict.push(mkLit(2*j, false));
+						conflict.push(mkLit(2*j+1, true));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+		if(assigns[2*i] == l_True && assigns[2*i+1] == l_False)
+		{	xcount++;
+			// Too many is in A
+			if(xcount > xa)
+			{	// Construct conflict clause
+				for(int j=0; j<=i; j++)
+				{	if(assigns[2*j] == l_True && assigns[2*j+1] == l_False)
+					{	conflict.push(mkLit(2*j, true));
+						conflict.push(mkLit(2*j+1, false));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+		if(assigns[2*i] == l_True && assigns[2*i+1] == l_True)
+		{	ycount++;
+			// Too many -is in A
+			if(ycount > ya)
+			{	// Construct conflict clause
+				for(int j=0; j<=i; j++)
+				{	if(assigns[2*j] == l_True && assigns[2*j+1] == l_True)
+					{	conflict.push(mkLit(2*j, true));
+						conflict.push(mkLit(2*j+1, true));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+	}
+
+	ucount = 0;
+	vcount = 0;
+	xcount = 0;
+	ycount = 0;
+
+	for(int i=order; i<2*order; i++)
+	{	if(assigns[2*i] == l_False && assigns[2*i+1] == l_False)
+		{	ucount++;
+			// Too many 1s in B
+			if(ucount > ub)
+			{	// Construct conflict clause
+				for(int j=order; j<=i; j++)
+				{	if(assigns[2*j] == l_False && assigns[2*j+1] == l_False)
+					{	conflict.push(mkLit(2*j, false));
+						conflict.push(mkLit(2*j+1, false));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+		if(assigns[2*i] == l_False && assigns[2*i+1] == l_True)
+		{	vcount++;
+			// Too many -1s in B
+			if(vcount > vb)
+			{	// Construct conflict clause
+				for(int j=order; j<=i; j++)
+				{	if(assigns[2*j] == l_False && assigns[2*j+1] == l_True)
+					{	conflict.push(mkLit(2*j, false));
+						conflict.push(mkLit(2*j+1, true));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+		if(assigns[2*i] == l_True && assigns[2*i+1] == l_False)
+		{	xcount++;
+			// Too many is in B
+			if(xcount > xb)
+			{	// Construct conflict clause
+				for(int j=order; j<=i; j++)
+				{	if(assigns[2*j] == l_True && assigns[2*j+1] == l_False)
+					{	conflict.push(mkLit(2*j, true));
+						conflict.push(mkLit(2*j+1, false));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+		if(assigns[2*i] == l_True && assigns[2*i+1] == l_True)
+		{	ycount++;
+			// Too many -is in B
+			if(ycount > yb)
+			{	// Construct conflict clause
+				for(int j=order; j<=i; j++)
+				{	if(assigns[2*j] == l_True && assigns[2*j+1] == l_True)
+					{	conflict.push(mkLit(2*j, true));
+						conflict.push(mkLit(2*j+1, true));
+					}
+				}
+				// Construct out_learnt clause
+				out_learnt.clear();
+            	analyze(conflict, out_learnt, out_btlevel, out_lbd);
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
 {
     vec<Lit> conflict;
@@ -2169,15 +2344,37 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 	bool result1 = false;
 	bool result2 = false;
 	bool result3 = false;
+	bool result4 = false;
 	vec<Lit> out_learnt1;
 	vec<Lit> out_learnt2;
 	vec<Lit> out_learnt3;
+	vec<Lit> out_learnt4;
 	int out_btlevel1;
 	int out_btlevel2;
 	int out_btlevel3;
+	int out_btlevel4;
 	int out_lbd1;
 	int out_lbd2;
 	int out_lbd3;
+	int out_lbd4;
+
+	if(ua != -1)
+	{	
+		calls4++;
+		timestamp_t t0 = get_timestamp();
+		if(decomposition_check(out_learnt4, out_btlevel4, out_lbd4))
+			success4++, result4 = true;
+		timestamp_t t1 = get_timestamp();
+		time4 += (t1 - t0) / 1000000.0L;
+	}
+
+	if(result4)
+	{
+		out_learnt4.copyTo(out_learnt);
+		out_btlevel = out_btlevel4;
+		out_lbd = out_lbd4;
+		return true;
+	}
 
 	if(carda != -1)
 	{	
@@ -2602,9 +2799,10 @@ lbool Solver::solve_()
         delete [] B;
     }
 
-    printf("filtering       checks: %d successes, %d total, %.2f total time\n", success1, calls1, time1);
-    printf("cardinality     checks: %d successes, %d total, %.2f total time\n", success2, calls2, time2);
-    printf("autocorrelation checks: %d successes, %d total, %.2f total time\n", success3, calls3, time3);
+    printf("decomposition   checks: %d successes, %d total (%.2f), %.2f total time\n", success4, calls4, (float)success4/calls4, time4);
+    printf("cardinality     checks: %d successes, %d total (%.2f), %.2f total time\n", success2, calls2, (float)success2/calls2, time2);
+    printf("filtering       checks: %d successes, %d total (%.2f), %.2f total time\n", success1, calls1, (float)success1/calls1, time1);
+    printf("autocorrelation checks: %d successes, %d total (%.2f), %.2f total time\n", success3, calls3, (float)success3/calls3, time3);
 
     if (status == l_True){
         // Extend & copy model:

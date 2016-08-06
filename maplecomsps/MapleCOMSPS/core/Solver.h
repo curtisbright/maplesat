@@ -191,6 +191,7 @@ public:
     vec<uint32_t> conflicted;
     int order;
     int carda, cardb, cardc, cardd, numreala, numrealb;
+    int ua, va, xa, ya, ub, vb, xb, yb;
     const char* prodvars;
     vec<uint32_t> almost_conflicted;
 #ifdef ANTI_EXPLORATION
@@ -300,6 +301,7 @@ protected:
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
 
     bool     programmatic_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
+    bool     decomposition_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
