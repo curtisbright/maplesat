@@ -43,14 +43,17 @@ int calls1 = 0;
 int calls2 = 0;
 int calls3 = 0;
 int calls4 = 0;
+int calls5 = 0;
 int success1 = 0;
 int success2 = 0;
 int success3 = 0;
 int success4 = 0;
+int success5 = 0;
 double time1 = 0;
 double time2 = 0;
 double time3 = 0;
 double time4 = 0;
+double time5 = 0;
 
 using namespace Minisat;
 
@@ -1183,7 +1186,7 @@ std::complex<double> hall_eval(std::complex<double> seq[], int len,
 
 bool hall_check(std::complex<double> seq[], int len, int nchecks)
 {
-  double epsilon = 0.1;
+  double epsilon = 0.001;
   double theta;
   double v;
   std::complex<double> imagConst(0.0,1.0);
@@ -1903,24 +1906,86 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
   return true;
 }
 
+bool Solver::algebraic_check(vec<Lit>& out_learnt, int&out_btlevel, int& out_lbd)
+{	
+	bool complete = true;
+	vec<Lit> conflict;
+	
+	for(int i=0; i<2*order; i++)
+	{	if(assigns[i] == l_Undef)
+			complete = false;
+	}
+	
+	if(complete == true)
+	{	// Construct and print conflict clause
+		for(int i=0; i<2*order; i++)
+		{	if(assigns[i] == l_True)
+			{	conflict.push(mkLit(i, true));
+				printf("1");
+			}
+			else if(assigns[i] == l_False)
+			{	conflict.push(mkLit(i, false));
+				printf("0");
+			}
+		}
+		printf("\n");
+		// Construct out_learnt clause
+		out_learnt.clear();
+		analyze(conflict, out_learnt, out_btlevel, out_lbd);
+		return true;
+	}
+
+	complete = true;
+	
+	for(int i=2*order; i<4*order; i++)
+	{	if(assigns[i] == l_Undef)
+			complete = false;
+	}
+	
+	if(complete == true)
+	{	// Construct and print conflict clause
+		for(int i=2*order; i<4*order; i++)
+		{	if(assigns[i] == l_True)
+			{	conflict.push(mkLit(i, true));
+				printf("1");
+			}
+			else if(assigns[i] == l_False)
+			{	conflict.push(mkLit(i, false));
+				printf("0");
+			}
+		}
+		printf("\n");
+		// Construct out_learnt clause
+		out_learnt.clear();
+		analyze(conflict, out_learnt, out_btlevel, out_lbd);
+		return true;
+	}
+	
+	return false;
+}
+
 bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
 {
 	bool result1 = false;
 	bool result2 = false;
 	bool result3 = false;
 	bool result4 = false;
+	bool result5 = false;
 	vec<Lit> out_learnt1;
 	vec<Lit> out_learnt2;
 	vec<Lit> out_learnt3;
 	vec<Lit> out_learnt4;
+	vec<Lit> out_learnt5;
 	int out_btlevel1;
 	int out_btlevel2;
 	int out_btlevel3;
 	int out_btlevel4;
+	int out_btlevel5;
 	int out_lbd1;
 	int out_lbd2;
 	int out_lbd3;
 	int out_lbd4;
+	int out_lbd5;
 
 	if(ua != -1)
 	{	
@@ -1993,6 +2058,24 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 		out_lbd = out_lbd3;
 		return true;
 	}
+	
+	if(order != -1)
+	{
+		calls5++;
+		timestamp_t t0 = get_timestamp();
+		if(algebraic_check(out_learnt5, out_btlevel5, out_lbd5))
+			success5++, result5 = true;
+		timestamp_t t1 = get_timestamp();
+		time5 += (t1 - t0) / 1000000.0L;
+	}
+  
+	if(result5)
+	{
+		out_learnt5.copyTo(out_learnt);
+		out_btlevel = out_btlevel5;
+		out_lbd = out_lbd5;
+		return true;
+	}	
 
 	return false;
 }
@@ -2367,6 +2450,7 @@ lbool Solver::solve_()
     printf("cardinality     checks: %d successes, %d total (%.2f), %.2f total time\n", success2, calls2, (float)success2/calls2, time2);
     printf("filtering       checks: %d successes, %d total (%.2f), %.2f total time\n", success1, calls1, (float)success1/calls1, time1);
     printf("autocorrelation checks: %d successes, %d total (%.2f), %.2f total time\n", success3, calls3, (float)success3/calls3, time3);
+    printf("algebraic       checks: %d successes, %d total (%.2f), %.2f total time\n", success5, calls5, (float)success5/calls5, time5);
 
     if (status == l_True){
         // Extend & copy model:

@@ -301,6 +301,7 @@ protected:
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
 
+    bool     algebraic_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     programmatic_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     decomposition_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
