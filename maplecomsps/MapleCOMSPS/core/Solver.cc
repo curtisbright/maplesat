@@ -95,6 +95,7 @@ static IntOption     opt_ub  (_cat, "ub",   "Number of 1s in B", -1, IntRange(-1
 static IntOption     opt_vb  (_cat, "vb",   "Number of -1s in B", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_xb  (_cat, "xb",   "Number of is in B", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_yb  (_cat, "yb",   "Number of -is in B", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_trials    (_cat, "trials",     "Number of angles to try in filtering theorem", -1, IntRange(-1, INT32_MAX));
 
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 
@@ -157,6 +158,7 @@ Solver::Solver() :
   , vb (opt_vb)
   , xb (opt_xb)
   , yb (opt_yb)
+  , trials (opt_trials)
   , prodvars (opt_prodvars)
 
   , ok                 (true)
@@ -1840,7 +1842,7 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
 
   if (a_complete)
   {
-    if (!hall_check(a_fills,golay_dimension,55))
+    if (!hall_check(a_fills,golay_dimension,trials))
     {
 #ifdef PRINTCONF
       printf("conflict: filtering theorem for sequence A\n");
@@ -1859,7 +1861,7 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
 #ifdef PRINTCONF
       printf("conflict: filtering theorem for sequence B\n");
 #endif
-    if (!hall_check(b_fills,golay_dimension,55))
+    if (!hall_check(b_fills,golay_dimension,trials))
     {
       for (int i = golay_dimension*2;i<no_of_significant_vars; i++)
       {
@@ -1956,7 +1958,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 		return true;
 	}
 
-	if(order != -1)
+	if(trials != -1)
 	{
 		calls1++;
 		timestamp_t t0 = get_timestamp();

@@ -192,6 +192,7 @@ public:
     int order;
     int carda, cardb, cardc, cardd, numreala, numrealb;
     int ua, va, xa, ya, ub, vb, xb, yb;
+    int trials;
     const char* prodvars;
     vec<uint32_t> almost_conflicted;
 #ifdef ANTI_EXPLORATION
