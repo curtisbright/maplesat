@@ -190,7 +190,6 @@ public:
     vec<uint32_t> picked;
     vec<uint32_t> conflicted;
     int order;
-    int carda, cardb, cardc, cardd, numreala, numrealb;
     int ua, va, xa, ya, ub, vb, xb, yb;
     int trials;
     const char* prodvars;

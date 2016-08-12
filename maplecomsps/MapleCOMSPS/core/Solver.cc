@@ -85,13 +85,6 @@ static IntOption     opt_restart_first     (_cat, "rfirst",      "The base resta
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
-static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_carda     (_cat, "carda",      "Sum of real entries of A", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_cardb     (_cat, "cardb",      "Sum of imaginary entries of A", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_cardc     (_cat, "cardc",      "Sum of real entries of B", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_cardd     (_cat, "cardd",      "Sum of imaginary entries of B", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_numreala  (_cat, "numreala",   "Number of real entries of A", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_numrealb  (_cat, "numrealb",   "Number of real entries of B", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_ua  (_cat, "ua",   "Number of 1s in A", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_va  (_cat, "va",   "Number of -1s in A", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_xa  (_cat, "xa",   "Number of is in A", -1, IntRange(-1, INT32_MAX));
@@ -148,13 +141,6 @@ Solver::Solver() :
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), conflicts_VSIDS(0)
   , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
 
-  , order(opt_order)
-  , carda (opt_carda)
-  , cardb (opt_cardb)
-  , cardc (opt_cardc)
-  , cardd (opt_cardd)
-  , numreala (opt_numreala)
-  , numrealb (opt_numrealb)
   , ua (opt_ua)
   , va (opt_va)
   , xa (opt_xa)
