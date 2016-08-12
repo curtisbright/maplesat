@@ -54,6 +54,8 @@ double time2 = 0;
 double time3 = 0;
 double time4 = 0;
 double time5 = 0;
+int num_complete = 0;
+int filt_success = 0;
 
 using namespace Minisat;
 
@@ -1844,9 +1846,9 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
   vec<Lit> conflict;
 
   if (a_complete)
-  {
+  { num_complete++;
     if (!hall_check(a_fills,golay_dimension,trials))
-    {
+    { filt_success++;
 #ifdef PRINTCONF
       printf("conflict: filtering theorem for sequence A\n");
 #endif
@@ -1860,12 +1862,12 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
     }
   }
   else if (b_complete)
-  {
+  { num_complete++;
 #ifdef PRINTCONF
       printf("conflict: filtering theorem for sequence B\n");
 #endif
     if (!hall_check(b_fills,golay_dimension,trials))
-    {
+    { filt_success++;
       for (int i = golay_dimension*2;i<no_of_significant_vars; i++)
       {
 	if(assigns[i] == l_False)
@@ -2451,6 +2453,7 @@ lbool Solver::solve_()
     printf("filtering       checks: %d successes, %d total (%.2f), %.2f total time\n", success1, calls1, (float)success1/calls1, time1);
     printf("autocorrelation checks: %d successes, %d total (%.2f), %.2f total time\n", success3, calls3, (float)success3/calls3, time3);
     printf("algebraic       checks: %d successes, %d total (%.2f), %.2f total time\n", success5, calls5, (float)success5/calls5, time5);
+    printf("filtering               %d successes, %d total (%.2f)\n", filt_success, num_complete, (float)num_complete/filt_success);
 
     if (status == l_True){
         // Extend & copy model:
