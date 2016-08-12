@@ -2061,7 +2061,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 		return true;
 	}
 	
-	if(order != -1)
+	/*if(order != -1)
 	{
 		calls5++;
 		timestamp_t t0 = get_timestamp();
@@ -2077,7 +2077,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 		out_btlevel = out_btlevel5;
 		out_lbd = out_lbd5;
 		return true;
-	}	
+	}	*/
 
 	return false;
 }
@@ -2452,7 +2452,7 @@ lbool Solver::solve_()
     printf("cardinality     checks: %d successes, %d total (%.2f), %.2f total time\n", success2, calls2, (float)success2/calls2, time2);
     printf("filtering       checks: %d successes, %d total (%.2f), %.2f total time\n", success1, calls1, (float)success1/calls1, time1);
     printf("autocorrelation checks: %d successes, %d total (%.2f), %.2f total time\n", success3, calls3, (float)success3/calls3, time3);
-    printf("algebraic       checks: %d successes, %d total (%.2f), %.2f total time\n", success5, calls5, (float)success5/calls5, time5);
+    //printf("algebraic       checks: %d successes, %d total (%.2f), %.2f total time\n", success5, calls5, (float)success5/calls5, time5);
     printf("filtering               %d successes, %d total (%.2f)\n", filt_success, num_complete, (float)num_complete/filt_success);
 
     if (status == l_True){
