@@ -96,6 +96,9 @@ static IntOption     opt_xb  (_cat, "xb",   "Number of is in B", -1, IntRange(-1
 static IntOption     opt_yb  (_cat, "yb",   "Number of -is in B", -1, IntRange(-1, INT32_MAX));
 static IntOption     opt_trials    (_cat, "trials",     "Number of angles to try in filtering theorem", -1, IntRange(-1, INT32_MAX));
 
+static BoolOption    opt_a_prio    (_cat, "a-prio",     "Prioritize variables in A", false);
+static BoolOption    opt_b_prio    (_cat, "b-prio",     "Prioritize variables in B", false);
+
 static StringOption  opt_prodvars  (_cat, "prodvars",   "A file which contains a list of all product variables in the SAT instance.");
 
 int** A;
@@ -141,6 +144,9 @@ Solver::Solver() :
     //
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0), conflicts_VSIDS(0)
   , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+
+  , a_prio (opt_a_prio)
+  , b_prio (opt_b_prio)
 
   , order (opt_order)
   , ua (opt_ua)

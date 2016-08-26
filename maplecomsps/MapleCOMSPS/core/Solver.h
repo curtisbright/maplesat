@@ -189,6 +189,7 @@ public:
 
     vec<uint32_t> picked;
     vec<uint32_t> conflicted;
+    bool a_prio, b_prio;
     int order;
     int ua, va, xa, ya, ub, vb, xb, yb;
     int trials;
@@ -221,9 +222,25 @@ protected:
     };
 
     struct VarOrderLt {
-        const vec<double>&  activity;
-        bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
-        VarOrderLt(const vec<double>&  act) : activity(act) { }
+        const vec<double>& activity;
+        int order;
+        bool a_prio, b_prio;
+        bool operator () (Var x, Var y) const {
+           if(a_prio)
+           { if(x < order)
+               return true;
+             if(y < order)
+               return false;
+           }
+           if(b_prio)
+           { if(x >= order && x < 2*order)
+               return true;
+             if(y >= order && y < 2*order)
+               return false;
+           }
+           return activity[x] > activity[y];
+        }
+        VarOrderLt(const vec<double>& act, int n, bool ap, bool bp) : activity(act), order(n), a_prio(ap), b_prio(bp) { }
     };
 
     // Solver state:
