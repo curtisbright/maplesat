@@ -223,10 +223,10 @@ protected:
 
     struct VarOrderLt {
         const vec<double>& activity;
-        int order;
-        bool a_prio, b_prio;
+        /*int order;
+        bool a_prio, b_prio;*/
         bool operator () (Var x, Var y) const {
-           if(a_prio)
+           /*if(a_prio)
            { if(x < order)
                return true;
              if(y < order)
@@ -237,10 +237,10 @@ protected:
                return true;
              if(y >= order && y < 2*order)
                return false;
-           }
+           }*/
            return activity[x] > activity[y];
         }
-        VarOrderLt(const vec<double>& act, int n, bool ap, bool bp) : activity(act), order(n), a_prio(ap), b_prio(bp) { }
+        VarOrderLt(const vec<double>& act/*, int n, bool ap, bool bp*/) : activity(act)/*, order(n), a_prio(ap), b_prio(bp)*/ { }
     };
 
     // Solver state:
@@ -318,7 +318,7 @@ protected:
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
 
     bool     algebraic_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
-    bool     programmatic_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
+    bool     filtering_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     decomposition_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);
     bool     autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd);

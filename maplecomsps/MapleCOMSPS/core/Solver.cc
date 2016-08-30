@@ -170,8 +170,8 @@ Solver::Solver() :
   , qhead              (0)
   , simpDB_assigns     (-1)
   , simpDB_props       (0)
-  , order_heap_CHB     (VarOrderLt(activity_CHB))
-  , order_heap_VSIDS   (VarOrderLt(activity_VSIDS))
+  , order_heap_CHB     (VarOrderLt(activity_CHB/*, order, a_prio, b_prio*/))
+  , order_heap_VSIDS   (VarOrderLt(activity_VSIDS/*, order, a_prio, b_prio*/))
   , progress_estimate  (0)
   , remove_satisfied   (true)
 
@@ -1176,27 +1176,37 @@ std::complex<double> hall_eval(std::complex<double> seq[], int len,
 {
   std::complex<double> result(0.0,0.0);
   for (int i = 0; i<len; ++i)
-  {
+  { /*printf("seq[%d] = ", i);
+    printf("%.2f + %.2f i; ", seq[i].real(), seq[i].imag());*/
     result += seq[i]*pow(value,i);
   }
+  /*printf("len = %d; ", len);
+  printf("value = %.2f + %.2f i; ", value.real(), value.imag());
+  printf("result = %.2f + %.2f i\n", result.real(), result.imag());*/
   return result;
 }
 
-bool hall_check(std::complex<double> seq[], int len, int nchecks)
+int hall_check(std::complex<double> seq[], int len, int nchecks)
 {
   double epsilon = 0.001;
   double theta;
   double v;
+  double max = 0;
   std::complex<double> imagConst(0.0,1.0);
-  for (int i = 0; i<nchecks; ++i)
+  for (int k = 1; k<nchecks; ++k)
   {
-    theta = i*2*M_PI/nchecks;
-    v = std::abs(hall_eval(seq,len,std::exp(theta*imagConst)));
-    v*=v;
-    if (v>2*len+epsilon)
-      return false;
+    theta = k*2*M_PI/nchecks;
+    std::complex<double> res = hall_eval(seq,len,std::exp(theta*imagConst));
+    v = std::abs(res);
+    /*printf("res = %.2f + %.2f i, abs = %.2f\n", res.real(), res.imag(), v);*/
+    if (v>max)
+      max = v;
   }
-  return true;
+  /*printf("max: %.2f\n", max);*/
+  if(max - sqrt(2*len) < epsilon)
+    return -1;
+  else
+    return (int)(max - sqrt(2*len) - epsilon);
 }
 
 bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
@@ -1773,7 +1783,7 @@ bool Solver::cardinality_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_
     return false;    
 }
 
-bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
+bool Solver::filtering_check(vec<Lit>& out_learnt, int&
 				out_btlevel, int& out_lbd)
 {
   int golay_dimension = order;
@@ -1843,36 +1853,42 @@ bool Solver::programmatic_check(vec<Lit>& out_learnt, int&
 
   if (a_complete)
   { num_complete++;
-    if (!hall_check(a_fills,golay_dimension,trials))
+    int check = hall_check(a_fills,golay_dimension,trials);
+    if (check > 0)
     { filt_success++;
       filt_success_A++;
+      int entries_to_set = golay_dimension - check;
 #ifdef PRINTCONF
-      printf("conflict: filtering theorem for sequence A\n");
+      printf("conflict: filtering theorem for sequence A; setting %d entries\n", entries_to_set);
 #endif
-      for (int i = 0; i<golay_dimension*2; i++)
+      for (int i = 0; i<entries_to_set*2; i++)
       {
 	if(assigns[i] == l_False)
-	  conflict.push(mkLit(i,false));
+	  conflict.push(mkLit(i,false))/*, printf("0")*/;
 	else
-	  conflict.push(mkLit(i,true));
+	  conflict.push(mkLit(i,true))/*, printf("1")*/;
       }
+      /*printf("\n");*/
     }
   }
   else if (b_complete)
   { num_complete++;
-#ifdef PRINTCONF
-      printf("conflict: filtering theorem for sequence B\n");
-#endif
-    if (!hall_check(b_fills,golay_dimension,trials))
+    int check = hall_check(b_fills,golay_dimension,trials);
+    if (check > 0)
     { filt_success++;
       filt_success_B++;
-      for (int i = golay_dimension*2;i<no_of_significant_vars; i++)
+      int entries_to_set = golay_dimension - check;
+#ifdef PRINTCONF
+      printf("conflict: filtering theorem for sequence B; setting %d entries\n", entries_to_set);
+#endif
+      for (int i = golay_dimension*2; i < 2*(golay_dimension + entries_to_set); i++)
       {
 	if(assigns[i] == l_False)
-	  conflict.push(mkLit(i,false));
+	  conflict.push(mkLit(i,false))/*, printf("0")*/;
 	else
-	  conflict.push(mkLit(i,true));
+	  conflict.push(mkLit(i,true))/*, printf("1")*/;
       }
+      /*printf("\n");*/
     }
   }
 
@@ -1918,7 +1934,7 @@ bool Solver::algebraic_check(vec<Lit>& out_learnt, int&out_btlevel, int& out_lbd
 	
 	if(complete == true)
 	{	// Construct and print conflict clause
-		for(int i=0; i<2*order; i++)
+		/*for(int i=0; i<2*order; i++)
 		{	if(assigns[i] == l_True)
 			{	conflict.push(mkLit(i, true));
 				printf("1");
@@ -1928,7 +1944,8 @@ bool Solver::algebraic_check(vec<Lit>& out_learnt, int&out_btlevel, int& out_lbd
 				printf("0");
 			}
 		}
-		printf("\n");
+		printf("\n");*/
+		return false;
 		// Construct out_learnt clause
 		out_learnt.clear();
 		analyze(conflict, out_learnt, out_btlevel, out_lbd);
@@ -1944,7 +1961,7 @@ bool Solver::algebraic_check(vec<Lit>& out_learnt, int&out_btlevel, int& out_lbd
 	
 	if(complete == true)
 	{	// Construct and print conflict clause
-		for(int i=2*order; i<4*order; i++)
+		/*for(int i=2*order; i<4*order; i++)
 		{	if(assigns[i] == l_True)
 			{	conflict.push(mkLit(i, true));
 				printf("1");
@@ -1954,7 +1971,8 @@ bool Solver::algebraic_check(vec<Lit>& out_learnt, int&out_btlevel, int& out_lbd
 				printf("0");
 			}
 		}
-		printf("\n");
+		printf("\n");*/
+		return false;
 		// Construct out_learnt clause
 		out_learnt.clear();
 		analyze(conflict, out_learnt, out_btlevel, out_lbd);
@@ -2027,7 +2045,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 	{
 		calls1++;
 		timestamp_t t0 = get_timestamp();
-		if(programmatic_check(out_learnt1, out_btlevel1, out_lbd1))
+		if(filtering_check(out_learnt1, out_btlevel1, out_lbd1))
 			success1++, result1 = true;
 		timestamp_t t1 = get_timestamp();
 		time1 += (t1 - t0) / 1000000.0L;
@@ -2075,7 +2093,7 @@ bool Solver::callback_function(vec<Lit>& out_learnt, int& out_btlevel, int& out_
 		out_btlevel = out_btlevel5;
 		out_lbd = out_lbd5;
 		return true;
-	}	*/
+	}*/
 
 	return false;
 }
@@ -2377,6 +2395,7 @@ lbool Solver::solve_()
 
     signal(SIGALRM, SIGALRM_switch);
     alarm(2500);
+    //alarm(21600);
 
     model.clear();
     conflict.clear();
@@ -2450,7 +2469,7 @@ lbool Solver::solve_()
     printf("cardinality     checks: %d successes, %d total (%.2f), %.2f total time\n", success2, calls2, (float)success2/calls2, time2);
     printf("filtering       checks: %d successes, %d total (%.2f), %.2f total time\n", success1, calls1, (float)success1/calls1, time1);
     printf("autocorrelation checks: %d successes, %d total (%.2f), %.2f total time\n", success3, calls3, (float)success3/calls3, time3);
-    //printf("algebraic       checks: %d successes, %d total (%.2f), %.2f total time\n", success5, calls5, (float)success5/calls5, time5);
+    printf("algebraic       checks: %d successes, %d total (%.2f), %.2f total time\n", success5, calls5, (float)success5/calls5, time5);
     printf("filtering               %d successes, %d total (%.2f)\n", filt_success, num_complete, (float)filt_success/num_complete);
     printf("filtering               %d A successes, %d B successes\n", filt_success_A, filt_success_B);
 
