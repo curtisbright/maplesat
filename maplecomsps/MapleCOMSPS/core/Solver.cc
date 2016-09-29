@@ -1191,7 +1191,7 @@ int hall_check(std::complex<double> seq[], int len, int nchecks)
   double epsilon = 0.001;
   double theta;
   double v;
-  double max = 0;
+  //double max = 0;
   std::complex<double> imagConst(0.0,1.0);
   for (int k = 1; k<nchecks; ++k)
   {
@@ -1199,14 +1199,16 @@ int hall_check(std::complex<double> seq[], int len, int nchecks)
     std::complex<double> res = hall_eval(seq,len,std::exp(theta*imagConst));
     v = std::abs(res);
     /*printf("res = %.2f + %.2f i, abs = %.2f\n", res.real(), res.imag(), v);*/
-    if (v>max)
-      max = v;
+    /*if (v>max)
+      max = v;*/
+    if(v - sqrt(2*len) > epsilon)
+      return (int)(v - sqrt(2*len) - epsilon);
   }
   /*printf("max: %.2f\n", max);*/
-  if(max - sqrt(2*len) < epsilon)
+  //if(max - sqrt(2*len) < epsilon)
     return -1;
-  else
-    return (int)(max - sqrt(2*len) - epsilon);
+  //else
+  //  return (int)(max - sqrt(2*len) - epsilon);
 }
 
 bool Solver::autocorrelation_check(vec<Lit>& out_learnt, int& out_btlevel, int& out_lbd)
@@ -1854,7 +1856,7 @@ bool Solver::filtering_check(vec<Lit>& out_learnt, int&
   if (a_complete)
   { num_complete++;
     int check = hall_check(a_fills,golay_dimension,trials);
-    if (check > 0)
+    if (check >= 0)
     { filt_success++;
       filt_success_A++;
       int entries_to_set = golay_dimension - check;
@@ -1874,7 +1876,7 @@ bool Solver::filtering_check(vec<Lit>& out_learnt, int&
   else if (b_complete)
   { num_complete++;
     int check = hall_check(b_fills,golay_dimension,trials);
-    if (check > 0)
+    if (check >= 0)
     { filt_success++;
       filt_success_B++;
       int entries_to_set = golay_dimension - check;
