@@ -327,6 +327,154 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
+{
+    int pathC = 0;
+    CRef confl;
+    Lit p     = lit_Undef;
+
+    // Generate conflict clause:
+    //
+    out_learnt.push();      // (leave room for the asserting literal)
+    int index   = trail.size() - 1;
+
+        for (int j = (p == lit_Undef) ? 0 : 1; j < conflvec.size(); j++){
+            Lit q = conflvec[j];
+
+            if (!seen[var(q)] && level(var(q)) > 0){
+#if BRANCHING_HEURISTIC == CHB
+                last_conflict[var(q)] = conflicts;
+#elif BRANCHING_HEURISTIC == VSIDS
+                varBumpActivity(var(q));
+#endif
+                conflicted[var(q)]++;
+                seen[var(q)] = 1;
+                if (level(var(q)) >= decisionLevel())
+                    pathC++;
+                else
+                    out_learnt.push(q);
+            }
+        }
+
+        // Select next clause to look at:
+        while (!seen[var(trail[index--])]);
+        p     = trail[index+1];
+        confl = reason(var(p));
+        seen[var(p)] = 0;
+        pathC--;
+
+    while(pathC > 0){
+        assert(confl != CRef_Undef); // (otherwise should be UIP)
+        Clause& c = ca[confl];
+
+#if LBD_BASED_CLAUSE_DELETION
+        if (c.learnt() && c.activity() > 2)
+            c.activity() = lbd(c);
+#else
+        if (c.learnt())
+            claBumpActivity(c);
+#endif
+
+        for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
+            Lit q = c[j];
+
+            if (!seen[var(q)] && level(var(q)) > 0){
+#if BRANCHING_HEURISTIC == CHB
+                last_conflict[var(q)] = conflicts;
+#elif BRANCHING_HEURISTIC == VSIDS
+                varBumpActivity(var(q));
+#endif
+                conflicted[var(q)]++;
+                seen[var(q)] = 1;
+                if (level(var(q)) >= decisionLevel())
+                    pathC++;
+                else
+                    out_learnt.push(q);
+            }
+        }
+
+        // Select next clause to look at:
+        while (!seen[var(trail[index--])]);
+        p     = trail[index+1];
+        confl = reason(var(p));
+        seen[var(p)] = 0;
+        pathC--;
+
+    }
+    out_learnt[0] = ~p;
+
+    // Simplify conflict clause:
+    //
+    int i, j;
+    out_learnt.copyTo(analyze_toclear);
+    if (ccmin_mode == 2){
+        uint32_t abstract_level = 0;
+        for (i = 1; i < out_learnt.size(); i++)
+            abstract_level |= abstractLevel(var(out_learnt[i])); // (maintain an abstraction of levels involved in conflict)
+
+        for (i = j = 1; i < out_learnt.size(); i++)
+            if (reason(var(out_learnt[i])) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level))
+                out_learnt[j++] = out_learnt[i];
+
+    }else if (ccmin_mode == 1){
+        for (i = j = 1; i < out_learnt.size(); i++){
+            Var x = var(out_learnt[i]);
+
+            if (reason(x) == CRef_Undef)
+                out_learnt[j++] = out_learnt[i];
+            else{
+                Clause& c = ca[reason(var(out_learnt[i]))];
+                for (int k = 1; k < c.size(); k++)
+                    if (!seen[var(c[k])] && level(var(c[k])) > 0){
+                        out_learnt[j++] = out_learnt[i];
+                        break; }
+            }
+        }
+    }else
+        i = j = out_learnt.size();
+
+    max_literals += out_learnt.size();
+    out_learnt.shrink(i - j);
+    tot_literals += out_learnt.size();
+
+    // Find correct backtrack level:
+    //
+    if (out_learnt.size() == 1)
+        out_btlevel = 0;
+    else{
+        int max_i = 1;
+        // Find the first literal assigned at the next-highest level:
+        for (int i = 2; i < out_learnt.size(); i++)
+            if (level(var(out_learnt[i])) > level(var(out_learnt[max_i])))
+                max_i = i;
+        // Swap-in this literal at index 1:
+        Lit p             = out_learnt[max_i];
+        out_learnt[max_i] = out_learnt[1];
+        out_learnt[1]     = p;
+        out_btlevel       = level(var(p));
+    }
+
+#if ALMOST_CONFLICT
+    seen[var(p)] = true;
+    for(int i = out_learnt.size() - 1; i >= 0; i--) {
+        Var v = var(out_learnt[i]);
+        CRef rea = reason(v);
+        if (rea != CRef_Undef) {
+            Clause& reaC = ca[rea];
+            for (int i = 0; i < reaC.size(); i++) {
+                Lit l = reaC[i];
+                if (!seen[var(l)]) {
+                    seen[var(l)] = true;
+                    almost_conflicted[var(l)]++;
+                    analyze_toclear.push(l);
+                }
+            }
+        }
+    }
+#endif
+    for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+}
+
 /*_________________________________________________________________________________________________
 |
 |  analyze : (confl : Clause*) (out_learnt : vec<Lit>&) (out_btlevel : int&)  ->  [void]
