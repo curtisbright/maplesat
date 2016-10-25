@@ -327,6 +327,76 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+int wait = 0;
+
+// A callback function for programmatic interface. If the callback detects conflicts, then
+// refine the clause database by adding clauses to out_learnts. This function is called
+// very frequently, if the analysis is expensive then add code to skip the analysis on
+// most calls. However, if complete is set to true, do not skip the analysis or else the
+// solver will be unsound.
+//
+// complete: true if and only if the current trail is a complete assignment that satisfies
+//           the clause database. Note that not every variable is necessarily assigned since
+//           the simplification steps may have removed some variables! If complete is true,
+//           the solver will return satisfiable immediately unless this function returns at
+//           least one clause.
+void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
+    wait++;
+    if (wait % 5 == 3 || complete) {
+        //printf("%d %d %d %d %d\n", toInt(value(11)),toInt(value(12)),toInt(value(13)),toInt(value(14)),toInt(value(15)));
+        if (value(0) == l_False && value(30) == l_False) {
+            printf("wrong1\n");
+            out_learnts.push();
+            out_learnts[0].push(mkLit(0));
+            out_learnts[0].push(mkLit(30));
+        } else if (value(12) == l_False && value(13) == l_False) {
+            printf("wrong2\n");
+            out_learnts.push();
+            out_learnts[0].push(mkLit(12));
+            out_learnts[0].push(mkLit(13));
+        }
+    }
+}
+
+bool Solver::assertingClause(vec<Lit>& learnt) {
+    int asserting = -1;
+    for (int i = 0; i < learnt.size(); i++) {
+        if (level(var(learnt[i])) == decisionLevel()) {
+            if (asserting != -1) return false;
+            asserting = i;
+        }
+    }
+    if (asserting == -1) return false;
+    Lit temp = learnt[0];
+    learnt[0] = learnt[asserting];
+    learnt[asserting] = temp;
+    return true;
+}
+
+int Solver::backjumpDistance(vec<Lit>& learnt, bool& root_conflict) {
+    assert(learnt.size() > 0);
+    int cur_second_max = -1;
+    int cur_max = -1;
+    bool multi_cur_max = false;
+    root_conflict = true;
+    for (int i = 0; i < learnt.size(); i++) {
+        int l = level(var(learnt[i]));
+        if (l > cur_max) {
+            cur_second_max = cur_max;
+            cur_max = l;
+            multi_cur_max = false;
+        } else if (l == cur_max) {
+            multi_cur_max = true;
+        } else if (l > cur_second_max) {
+            cur_second_max = l;
+        }
+        root_conflict &= (l == 0);
+    }
+    return cur_second_max == -1 || multi_cur_max
+        ? cur_max - 1 // All literals decision level cur_max or not asserting
+        : cur_second_max;
+}
+
 void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
 {
     int pathC = 0;
@@ -1028,6 +1098,48 @@ lbool Solver::search(int nof_conflicts)
                 // New variable decision:
                 decisions++;
                 next = pickBranchLit();
+
+                callbackLearntClauses.clear();
+                callbackFunction(next == lit_Undef, callbackLearntClauses);
+                if (callbackLearntClauses.size() > 0) {
+                    conflicts++; conflictC++;
+                    backtrack_level = decisionLevel();
+                    for (int i = 0; i < callbackLearntClauses.size(); i++) {
+                        bool root_conflict;
+                        int level = backjumpDistance(callbackLearntClauses[i], root_conflict);
+                        if (root_conflict) {
+                            return l_False;
+                        } else if (level < backtrack_level) {
+                            backtrack_level = level;
+                        }
+                    }
+
+                    cancelUntil(backtrack_level);
+
+#if BRANCHING_HEURISTIC == CHB
+                    action = trail.size();
+#endif
+
+                    for (int i = 0; i < callbackLearntClauses.size(); i++) {
+                        vec<Lit>& callback_learnt_clause = callbackLearntClauses[i];
+                        if (callback_learnt_clause.size() == 1){
+                            uncheckedEnqueue(callback_learnt_clause[0]);
+                        }else{
+                            bool asserting = assertingClause(callback_learnt_clause);
+                            printf("asserting?%d\n", asserting);
+                            CRef cr = ca.alloc(callback_learnt_clause, true);
+                            learnts.push(cr);
+                            attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+                            Clause& clause = ca[cr];
+                            clause.activity() = lbd(clause);
+#else
+                            claBumpActivity(ca[cr]);
+#endif
+                            if (asserting) uncheckedEnqueue(callback_learnt_clause[0], cr);
+                        }
+                    }
+                }
 
                 if (next == lit_Undef)
                     // Model found:
