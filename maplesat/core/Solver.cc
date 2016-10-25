@@ -342,15 +342,12 @@ int wait = 0;
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     wait++;
-    if (wait % 5 == 3 || complete) {
-        //printf("%d %d %d %d %d\n", toInt(value(11)),toInt(value(12)),toInt(value(13)),toInt(value(14)),toInt(value(15)));
+    if (wait % 5 == 4 || complete) {
         if (value(0) == l_False && value(30) == l_False) {
-            printf("wrong1\n");
             out_learnts.push();
             out_learnts[0].push(mkLit(0));
             out_learnts[0].push(mkLit(30));
         } else if (value(12) == l_False && value(13) == l_False) {
-            printf("wrong2\n");
             out_learnts.push();
             out_learnts[0].push(mkLit(12));
             out_learnts[0].push(mkLit(13));
