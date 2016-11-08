@@ -51,7 +51,7 @@ double time2 = 0;
 double time3 = 0;
 double time4 = 0;
 
-#include <fftw3.h>
+//#include <fftw3.h>
 
 using namespace Minisat;
 
