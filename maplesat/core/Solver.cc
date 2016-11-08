@@ -2379,18 +2379,14 @@ lbool Solver::search(int nof_conflicts)
                     } else {
                     // Increase decision level and enqueue 'next'
                     newDecisionLevel();
-#if BRANCHING_HEURISTIC == CHB
                     action = trail.size();
-#endif
                     uncheckedEnqueue(next);
                     }
 
                 } else {
                     // Increase decision level and enqueue 'next'
                     newDecisionLevel();
-#if BRANCHING_HEURISTIC == CHB
                     action = trail.size();
-#endif
                     uncheckedEnqueue(next);
                 }
 
