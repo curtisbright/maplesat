@@ -404,7 +404,7 @@ Lit Solver::pickBranchLit()
             if (!VSIDS){
                 Var v = order_heap_CHB[0];
                 uint32_t age = conflicts - canceled[v];
-                while (age > 0){
+                while (age > 0 && value(next) == l_Undef){
                     double decay = pow(0.95, age);
                     activity_CHB[v] *= decay;
                     if (order_heap_CHB.inHeap(v))
