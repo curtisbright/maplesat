@@ -310,7 +310,7 @@ Lit Solver::pickBranchLit()
 #if ANTI_EXPLORATION
             next = order_heap[0];
             uint64_t age = conflicts - canceled[next];
-            while (age > 0) {
+            while (age > 0 && value(next) == l_Undef) {
                 double decay = pow(0.95, age);
                 activity[next] *= decay;
                 if (order_heap.inHeap(next)) {
