@@ -166,6 +166,9 @@ public:
     vec<long double> total_actual_rewards;
     vec<int> total_actual_count;
 
+    int order, carda, cardb, cardc, cardd;
+    const char* compsums;
+
 protected:
 
     // Helper structures:
@@ -270,6 +273,10 @@ protected:
         }
         return lbd;
     }
+    
+    bool     cardinality_check(vec<vec<Lit> >& out_learnts);
+    bool     compression_check(vec<vec<Lit> >& out_learnts);
+    
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.

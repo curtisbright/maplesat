@@ -19,6 +19,35 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include <math.h>
+#include <cstdio>
+
+#include <sys/time.h>
+typedef unsigned long long timestamp_t;
+
+static timestamp_t
+get_timestamp ()
+{
+  struct timeval now;
+  gettimeofday (&now, NULL);
+  return  now.tv_usec + (timestamp_t)now.tv_sec * 1000000;
+}
+
+int calls1 = 0;
+int calls2 = 0;
+//int calls3 = 0;
+//int calls4 = 0;
+int success1 = 0;
+int success2 = 0;
+//int success3 = 0;
+//int success4 = 0;
+double time1 = 0;
+double time2 = 0;
+//double time3 = 0;
+//double time4 = 0;
+
+//#ifndef NDEBUG
+#define PRINTCONF
+//#endif
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -55,6 +84,21 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
+static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
+static IntOption     opt_carda     (_cat, "carda",      "Cardinality of row A", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
+static IntOption     opt_cardb     (_cat, "cardb",      "Cardinality of row B", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
+static IntOption     opt_cardc     (_cat, "cardc",      "Cardinality of row C", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
+static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
+static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
+static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
+static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);
+static BoolOption    opt_ordering (_cat, "ordering",  "Use ordering programmatic check", false);
+
+int div1, div2;
+int compA[2][99];
+int compB[2][99];
+int compC[2][99];
+int compD[2][99];
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -100,13 +144,15 @@ Solver::Solver() :
     //
   , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0)
   , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
-
+  
   , lbd_calls(0)
 #if BRANCHING_HEURISTIC == CHB
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
 #endif
 
+  , order (opt_order), carda (opt_carda), cardb (opt_cardb), cardc (opt_cardc), cardd (opt_cardd)
+  , compsums (opt_compsums)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -127,7 +173,72 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+    if(order != -1)
+	{   if(carda == INT32_MIN || cardb == INT32_MIN || cardc == INT32_MIN || cardd == INT32_MIN)
+            printf("need to set rowsums\n"), exit(1);
+        if(abs(carda) % 2 != order % 2)
+            printf("invalid carda\n"), exit(1);
+        if(abs(cardb % 2) != order % 2)
+            printf("invalid cardb\n"), exit(1);
+        if(abs(cardc % 2) != order % 2)
+            printf("invalid cardc\n"), exit(1);
+		if(abs(cardd % 2) != order % 2)
+            printf("invalid cardd\n"), exit(1);
+    }
+    
+    if(compsums != NULL)
+    {   FILE* compsum_file = fopen(compsums, "r");
+        if(compsum_file == NULL)
+            printf("ERROR! Could not open file: %s\n", compsums), exit(1);
+
+        if(fscanf(compsum_file, "%d ", &div1) != 1)
+            printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+
+        for(int i=0; i<div1; i++)
+        {   if(fscanf(compsum_file, "%d ", &compA[0][i]) != 1)
+                printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+        }
+        for(int i=0; i<div1; i++)
+        {   if(fscanf(compsum_file, "%d ", &compB[0][i]) != 1)
+                printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+        }
+        for(int i=0; i<div1; i++)
+        {   if(fscanf(compsum_file, "%d ", &compC[0][i]) != 1)
+                printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+        }
+        for(int i=0; i<div1; i++)
+        {   if(fscanf(compsum_file, "%d ", &compD[0][i]) != 1)
+                printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+        }
+        if(fscanf(compsum_file, "\n") != 0)
+            printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+
+        if(fscanf(compsum_file, "%d ", &div2) != 1)
+            div2 = 0;
+        else
+        {   for(int i=0; i<div2; i++)
+            {   if(fscanf(compsum_file, "%d ", &compA[1][i]) != 1)
+                    printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+            }
+            for(int i=0; i<div2; i++)
+            {   if(fscanf(compsum_file, "%d ", &compB[1][i]) != 1)
+                    printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+            }
+            for(int i=0; i<div2; i++)
+            {   if(fscanf(compsum_file, "%d ", &compC[1][i]) != 1)
+                    printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+            }
+            for(int i=0; i<div2; i++)
+            {   if(fscanf(compsum_file, "%d ", &compD[1][i]) != 1)
+                    printf("ERROR! syntax error in file: %s\n", compsums), exit(1);
+            }
+        }
+
+        fclose(compsum_file);
+    }
+    
+}
 
 
 Solver::~Solver()
@@ -329,6 +440,16 @@ Lit Solver::pickBranchLit()
 
 int wait = 0;
 
+#ifdef PRINTCONF
+void printclause(vec<Lit>& cl)
+{ printf("clause size %d: ", cl.size());
+  for(int i=0; i<cl.size(); i++)
+  { printf("%c%d ", sign(cl[i]) ? '-' : '+', var(cl[i])+1);
+  }
+  printf("\n");
+}
+#endif
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -341,7 +462,28 @@ int wait = 0;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
+    if(order==-1)
+        return;
+        
+    if(opt_cardinality)
+    {   calls1++;
+        timestamp_t t0 = get_timestamp();
+        if(cardinality_check(out_learnts))
+            success1++;
+        timestamp_t t1 = get_timestamp();
+        time1 += (t1 - t0) / 1000000.0L;
+    }
+    
+    if(compsums != NULL)
+    {   calls2++;
+        timestamp_t t0 = get_timestamp();
+        if(compression_check(out_learnts))
+            success2++;
+        timestamp_t t1 = get_timestamp();
+        time2 += (t1 - t0) / 1000000.0L;
+    }
+    
+    /*wait++;
     if (wait % 5 == 4 || complete) {
         if (value(0) == l_False && value(30) == l_False) {
             out_learnts.push();
@@ -352,7 +494,678 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
             out_learnts[0].push(mkLit(12));
             out_learnts[0].push(mkLit(13));
         }
+    }*/
+}
+
+bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
+{
+  int out_btlevel = 0;
+  int n = order;
+  int dim = n/2+1;
+  vec<Lit> conflict;
+  
+  int true_sum = 0;
+  int false_sum = 0;
+  int target = (carda+n)/2;
+  bool result = false;
+  
+  for(int i=0; i<dim; i++)
+  { if(assigns[i] == l_True)
+    { true_sum += ((i == 0 || (i == dim-1 && n % 2 == 0)) ? 1 : 2);
     }
+    if(assigns[i] == l_False)
+    { false_sum += ((i == 0 || (i == dim-1 && n % 2 == 0)) ? 1 : 2);
+    }
+  }
+  
+  if(true_sum > target)
+  { for(int i=0; i<dim; i++)
+      if(assigns[i] == l_True)
+        conflict.push(mkLit(i, true));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  if(false_sum > n-target)
+  { for(int i=0; i<dim; i++)
+      if(assigns[i] == l_False)
+        conflict.push(mkLit(i, false));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  true_sum = 0;
+  false_sum = 0;
+  target = (cardb+n)/2;
+  
+  for(int i=dim; i<2*dim; i++)
+  { if(assigns[i] == l_True)
+    { true_sum += ((i == dim || (i == 2*dim-1 && n % 2 == 0)) ? 1 : 2);
+    }
+    if(assigns[i] == l_False)
+    { false_sum += ((i == dim || (i == 2*dim-1 && n % 2 == 0)) ? 1 : 2);
+    }
+  }
+  
+  if(true_sum > target)
+  { for(int i=dim; i<2*dim; i++)
+      if(assigns[i] == l_True)
+        conflict.push(mkLit(i, true));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  if(false_sum > n-target)
+  { for(int i=dim; i<2*dim; i++)
+      if(assigns[i] == l_False)
+        conflict.push(mkLit(i, false));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  true_sum = 0;
+  false_sum = 0;
+  target = (cardc+n)/2;
+  
+  for(int i=2*dim; i<3*dim; i++)
+  { if(assigns[i] == l_True)
+    { true_sum += ((i == 2*dim || (i == 3*dim-1 && n % 2 == 0)) ? 1 : 2);
+    }
+    if(assigns[i] == l_False)
+    { false_sum += ((i == 2*dim || (i == 3*dim-1 && n % 2 == 0)) ? 1 : 2);
+    }
+  }
+  
+  if(true_sum > target)
+  { for(int i=2*dim; i<3*dim; i++)
+      if(assigns[i] == l_True)
+        conflict.push(mkLit(i, true));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  if(false_sum > n-target)
+  { for(int i=2*dim; i<3*dim; i++)
+      if(assigns[i] == l_False)
+        conflict.push(mkLit(i, false));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  true_sum = 0;
+  false_sum = 0;
+  target = (cardd+n)/2;
+  
+  for(int i=3*dim; i<4*dim; i++)
+  { if(assigns[i] == l_True)
+    { true_sum += ((i == 3*dim || (i == 4*dim-1 && n % 2 == 0)) ? 1 : 2);
+    }
+    if(assigns[i] == l_False)
+    { false_sum += ((i == 3*dim || (i == 4*dim-1 && n % 2 == 0)) ? 1 : 2);
+    }
+  }
+  
+  if(true_sum > target)
+  { for(int i=3*dim; i<4*dim; i++)
+      if(assigns[i] == l_True)
+        conflict.push(mkLit(i, true));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  if(false_sum > n-target)
+  { for(int i=3*dim; i<4*dim; i++)
+      if(assigns[i] == l_False)
+        conflict.push(mkLit(i, false));
+
+    int size = out_learnts.size();
+    out_learnts.push();
+    if(conflict.size()==1)
+      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+    else
+      analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+    printf("conflict "), printclause(conflict);
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+    result = true;
+    conflict.clear();
+  }
+  
+  return result;
+}
+
+bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
+{
+  int out_btlevel = 0;
+  int n = order;
+  int dim = n/2+1;
+  int comp_factor = n/div1;
+  vec<Lit> conflict;
+  bool result = false;
+  
+  for(int i = 0; i < div1; i++)
+  {
+    int target = (comp_factor+compA[0][i])/2;
+    int true_sum = 0;
+    int false_sum = 0;
+    
+    for(int j = i; j < n; j += div1)
+    { int var = (j > n/2) ? n-j : j;
+      if(assigns[var] == l_True)
+        true_sum++;
+      else if(assigns[var] == l_False)
+        false_sum++;
+    }
+    
+    if(true_sum > target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[var] == l_True)
+          conflict.push(mkLit(var, true));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+    if(false_sum > comp_factor - target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[var] == l_False)
+          conflict.push(mkLit(var, false));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+    target = (comp_factor+compB[0][i])/2;
+    true_sum = 0;
+    false_sum = 0;
+    
+    for(int j = i; j < n; j += div1)
+    { int var = (j > n/2) ? n-j : j;
+      if(assigns[dim+var] == l_True)
+        true_sum++;
+      else if(assigns[dim+var] == l_False)
+        false_sum++;
+    }
+    
+    if(true_sum > target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[dim+var] == l_True)
+          conflict.push(mkLit(dim+var, true));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+    if(false_sum > comp_factor - target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[dim+var] == l_False)
+          conflict.push(mkLit(dim+var, false));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+    target = (comp_factor+compC[0][i])/2;
+    true_sum = 0;
+    false_sum = 0;
+    
+    for(int j = i; j < n; j += div1)
+    { int var = (j > n/2) ? n-j : j;
+      if(assigns[2*dim+var] == l_True)
+        true_sum++;
+      else if(assigns[2*dim+var] == l_False)
+        false_sum++;
+    }
+    
+    if(true_sum > target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[2*dim+var] == l_True)
+          conflict.push(mkLit(2*dim+var, true));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+    if(false_sum > comp_factor - target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[2*dim+var] == l_False)
+          conflict.push(mkLit(2*dim+var, false));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+    target = (comp_factor+compD[0][i])/2;
+    true_sum = 0;
+    false_sum = 0;
+    
+    for(int j = i; j < n; j += div1)
+    { int var = (j > n/2) ? n-j : j;
+      if(assigns[3*dim+var] == l_True)
+        true_sum++;
+      else if(assigns[3*dim+var] == l_False)
+        false_sum++;
+    }
+    
+    if(true_sum > target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[3*dim+var] == l_True)
+          conflict.push(mkLit(3*dim+var, true));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+    if(false_sum > comp_factor - target)
+    {
+      for(int j = i; j < n; j += div1)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[3*dim+var] == l_False)
+          conflict.push(mkLit(3*dim+var, false));
+      }
+      int size = out_learnts.size();
+      out_learnts.push();
+      if(conflict.size()==1)
+        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+      else
+        analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+      printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+      printf("true_conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      return true;
+    }
+    
+  }
+  
+  if(div2>0)
+  {
+    comp_factor = n/div2;
+    for(int i=0; i<div2; i++)
+    {
+      int target = (comp_factor+compA[1][i])/2;
+      int true_sum = 0;
+      int false_sum = 0;
+      
+      for(int j = i; j < n; j += div2)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[var] == l_True)
+          true_sum++;
+        else if(assigns[var] == l_False)
+          false_sum++;
+      }
+      
+      if(true_sum > target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[var] == l_True)
+            conflict.push(mkLit(var, true));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+      if(false_sum > comp_factor - target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[var] == l_False)
+            conflict.push(mkLit(var, false));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+      target = (comp_factor+compB[1][i])/2;
+      true_sum = 0;
+      false_sum = 0;
+      
+      for(int j = i; j < n; j += div2)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[dim+var] == l_True)
+          true_sum++;
+        else if(assigns[dim+var] == l_False)
+          false_sum++;
+      }
+      
+      if(true_sum > target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[dim+var] == l_True)
+            conflict.push(mkLit(dim+var, true));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+      if(false_sum > comp_factor - target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[dim+var] == l_False)
+            conflict.push(mkLit(dim+var, false));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+      target = (comp_factor+compC[1][i])/2;
+      true_sum = 0;
+      false_sum = 0;
+      
+      for(int j = i; j < n; j += div2)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[2*dim+var] == l_True)
+          true_sum++;
+        else if(assigns[2*dim+var] == l_False)
+          false_sum++;
+      }
+      
+      if(true_sum > target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[2*dim+var] == l_True)
+            conflict.push(mkLit(2*dim+var, true));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+      if(false_sum > comp_factor - target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[2*dim+var] == l_False)
+            conflict.push(mkLit(2*dim+var, false));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+      target = (comp_factor+compD[1][i])/2;
+      true_sum = 0;
+      false_sum = 0;
+      
+      for(int j = i; j < n; j += div2)
+      { int var = (j > n/2) ? n-j : j;
+        if(assigns[3*dim+var] == l_True)
+          true_sum++;
+        else if(assigns[3*dim+var] == l_False)
+          false_sum++;
+      }
+      
+      if(true_sum > target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[3*dim+var] == l_True)
+            conflict.push(mkLit(3*dim+var, true));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+      if(false_sum > comp_factor - target)
+      {
+        for(int j = i; j < n; j += div2)
+        { int var = (j > n/2) ? n-j : j;
+          if(assigns[3*dim+var] == l_False)
+            conflict.push(mkLit(3*dim+var, false));
+        }
+        int size = out_learnts.size();
+        out_learnts.push();
+        if(conflict.size()==1)
+          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
+        else
+          analyze(conflict, out_learnts[size], out_btlevel);
+#ifdef PRINTCONF
+        printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
+        printf("true_conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        return true;
+      }
+      
+    }
+  }
+
+  return false;
 }
 
 bool Solver::assertingClause(vec<Lit>& learnt) {
@@ -1236,7 +2049,9 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
-
+        
+    printf("cardinality checks: %d/%d = %.5f, %.2f total time\n", success1, calls1, success1/(double)calls1, time1);
+    printf("compression checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);
 
     if (status == l_True){
         // Extend & copy model:
