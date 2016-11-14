@@ -1120,7 +1120,9 @@ lbool Solver::search(int nof_conflicts)
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
                         vec<Lit>& callback_learnt_clause = callbackLearntClauses[i];
                         if (callback_learnt_clause.size() == 1){
-                            uncheckedEnqueue(callback_learnt_clause[0]);
+                            // Make sure it wasn't assigned by one of the other callback learnt clauses.
+                            if (value(callback_learnt_clause[0]) == l_Undef)
+                                uncheckedEnqueue(callback_learnt_clause[0]);
                         }else{
                             bool asserting = assertingClause(callback_learnt_clause);
                             CRef cr = ca.alloc(callback_learnt_clause, true);
