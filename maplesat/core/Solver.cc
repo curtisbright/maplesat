@@ -1123,7 +1123,6 @@ lbool Solver::search(int nof_conflicts)
                             uncheckedEnqueue(callback_learnt_clause[0]);
                         }else{
                             bool asserting = assertingClause(callback_learnt_clause);
-                            printf("asserting?%d\n", asserting);
                             CRef cr = ca.alloc(callback_learnt_clause, true);
                             learnts.push(cr);
                             attachClause(cr);
