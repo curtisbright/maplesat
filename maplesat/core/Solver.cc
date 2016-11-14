@@ -1138,8 +1138,7 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
 bool Solver::assertingClause(vec<Lit>& learnt) {
     int asserting = -1;
     for (int i = 0; i < learnt.size(); i++) {
-        printf("var %d at dl %d, cdl %d\n", var(learnt[i])+1, level(var(learnt[i])), decisionLevel());
-        if (level(var(learnt[i])) == decisionLevel()) {
+        if (value(learnt[i]) == l_Undef) {
             if (asserting != -1) return false;
             asserting = i;
         }
@@ -1906,7 +1905,6 @@ lbool Solver::search(int nof_conflicts)
                             uncheckedEnqueue(callback_learnt_clause[0]);
                         }else{
                             bool asserting = assertingClause(callback_learnt_clause);
-                            printf("asserting?%d\n", asserting);
                             CRef cr = ca.alloc(callback_learnt_clause, true);
                             learnts.push(cr);
                             attachClause(cr);
