@@ -358,7 +358,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 bool Solver::assertingClause(vec<Lit>& learnt) {
     int asserting = -1;
     for (int i = 0; i < learnt.size(); i++) {
-        if (level(var(learnt[i])) == decisionLevel()) {
+        if (value(learnt[i]) == l_Undef) {
             if (asserting != -1) return false;
             asserting = i;
         }
