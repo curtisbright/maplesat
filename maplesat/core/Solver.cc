@@ -45,9 +45,9 @@ double time2 = 0;
 //double time3 = 0;
 //double time4 = 0;
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
 #define PRINTCONF
-//#endif
+#endif
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -92,7 +92,7 @@ static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", 
 static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
 static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
 static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);
-static BoolOption    opt_ordering (_cat, "ordering",  "Use ordering programmatic check", false);
+//static BoolOption    opt_ordering (_cat, "ordering",  "Use ordering programmatic check", false);
 
 int div1, div2;
 int compA[2][99];
@@ -473,7 +473,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         timestamp_t t1 = get_timestamp();
         time1 += (t1 - t0) / 1000000.0L;
     }
-    
+        
     if(compsums != NULL)
     {   calls2++;
         timestamp_t t0 = get_timestamp();
@@ -482,6 +482,15 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         timestamp_t t1 = get_timestamp();
         time2 += (t1 - t0) / 1000000.0L;
     }
+    
+#ifdef PRINTCONF
+    for(int i=0; i<out_learnts.size(); i++)
+    {   printf("learned clause %d: ", i);
+        printclause(out_learnts[i]);
+    }
+    if(out_learnts.size()==0)
+        printf("no learned clauses\n");
+#endif
     
     /*wait++;
     if (wait % 5 == 4 || complete) {
@@ -519,41 +528,37 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
   }
   
   if(true_sum > target)
-  { for(int i=0; i<dim; i++)
+  {  //printf("true sum: %d, target: %d\n", true_sum, target);
+     for(int i=0; i<dim; i++)
       if(assigns[i] == l_True)
         conflict.push(mkLit(i, true));
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   if(false_sum > n-target)
-  { for(int i=0; i<dim; i++)
+  { //printf("false sum: %d, target: %d\n", false_sum, target);
+    for(int i=0; i<dim; i++)
       if(assigns[i] == l_False)
         conflict.push(mkLit(i, false));
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   true_sum = 0;
@@ -576,16 +581,13 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   if(false_sum > n-target)
@@ -595,16 +597,13 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   true_sum = 0;
@@ -627,16 +626,13 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   if(false_sum > n-target)
@@ -646,16 +642,13 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   true_sum = 0;
@@ -678,16 +671,13 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   if(false_sum > n-target)
@@ -697,16 +687,13 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 
     int size = out_learnts.size();
     out_learnts.push();
-    if(conflict.size()==1)
-      out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-    else
-      analyze(conflict, out_learnts[size], out_btlevel);
+    conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
     printf("conflict "), printclause(conflict);
-    printf("out_learnt "), printclause(out_learnts[size]);
 #endif
     result = true;
     conflict.clear();
+    return result;
   }
   
   return result;
@@ -744,16 +731,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-      return true;
+      result = true;
+      conflict.clear();
+      return result;
     }
     
     if(false_sum > comp_factor - target)
@@ -765,16 +751,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-      return true;
+      result = true;
+      conflict.clear();
+      return result;
     }
     
     target = (comp_factor+compB[0][i])/2;
@@ -798,16 +783,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-      return true;
+      result = true;
+      conflict.clear();
+      return result;
     }
     
     if(false_sum > comp_factor - target)
@@ -819,16 +803,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-      return true;
+      result = true;
+      conflict.clear();
+      return result;
     }
     
     target = (comp_factor+compC[0][i])/2;
@@ -852,16 +835,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-      return true;
+      result = true;
+      conflict.clear();
+      return result;
     }
     
     if(false_sum > comp_factor - target)
@@ -873,14 +855,11 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
       return true;
     }
@@ -906,16 +885,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-      return true;
+      result = true;
+      conflict.clear();
+      return result;
     }
     
     if(false_sum > comp_factor - target)
@@ -927,14 +905,11 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
       }
       int size = out_learnts.size();
       out_learnts.push();
-      if(conflict.size()==1)
-        out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-      else
-        analyze(conflict, out_learnts[size], out_btlevel);
+      conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
       printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
       printf("true_conflict "), printclause(conflict);
-      printf("out_learnt "), printclause(out_learnts[size]);
+      //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
       return true;
     }
@@ -967,16 +942,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
       if(false_sum > comp_factor - target)
@@ -988,16 +962,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
       target = (comp_factor+compB[1][i])/2;
@@ -1021,16 +994,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
       if(false_sum > comp_factor - target)
@@ -1042,16 +1014,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
       target = (comp_factor+compC[1][i])/2;
@@ -1075,16 +1046,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
       if(false_sum > comp_factor - target)
@@ -1096,16 +1066,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
       target = (comp_factor+compD[1][i])/2;
@@ -1129,16 +1098,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
       if(false_sum > comp_factor - target)
@@ -1150,16 +1118,15 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
         }
         int size = out_learnts.size();
         out_learnts.push();
-        if(conflict.size()==1)
-          out_btlevel = 0, conflict.copyTo(out_learnts[size]);
-        else
-          analyze(conflict, out_learnts[size], out_btlevel);
+        conflict.copyTo(out_learnts[size]);
 #ifdef PRINTCONF
         printf("target:%d, true_sum:%d, false_sum:%d\n", target, true_sum, false_sum);
         printf("true_conflict "), printclause(conflict);
-        printf("out_learnt "), printclause(out_learnts[size]);
+        //printf("out_learnt "), printclause(out_learnts[size]);
 #endif
-        return true;
+        result = true;
+        conflict.clear();
+        return result;
       }
       
     }
@@ -1171,6 +1138,7 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
 bool Solver::assertingClause(vec<Lit>& learnt) {
     int asserting = -1;
     for (int i = 0; i < learnt.size(); i++) {
+        printf("var %d at dl %d, cdl %d\n", var(learnt[i])+1, level(var(learnt[i])), decisionLevel());
         if (level(var(learnt[i])) == decisionLevel()) {
             if (asserting != -1) return false;
             asserting = i;
@@ -1180,6 +1148,7 @@ bool Solver::assertingClause(vec<Lit>& learnt) {
     Lit temp = learnt[0];
     learnt[0] = learnt[asserting];
     learnt[asserting] = temp;
+    printf("assert %d\n", asserting);
     return true;
 }
 
@@ -1567,6 +1536,7 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 
 void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
+    printf("%d\n", var(p)+1);
     assert(value(p) == l_Undef);
     picked[var(p)] = conflicts;
 #if ANTI_EXPLORATION
