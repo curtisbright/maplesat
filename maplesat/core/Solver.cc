@@ -1170,9 +1170,12 @@ int Solver::backjumpDistance(vec<Lit>& learnt, bool& root_conflict) {
         }
         root_conflict &= (l == 0);
     }
-    return cur_second_max == -1 || multi_cur_max
-        ? cur_max - 1 // All literals decision level cur_max or not asserting
-        : cur_second_max;
+    if (cur_second_max == -1) {
+        return multi_cur_max
+            ? cur_max - 1 // All literals decision level cur_max or not asserting
+            : 0;
+    }
+    return cur_second_max;
 }
 
 void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
