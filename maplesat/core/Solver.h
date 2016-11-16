@@ -253,9 +253,8 @@ protected:
     bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.
     CRef     propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
-    void     callbackFunction(bool complete, vec<vec<Lit> >& out_learnts);
-    bool     assertingClause(vec<Lit>& learnt);
-    int      backjumpDistance(vec<Lit>& learnt, bool& root_conflict);
+    void     callbackFunction (bool complete, vec<vec<Lit> >& out_learnts);
+    bool     assertingClause  (CRef confl);
     void     analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel);
     void     analyze          (CRef confl, vec<Lit>& out_learnt, int& out_btlevel);    // (bt = backtrack)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
