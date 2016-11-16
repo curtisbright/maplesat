@@ -342,59 +342,26 @@ int wait = 0;
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     wait++;
-    if (wait % 5 == 4 || complete) {
-        if (value(0) == l_False && value(30) == l_False) {
+    if (wait == 5 || complete) {
+        if (value(10) == l_True) {
             out_learnts.push();
-            out_learnts[0].push(mkLit(0));
-            out_learnts[0].push(mkLit(30));
-        } else if (value(12) == l_False && value(13) == l_False) {
+            out_learnts[0].push(~mkLit(10));
             out_learnts.push();
-            out_learnts[0].push(mkLit(12));
-            out_learnts[0].push(mkLit(13));
+            out_learnts[1].push(~mkLit(10));
         }
     }
 }
 
-bool Solver::assertingClause(vec<Lit>& learnt) {
+bool Solver::assertingClause(CRef confl) {
+    Clause& c = ca[confl];
     int asserting = -1;
-    for (int i = 0; i < learnt.size(); i++) {
-        if (value(learnt[i]) == l_Undef) {
+    for (int i = 0; i < c.size(); i++) {
+        if (value(c[i]) == l_Undef) {
             if (asserting != -1) return false;
             asserting = i;
         }
     }
-    if (asserting == -1) return false;
-    Lit temp = learnt[0];
-    learnt[0] = learnt[asserting];
-    learnt[asserting] = temp;
-    return true;
-}
-
-int Solver::backjumpDistance(vec<Lit>& learnt, bool& root_conflict) {
-    assert(learnt.size() > 0);
-    int cur_second_max = -1;
-    int cur_max = -1;
-    bool multi_cur_max = false;
-    root_conflict = true;
-    for (int i = 0; i < learnt.size(); i++) {
-        int l = level(var(learnt[i]));
-        if (l > cur_max) {
-            cur_second_max = cur_max;
-            cur_max = l;
-            multi_cur_max = false;
-        } else if (l == cur_max) {
-            multi_cur_max = true;
-        } else if (l > cur_second_max) {
-            cur_second_max = l;
-        }
-        root_conflict &= (l == 0);
-    }
-    if (cur_second_max == -1) {
-        return multi_cur_max
-            ? cur_max - 1 // All literals decision level cur_max or not asserting
-            : 0;
-    }
-    return cur_second_max;
+    return asserting != -1;
 }
 
 void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
@@ -402,6 +369,22 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
     int pathC = 0;
     CRef confl;
     Lit p     = lit_Undef;
+
+    int cur_max = level(var(conflvec[0]));
+    for(int j=1; j < conflvec.size(); j++) {
+        if(level(var(conflvec[j])) > cur_max) {
+            cur_max = level(var(conflvec[j]));
+        }
+    }
+    if(cur_max == 0) {
+        out_btlevel = -1;
+        return;
+    }
+    if (conflvec.size() == 1) {
+        out_btlevel = 0;
+        conflvec.copyTo(out_learnt);
+        return;
+    }
 
     // Generate conflict clause:
     //
@@ -419,7 +402,7 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
 #endif
                 conflicted[var(q)]++;
                 seen[var(q)] = 1;
-                if (level(var(q)) >= decisionLevel())
+                if (level(var(q)) >= cur_max)
                     pathC++;
                 else
                     out_learnt.push(q);
@@ -456,7 +439,7 @@ void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
 #endif
                 conflicted[var(q)]++;
                 seen[var(q)] = 1;
-                if (level(var(q)) >= decisionLevel())
+                if (level(var(q)) >= cur_max)
                     pathC++;
                 else
                     out_learnt.push(q);
@@ -983,6 +966,7 @@ lbool Solver::search(int nof_conflicts)
     int         backtrack_level;
     int         conflictC = 0;
     vec<Lit>    learnt_clause;
+    vec<Lit>    units;
     starts++;
 
     for (;;){
@@ -1103,14 +1087,30 @@ lbool Solver::search(int nof_conflicts)
                 callbackFunction(next == lit_Undef, callbackLearntClauses);
                 if (callbackLearntClauses.size() > 0) {
                     conflicts++; conflictC++;
+                    int pending = learnts.size();
+                    units.clear();
                     backtrack_level = decisionLevel();
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
-                        bool root_conflict;
-                        int level = backjumpDistance(callbackLearntClauses[i], root_conflict);
-                        if (root_conflict) {
+                        int level;
+                        learnt_clause.clear();
+                        analyze(callbackLearntClauses[i], learnt_clause, level);
+                        if (level == -1) {
                             return l_False;
                         } else if (level < backtrack_level) {
                             backtrack_level = level;
+                        }
+                        if (learnt_clause.size() == 1) {
+                            units.push(learnt_clause[0]);
+                        } else {
+                            CRef cr = ca.alloc(learnt_clause, true);
+                            learnts.push(cr);
+                            attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+                            Clause& clause = ca[cr];
+                            clause.activity() = lbd(clause);
+#else
+                            claBumpActivity(ca[cr]);
+#endif
                         }
                     }
 
@@ -1120,25 +1120,16 @@ lbool Solver::search(int nof_conflicts)
                     action = trail.size();
 #endif
 
-                    for (int i = 0; i < callbackLearntClauses.size(); i++) {
-                        vec<Lit>& callback_learnt_clause = callbackLearntClauses[i];
-                        if (callback_learnt_clause.size() == 1){
-                            // Make sure it wasn't assigned by one of the other callback learnt clauses.
-                            if (value(callback_learnt_clause[0]) == l_Undef)
-                                uncheckedEnqueue(callback_learnt_clause[0]);
-                        }else{
-                            bool asserting = assertingClause(callback_learnt_clause);
-                            CRef cr = ca.alloc(callback_learnt_clause, true);
-                            learnts.push(cr);
-                            attachClause(cr);
-#if LBD_BASED_CLAUSE_DELETION
-                            Clause& clause = ca[cr];
-                            clause.activity() = lbd(clause);
-#else
-                            claBumpActivity(ca[cr]);
-#endif
-                            if (asserting) uncheckedEnqueue(callback_learnt_clause[0], cr);
-                        }
+                    for (int i = 0; i < units.size(); i++) {
+                        Lit l = units[i];
+                        // Make sure it wasn't assigned by one of the other callback learnt clauses.
+                        if (value(l) == l_Undef) uncheckedEnqueue(l);
+                    }
+                    for (int i = pending; i < learnts.size(); i++) {
+                        CRef cr = learnts[i];
+                        Clause& c = ca[cr];
+                        bool asserting = assertingClause(cr);
+                        if (asserting) uncheckedEnqueue(c[0], cr);
                     }
                 }
 
