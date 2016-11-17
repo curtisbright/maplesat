@@ -361,13 +361,7 @@ bool Solver::assertingClause(CRef confl) {
             asserting = i;
         }
     }
-    if (asserting == -1) {
-        return false;
-    }
-    Lit temp = c[asserting];
-    c[asserting] = c[0];
-    c[0] = temp;
-    return true;
+    return asserting == 0;
 }
 
 void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
