@@ -1520,7 +1520,6 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 
 void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
-    printf("%d\n", var(p)+1);
     assert(value(p) == l_Undef);
     picked[var(p)] = conflicts;
 #if ANTI_EXPLORATION
@@ -1912,19 +1911,24 @@ lbool Solver::search(int nof_conflicts)
                         bool asserting = assertingClause(cr);
                         if (asserting) uncheckedEnqueue(c[0], cr);
                     }
-                }
-
-                if (next == lit_Undef)
+                    // Do not branch.
+                    if (next != lit_Undef) {
+                        insertVarOrder(var(next));
+                        next = lit_Undef;
+                    }
+                } else if (next == lit_Undef)
                     // Model found:
                     return l_True;
             }
 
-            // Increase decision level and enqueue 'next'
-            newDecisionLevel();
-#if BRANCHING_HEURISTIC == CHB
-            action = trail.size();
-#endif
-            uncheckedEnqueue(next);
+            if (next != lit_Undef) {
+                // Increase decision level and enqueue 'next'
+                newDecisionLevel();
+    #if BRANCHING_HEURISTIC == CHB
+                action = trail.size();
+    #endif
+                uncheckedEnqueue(next);
+            }
         }
     }
 }
