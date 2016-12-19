@@ -34,15 +34,15 @@ get_timestamp ()
 
 int calls1 = 0;
 int calls2 = 0;
-//int calls3 = 0;
+int calls3 = 0;
 //int calls4 = 0;
 int success1 = 0;
 int success2 = 0;
-//int success3 = 0;
+int success3 = 0;
 //int success4 = 0;
 double time1 = 0;
 double time2 = 0;
-//double time3 = 0;
+double time3 = 0;
 //double time4 = 0;
 
 #ifndef NDEBUG
@@ -51,6 +51,12 @@ double time2 = 0;
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
+
+#include <fftw3.h>
+
+double* fft_signal;
+fftw_complex* fft_result;
+fftw_plan plan;
 
 using namespace Minisat;
 
@@ -92,7 +98,7 @@ static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", 
 static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
 static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
 static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);
-//static BoolOption    opt_ordering (_cat, "ordering",  "Use ordering programmatic check", false);
+static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
 
 int div1, div2;
 int compA[2][99];
@@ -174,8 +180,10 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-    if(order != -1)
-	{   if(carda == INT32_MIN || cardb == INT32_MIN || cardc == INT32_MIN || cardd == INT32_MIN)
+    if(opt_cardinality)
+	{   if(order == -1)
+           printf("need to set order\n"), exit(1);
+        if(carda == INT32_MIN || cardb == INT32_MIN || cardc == INT32_MIN || cardd == INT32_MIN)
             printf("need to set rowsums\n"), exit(1);
         if(abs(carda) % 2 != order % 2)
             printf("invalid carda\n"), exit(1);
@@ -185,6 +193,14 @@ Solver::Solver() :
             printf("invalid cardc\n"), exit(1);
 		if(abs(cardd % 2) != order % 2)
             printf("invalid cardd\n"), exit(1);
+    }
+
+    if(opt_filtering)
+    {  if(order == -1)
+           printf("need to set order\n"), exit(1);
+       fft_signal = (double*)malloc(sizeof(double)*order);
+       fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
+       plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
     }
     
     if(compsums != NULL)
@@ -243,6 +259,9 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
+    fftw_destroy_plan(plan);
+    free(fft_signal);
+    free(fft_result);
 }
 
 
@@ -482,6 +501,15 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         timestamp_t t1 = get_timestamp();
         time2 += (t1 - t0) / 1000000.0L;
     }
+
+    if(opt_filtering)
+    {   calls3++;
+        timestamp_t t0 = get_timestamp();
+        if(filtering_check(out_learnts))
+            success3++;
+        timestamp_t t1 = get_timestamp();
+        time3 += (t1 - t0) / 1000000.0L;
+    }
     
 #ifdef PRINTCONF
     for(int i=0; i<out_learnts.size(); i++)
@@ -503,9 +531,243 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     }*/
 }
 
+bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
+{
+  int n = order;
+  int dim = n/2+1;
+  vec<Lit> conflict;
+  bool result = false;
+  
+  double psds[dim];
+  for(int i=0; i<dim; i++)
+    psds[i] = 0;
+  bool Acomplete = true;
+  bool Bcomplete = true;
+  bool Ccomplete = true;
+  bool Dcomplete = true;
+  
+  for(int i=0; i<dim; i++)
+  { if(assigns[i] == l_Undef)
+    { Acomplete = false;
+      break;
+    }
+  }
+  
+  if(Acomplete)
+  {
+    for(int i=0; i<dim; i++)
+    { fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i] == l_True) ? 1 : -1;
+      //if(i>0)
+      // fft_signal[n-i] = fft_signal[i];
+    }
+
+    fftw_execute(plan);
+
+    for(int i=0; i<dim; i++)
+    { 
+      double psd_i = fft_result[i][0]*fft_result[i][0];
+      psds[i] += psd_i;
+
+      if(psd_i > 4*n+0.01)
+      { for(int i=0; i<dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+
+        int size = out_learnts.size();
+        out_learnts.push();
+        conflict.copyTo(out_learnts[size]);
+#ifdef PRINTCONF
+        printf("conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        result = true;
+        conflict.clear();
+        return result;
+      }
+    }
+  }
+  
+  for(int i=dim; i<2*dim; i++)
+  { if(assigns[i] == l_Undef)
+    { Bcomplete = false;
+      break;
+    }
+  }
+
+  if(Bcomplete)
+  { 
+    for(int i=0; i<dim; i++)
+      fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+dim] == l_True) ? 1 : -1;
+
+    fftw_execute(plan);
+
+    for(int i=0; i<dim; i++)
+    { 
+      double psd_i = fft_result[i][0]*fft_result[i][0];
+      psds[i] += psd_i;
+
+      if(psd_i > 4*n+0.01)
+      { for(int i=dim; i<2*dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+
+        int size = out_learnts.size();
+        out_learnts.push();
+        conflict.copyTo(out_learnts[size]);
+#ifdef PRINTCONF
+        printf("conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        result = true;
+        conflict.clear();
+        return result;
+      }
+    }
+  }
+  
+  for(int i=2*dim; i<3*dim; i++)
+  { if(assigns[i] == l_Undef)
+    { Ccomplete = false;
+      break;
+    }
+  }
+
+  if(Ccomplete)
+  { 
+    for(int i=0; i<dim; i++)
+      fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+2*dim] == l_True) ? 1 : -1;
+
+    fftw_execute(plan);
+
+    for(int i=0; i<dim; i++)
+    { 
+      double psd_i = fft_result[i][0]*fft_result[i][0];
+      psds[i] += psd_i;
+
+      if(psd_i > 4*n+0.01)
+      { for(int i=2*dim; i<3*dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+
+        int size = out_learnts.size();
+        out_learnts.push();
+        conflict.copyTo(out_learnts[size]);
+#ifdef PRINTCONF
+        printf("conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        result = true;
+        conflict.clear();
+        return result;
+      }
+    }
+  }
+
+  for(int i=3*dim; i<4*dim; i++)
+  { if(assigns[i] == l_Undef)
+    { Dcomplete = false;
+      break;
+    }
+  }
+  
+  if(Dcomplete)
+  { 
+    for(int i=0; i<dim; i++)
+      fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+3*dim] == l_True) ? 1 : -1;
+
+    fftw_execute(plan);
+
+    for(int i=0; i<dim; i++)
+    { 
+      double psd_i = fft_result[i][0]*fft_result[i][0];
+      psds[i] += psd_i;
+
+      if(psd_i > 4*n+0.01)
+      { for(int i=3*dim; i<4*dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+
+        int size = out_learnts.size();
+        out_learnts.push();
+        conflict.copyTo(out_learnts[size]);
+#ifdef PRINTCONF
+        printf("conflict "), printclause(conflict);
+        printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+        result = true;
+        conflict.clear();
+        return result;
+      }
+    }
+  }
+  
+  for(int i=0; i<dim; i++)
+  { if(psds[i] > 4*n+0.01)
+    { if(Acomplete)
+      { for(int i=0; i<dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+      }
+      if(Bcomplete)
+      { for(int i=dim; i<2*dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+      }
+      if(Ccomplete)
+      { for(int i=2*dim; i<3*dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+      }
+      if(Dcomplete)
+      { for(int i=3*dim; i<4*dim; i++)
+        { if(assigns[i] == l_True)
+            conflict.push(mkLit(i, true));
+          else if(assigns[i] == l_False)
+            conflict.push(mkLit(i, false));
+        }
+      }
+      
+      int size = out_learnts.size();
+      out_learnts.push();
+      conflict.copyTo(out_learnts[size]);
+#ifdef PRINTCONF
+      printf("conflict "), printclause(conflict);
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+      result = true;
+      conflict.clear();
+      return result;
+    }
+  }
+  
+  return result;
+
+}
+
 bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 {
-  int out_btlevel = 0;
+  //int out_btlevel = 0;
   int n = order;
   int dim = n/2+1;
   vec<Lit> conflict;
@@ -698,7 +960,7 @@ bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 
 bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
 {
-  int out_btlevel = 0;
+  //int out_btlevel = 0;
   int n = order;
   int dim = n/2+1;
   int comp_factor = n/div1;
@@ -2019,6 +2281,7 @@ lbool Solver::solve_()
         
     printf("cardinality checks: %d/%d = %.5f, %.2f total time\n", success1, calls1, success1/(double)calls1, time1);
     printf("compression checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);
+    printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success3, calls3, success3/(double)calls3, time3);
 
     if (status == l_True){
         // Extend & copy model:

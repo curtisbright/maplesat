@@ -3,7 +3,7 @@ export MROOT
 
 debug:
 	make -C simp d
-minisat:
+maplesat:
 	make -C simp rs
 
 clean:
