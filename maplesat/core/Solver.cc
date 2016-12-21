@@ -96,6 +96,7 @@ static IntOption     opt_cardb     (_cat, "cardb",      "Cardinality of row B", 
 static IntOption     opt_cardc     (_cat, "cardc",      "Cardinality of row C", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
 static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
 static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
+static StringOption  opt_compstring(_cat, "compstring",   "A string which contains a comma-separated list of the compression sums to be used.");
 static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
 static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
@@ -159,6 +160,7 @@ Solver::Solver() :
 
   , order (opt_order), carda (opt_carda), cardb (opt_cardb), cardc (opt_cardc), cardd (opt_cardd)
   , compsums (opt_compsums)
+  , compstring (opt_compstring)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -202,6 +204,42 @@ Solver::Solver() :
        fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
        plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
     }
+    
+    if(compstring != NULL)
+    {	
+		char* tmp = (char*)compstring;
+		
+        if(sscanf(tmp, "%d", &div1) != 1)
+            printf("ERROR! syntax error in compstring: %s\n", tmp), exit(1);		
+		while(*tmp != ',' && *tmp != '\0')
+			tmp++;
+		tmp++;
+	
+		for(int i=0; i<div1; i++)
+		{	sscanf(tmp, "%d", &compA[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+		for(int i=0; i<div1; i++)
+		{	sscanf(tmp, "%d", &compB[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+		for(int i=0; i<div1; i++)
+		{	sscanf(tmp, "%d", &compC[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+		for(int i=0; i<div1; i++)
+		{	sscanf(tmp, "%d", &compD[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+	}
     
     if(compsums != NULL)
     {   FILE* compsum_file = fopen(compsums, "r");
@@ -493,7 +531,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         time1 += (t1 - t0) / 1000000.0L;
     }
         
-    if(compsums != NULL)
+    if(compstring != NULL || compsums != NULL)
     {   calls2++;
         timestamp_t t0 = get_timestamp();
         if(compression_check(out_learnts))

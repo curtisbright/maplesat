@@ -168,6 +168,7 @@ public:
 
     int order, carda, cardb, cardc, cardd;
     const char* compsums;
+    const char* compstring;
 
 protected:
 
