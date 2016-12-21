@@ -1,10 +1,11 @@
 MROOT := $(shell pwd)
 export MROOT
 
-debug:
-	make -C simp d
 maplesat:
 	make -C simp rs
+
+debug:
+	make -C simp d
 
 clean:
 	make -C simp clean
