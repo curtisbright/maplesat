@@ -106,6 +106,151 @@ int compA[2][99];
 int compB[2][99];
 int compC[2][99];
 int compD[2][99];
+#ifdef PRINTCONF
+void printclause(vec<Lit>& cl);
+#endif
+
+void Solver::generateCompClauses(int n, int d, int i, int c, int v)
+{
+	int index = c*(n/2+1);
+	printf("n %d d %d i %d c %d v %d index %d\n",n,d,i,c,v,index);
+
+	if(v == -d)
+	{	// all variables -1 variable
+		for(int j=0; j<d; j++)
+		{	vec<Lit> cl;
+			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			cl.clear();
+			cl.push(mkLit(newindex, true));
+			addClause(cl);
+#ifdef PRINTCONF
+			printclause(cl);
+#endif
+		}
+	}
+	else if(v == -d+2)
+	{	// at least one 1 variable
+		vec<Lit> cl;
+		cl.clear();
+		for(int j=0; j<d; j++)
+		{
+			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			cl.push(mkLit(newindex, false));
+		}
+		addClause(cl);
+#ifdef PRINTCONF
+		printclause(cl);
+#endif
+		// at most one 1 variable
+		for(int j=0; j<d; j++)
+		{	
+			int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			for(int k=j+1; k<d; k++)
+			{	vec<Lit> cl;
+				cl.clear();
+				int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+				cl.push(mkLit(newindex_j, true));
+				cl.push(mkLit(newindex_k, true));
+				addClause(cl);
+#ifdef PRINTCONF
+				printclause(cl);
+#endif
+			}
+		}
+	}
+	else if(v == d-2)
+	{	// at least one -1 variable
+		vec<Lit> cl;
+		cl.clear();
+		for(int j=0; j<d; j++)
+		{
+			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			cl.push(mkLit(newindex, true));
+		}
+		addClause(cl);
+#ifdef PRINTCONF
+		printclause(cl);
+#endif
+		// at most one -1 variable
+		for(int j=0; j<d; j++)
+		{	
+			int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			for(int k=j+1; k<d; k++)
+			{	vec<Lit> cl;
+				cl.clear();
+				int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+				cl.push(mkLit(newindex_j, false));
+				cl.push(mkLit(newindex_k, false));
+				addClause(cl);
+#ifdef PRINTCONF
+				printclause(cl);
+#endif
+			}
+		}
+	}
+	else if(v == d)
+	{	// all variables 1
+		for(int j=0; j<d; j++)
+		{	vec<Lit> cl;
+			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			cl.clear();
+			cl.push(mkLit(newindex, false));
+			addClause(cl);
+#ifdef PRINTCONF
+			printclause(cl);
+#endif
+		}
+	}
+	
+}
+
+void Solver::addCompClauses()
+{	//printf("compstring: %s\n", compstring);	
+	if(compstring != NULL)
+	{	
+		char* tmp = (char*)compstring;
+
+		if(sscanf(tmp, "%d", &div1) != 1)
+			printf("ERROR! syntax error in compstring: %s\n", tmp), exit(1);
+
+		while(*tmp != ',' && *tmp != '\0')
+			tmp++;
+		tmp++;
+
+		for(int i=0; i<order/div1; i++)
+		{	sscanf(tmp, "%d", &compA[0][i]);
+			generateCompClauses(order, div1, i, 0, compA[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+
+		for(int i=0; i<order/div1; i++)
+		{	sscanf(tmp, "%d", &compB[0][i]);
+			generateCompClauses(order, div1, i, 1, compB[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+
+		for(int i=0; i<order/div1; i++)
+		{	sscanf(tmp, "%d", &compC[0][i]);
+			generateCompClauses(order, div1, i, 2, compC[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+
+		for(int i=0; i<order/div1; i++)
+		{	sscanf(tmp, "%d", &compD[0][i]);
+			generateCompClauses(order, div1, i, 3, compD[0][i]);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+		}
+	}
+ 
+}
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -182,65 +327,31 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-    if(opt_cardinality)
-	{   if(order == -1)
-           printf("need to set order\n"), exit(1);
-        if(carda == INT32_MIN || cardb == INT32_MIN || cardc == INT32_MIN || cardd == INT32_MIN)
-            printf("need to set rowsums\n"), exit(1);
-        if(abs(carda) % 2 != order % 2)
-            printf("invalid carda\n"), exit(1);
-        if(abs(cardb % 2) != order % 2)
-            printf("invalid cardb\n"), exit(1);
-        if(abs(cardc % 2) != order % 2)
-            printf("invalid cardc\n"), exit(1);
+	if(opt_cardinality)
+	{
+		if(order == -1)
+			printf("need to set order\n"), exit(1);
+		if(carda == INT32_MIN || cardb == INT32_MIN || cardc == INT32_MIN || cardd == INT32_MIN)
+			printf("need to set rowsums\n"), exit(1);
+		if(abs(carda) % 2 != order % 2)
+			printf("invalid carda\n"), exit(1);
+		if(abs(cardb % 2) != order % 2)
+			printf("invalid cardb\n"), exit(1);
+		if(abs(cardc % 2) != order % 2)
+			printf("invalid cardc\n"), exit(1);
 		if(abs(cardd % 2) != order % 2)
-            printf("invalid cardd\n"), exit(1);
-    }
+			printf("invalid cardd\n"), exit(1);
+	}
 
-    if(opt_filtering)
-    {  if(order == -1)
-           printf("need to set order\n"), exit(1);
-       fft_signal = (double*)malloc(sizeof(double)*order);
-       fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
-       plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
-    }
-    
-    if(compstring != NULL)
-    {	
-		char* tmp = (char*)compstring;
-		
-        if(sscanf(tmp, "%d", &div1) != 1)
-            printf("ERROR! syntax error in compstring: %s\n", tmp), exit(1);		
-		while(*tmp != ',' && *tmp != '\0')
-			tmp++;
-		tmp++;
-	
-		for(int i=0; i<div1; i++)
-		{	sscanf(tmp, "%d", &compA[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-		}
-		for(int i=0; i<div1; i++)
-		{	sscanf(tmp, "%d", &compB[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-		}
-		for(int i=0; i<div1; i++)
-		{	sscanf(tmp, "%d", &compC[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-		}
-		for(int i=0; i<div1; i++)
-		{	sscanf(tmp, "%d", &compD[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-		}
+	if(opt_filtering)
+	{	if(order == -1)
+			printf("need to set order\n"), exit(1);
+		fft_signal = (double*)malloc(sizeof(double)*order);
+		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
+		plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
 	}
     
+   
     if(compsums != NULL)
     {   FILE* compsum_file = fopen(compsums, "r");
         if(compsum_file == NULL)
@@ -531,7 +642,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         time1 += (t1 - t0) / 1000000.0L;
     }
         
-    if(compstring != NULL || compsums != NULL)
+    if(compsums != NULL)
     {   calls2++;
         timestamp_t t0 = get_timestamp();
         if(compression_check(out_learnts))
