@@ -92,6 +92,7 @@ int main(int argc, char** argv)
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
+        StringOption assums ("MAIN", "assums", "Comma-separated list of assumptions to use.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
@@ -199,6 +200,20 @@ int main(int argc, char** argv)
                 dummy.push(l);
             }
             fclose(assertion_file);
+        }
+        else if (assums) {
+            const char* the_assums = assums;
+            char* tmp = (char*)the_assums;
+            int i = 0;
+            while (sscanf(tmp, "%d", &i) == 1) {
+                Var v = abs(i) - 1;
+                Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                dummy.push(l);
+                while(*tmp != ',' && *tmp != '\0')
+                    tmp++;
+                if(*tmp == ',')
+                    tmp++;
+            }
         }
         for( int i = 0; i < dummy.size(); i++) {
             printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
