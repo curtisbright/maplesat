@@ -233,9 +233,11 @@ int main(int argc, char** argv)
                 fprintf(res, " 0\n");
             }else if (ret == l_False) {
                 fprintf(res, "UNSAT\n");
-                for (int i = 0; i < S.conflict.size(); i++) {
-                    // Reverse the signs to keep the same sign as the assertion file.
-                    fprintf(res, "%s%d\n", sign(S.conflict[i]) ? "" : "-", var(S.conflict[i]) + 1);
+		if (S.conflict.size() <= 10) {
+                    for (int i = 0; i < S.conflict.size(); i++) {
+                        // Reverse the signs to keep the same sign as the assertion file.
+                        fprintf(res, "%s%d\n", sign(S.conflict[i]) ? "" : "-", var(S.conflict[i]) + 1);
+                    }
                 }
             } else
                 fprintf(res, "INDET\n");
@@ -245,7 +247,7 @@ int main(int argc, char** argv)
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
-        return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
+        return (ret == l_True ? 10 : ret == l_False ? (S.conflict.size() <= 10 ? 21 : 20) : 0);
 #endif
     } catch (OutOfMemoryException&){
         printf("===============================================================================\n");
