@@ -113,7 +113,9 @@ void printclause(vec<Lit>& cl);
 void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 {
 	int index = c*(n/2+1);
+#ifdef PRINTCONF
 	printf("n %d d %d i %d c %d v %d index %d\n",n,d,i,c,v,index);
+#endif
 
 	if(v == -d)
 	{	// all variables -1 variable
@@ -248,6 +250,47 @@ void Solver::addCompClauses()
 				tmp++;
 			tmp++;
 		}
+
+		if(sscanf(tmp, "%d", &div2) != 1)
+		{
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			tmp++;
+
+			for(int i=0; i<order/div2; i++)
+			{	sscanf(tmp, "%d", &compA[0][i]);
+				generateCompClauses(order, div2, i, 0, compA[0][i]);
+				while(*tmp != ',' && *tmp != '\0')
+					tmp++;
+				tmp++;
+			}
+
+			for(int i=0; i<order/div2; i++)
+			{	sscanf(tmp, "%d", &compB[0][i]);
+				generateCompClauses(order, div2, i, 1, compB[0][i]);
+				while(*tmp != ',' && *tmp != '\0')
+					tmp++;
+				tmp++;
+			}
+
+			for(int i=0; i<order/div2; i++)
+			{	sscanf(tmp, "%d", &compC[0][i]);
+				generateCompClauses(order, div2, i, 2, compC[0][i]);
+				while(*tmp != ',' && *tmp != '\0')
+					tmp++;
+				tmp++;
+			}
+
+			for(int i=0; i<order/div2; i++)
+			{	sscanf(tmp, "%d", &compD[0][i]);
+				generateCompClauses(order, div2, i, 3, compD[0][i]);
+				while(*tmp != ',' && *tmp != '\0')
+					tmp++;
+				tmp++;
+			}
+
+		}
+
 	}
  
 }
