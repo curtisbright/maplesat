@@ -91,7 +91,7 @@ int main(int argc, char** argv)
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
-        StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
+        /*StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");*/
         StringOption assums ("MAIN", "assums", "Comma-separated list of assumptions to use.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
         }
 
         vec<Lit> dummy;
-        if (assumptions) {
+        /*if (assumptions) {
             const char* file_name = assumptions;
             FILE* assertion_file = fopen (file_name, "r");
             if (assertion_file == NULL)
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
             }
             fclose(assertion_file);
         }
-        else if (assums) {
+        else*/ if (assums) {
             const char* the_assums = assums;
             char* tmp = (char*)the_assums;
             int i = 0;

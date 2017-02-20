@@ -91,14 +91,14 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 
 static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
-static IntOption     opt_carda     (_cat, "carda",      "Cardinality of row A", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
+/*static IntOption     opt_carda     (_cat, "carda",      "Cardinality of row A", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
 static IntOption     opt_cardb     (_cat, "cardb",      "Cardinality of row B", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
 static IntOption     opt_cardc     (_cat, "cardc",      "Cardinality of row C", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
-static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));
-static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");
+static IntOption     opt_cardd     (_cat, "cardd",      "Cardinality of row D", INT32_MIN, IntRange(INT32_MIN, INT32_MAX));*/
+/*static StringOption  opt_compsums  (_cat, "compsums",   "A file which contains a list of the compression sums to be used.");*/
 static StringOption  opt_compstring(_cat, "compstring",   "A string which contains a comma-separated list of the compression sums to be used.");
-static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);
-static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);
+/*static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);*/
+/*static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);*/
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
 
 int div1, div2;
@@ -303,8 +303,8 @@ Solver::Solver() :
   , reward_multiplier(opt_reward_multiplier)
 #endif
 
-  , order (opt_order), carda (opt_carda), cardb (opt_cardb), cardc (opt_cardc), cardd (opt_cardd)
-  , compsums (opt_compsums)
+  , order (opt_order) /*, carda (opt_carda), cardb (opt_cardb), cardc (opt_cardc), cardd (opt_cardd)*/
+  /*, compsums (opt_compsums)*/
   , compstring (opt_compstring)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
@@ -327,7 +327,7 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-	if(opt_cardinality)
+	/*if(opt_cardinality)
 	{
 		if(order == -1)
 			printf("need to set order\n"), exit(1);
@@ -341,7 +341,7 @@ Solver::Solver() :
 			printf("invalid cardc\n"), exit(1);
 		if(abs(cardd % 2) != order % 2)
 			printf("invalid cardd\n"), exit(1);
-	}
+	}*/
 
 	if(opt_filtering)
 	{	if(order == -1)
@@ -352,7 +352,7 @@ Solver::Solver() :
 	}
     
    
-    if(compsums != NULL)
+    /*if(compsums != NULL)
     {   FILE* compsum_file = fopen(compsums, "r");
         if(compsum_file == NULL)
             printf("ERROR! Could not open file: %s\n", compsums), exit(1);
@@ -401,7 +401,7 @@ Solver::Solver() :
         }
 
         fclose(compsum_file);
-    }
+    }*/
     
 }
 
@@ -633,23 +633,23 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     if(order==-1)
         return;
         
-    if(opt_cardinality)
+    /*if(opt_cardinality)
     {   calls1++;
         timestamp_t t0 = get_timestamp();
         if(cardinality_check(out_learnts))
             success1++;
         timestamp_t t1 = get_timestamp();
         time1 += (t1 - t0) / 1000000.0L;
-    }
+    }*/
         
-    if(compsums != NULL)
+    /*if(compsums != NULL)
     {   calls2++;
         timestamp_t t0 = get_timestamp();
         if(compression_check(out_learnts))
             success2++;
         timestamp_t t1 = get_timestamp();
         time2 += (t1 - t0) / 1000000.0L;
-    }
+    }*/
 
     if(opt_filtering)
     {   calls3++;
@@ -2428,8 +2428,8 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
         
-    printf("cardinality checks: %d/%d = %.5f, %.2f total time\n", success1, calls1, success1/(double)calls1, time1);
-    printf("compression checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);
+    /*printf("cardinality checks: %d/%d = %.5f, %.2f total time\n", success1, calls1, success1/(double)calls1, time1);*/
+    /*printf("compression checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);*/
     printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success3, calls3, success3/(double)calls3, time3);
 
     if (status == l_True){
