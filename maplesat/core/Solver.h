@@ -277,8 +277,8 @@ protected:
         return lbd;
     }
     
-    bool     cardinality_check(vec<vec<Lit> >& out_learnts);
-    bool     compression_check(vec<vec<Lit> >& out_learnts);
+    /*bool     cardinality_check(vec<vec<Lit> >& out_learnts);
+    bool     compression_check(vec<vec<Lit> >& out_learnts);*/
     bool     filtering_check(vec<vec<Lit> >& out_learnts);
     
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.

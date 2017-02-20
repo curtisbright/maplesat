@@ -957,7 +957,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
 }
 
-bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
+/*bool Solver::cardinality_check(vec<vec<Lit> >& out_learnts)
 {
   //int out_btlevel = 0;
   int n = order;
@@ -1584,7 +1584,7 @@ bool Solver::compression_check(vec<vec<Lit> >& out_learnts)
   }
 
   return false;
-}
+}*/
 
 bool Solver::assertingClause(CRef confl) {
     Clause& c = ca[confl];
