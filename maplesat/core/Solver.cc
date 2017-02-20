@@ -251,7 +251,7 @@ void Solver::addCompClauses()
 			tmp++;
 		}
 
-		if(sscanf(tmp, "%d", &div2) != 1)
+		if(sscanf(tmp, "%d", &div2) == 1)
 		{
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
