@@ -739,15 +739,19 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
   int n = order;
   int dim = n/2+1;
-  vec<Lit> conflict;
   
   struct psd_holder psds[dim][4];
-  bool seqcomplete[4] = {true, true, true, true};
-
   int num_complete = 0;
+
+  double psdsum[dim];
+  for(int i=0; i<dim; i++)
+    psdsum[i] = 0;
+
+  bool seqcomplete[4] = {false, false, false, false};
   
   for(int seq=0; seq<4; seq++)
   { 
+    seqcomplete[seq] = true;
     for(int i=seq*dim; i<(seq+1)*dim; i++)
     { if(assigns[i] == l_Undef)
       { seqcomplete[seq] = false;
@@ -756,12 +760,11 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     }
 
     if(seqcomplete[seq])
-    { num_complete++;
+    { 
+      num_complete++;
 
       for(int i=0; i<dim; i++)
       { fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
-        //if(i>0)
-        // fft_signal[n-i] = fft_signal[i];
       }
 
       fftw_execute(plan);
@@ -771,24 +774,47 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         double psd_i = fft_result[i][0]*fft_result[i][0];
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
+		psdsum[i] += psd_i;
 
-        if(psd_i > 4*n+0.01)
-        { for(int j=seq*dim; j<(seq+1)*dim; j++)
-          { if(assigns[j] == l_True)
-              conflict.push(mkLit(j, true));
-            else if(assigns[j] == l_False)
-              conflict.push(mkLit(j, false));
+        if(psdsum[i] > 4*n+0.01)
+        { 
+          // Sort PSDs
+          qsort(psds[i], seq+1, sizeof(struct psd_holder), compare_psd_holders);
+          double this_psdsum = 0;
+          bool seqused[4] = {false, false, false, false};
+
+          for(int seq=0; seq<num_complete; seq++)
+          { 
+             seqused[psds[i][seq].seqindex] = true;
+             this_psdsum += psds[i][seq].psd;
+
+             if(this_psdsum > 4*n + 0.01)
+             {
+
+                int size = out_learnts.size();
+                out_learnts.push();
+
+                for(int s=0; s<4; s++)
+                {
+                  if(seqused[s])
+                  { for(int j=s*dim; j<(s+1)*dim; j++)
+                    { if(assigns[j] == l_True)
+                        out_learnts[size].push(mkLit(j, true));
+                      else if(assigns[j] == l_False)
+                        out_learnts[size].push(mkLit(j, false));
+                    }
+                  }
+                }
+
+#ifdef PRINTCONF
+                printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+
+                return true;
+
+             }
           }
 
-          int size = out_learnts.size();
-          out_learnts.push();
-          conflict.copyTo(out_learnts[size]);
-#ifdef PRINTCONF
-          printf("conflict "), printclause(conflict);
-          printf("out_learnt "), printclause(out_learnts[size]);
-#endif
-          conflict.clear();
-          return true;
         }
 
       }
@@ -802,76 +828,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     }
 
   }
-  
-  for(int i=0; i<dim; i++)
-    qsort(psds[i], 4, sizeof(struct psd_holder), compare_psd_holders);
 
-  double psdsums[dim];
-  bool seqused[dim][4];
-
-  for(int i=0; i<dim; i++)
-  { for(int seq=0; seq<4; seq++)
-      seqused[i][seq] = false;
-    psdsums[i] = 0;
-  }
-
-  for(int seq=0; seq<num_complete; seq++)
-  { for(int i=0; i<dim; i++)
-    {  
-       seqused[i][psds[i][seq].seqindex] = true;
-       psdsums[i] += psds[i][seq].psd;
-
-       if(psdsums[i] > 4*n + 0.01)
-       {
-          for(int s=0; s<4; s++)
-          {
-            if(seqused[i][s])
-            { for(int j=s*dim; j<(s+1)*dim; j++)
-              { if(assigns[j] == l_True)
-                  conflict.push(mkLit(j, true));
-                else if(assigns[j] == l_False)
-                  conflict.push(mkLit(j, false));
-              }
-            }
-          }
-      
-          int size = out_learnts.size();
-          out_learnts.push();
-          conflict.copyTo(out_learnts[size]);
-#ifdef PRINTCONF
-          printf("conflict "), printclause(conflict);
-          printf("out_learnt "), printclause(out_learnts[size]);
-#endif
-          conflict.clear();
-          return true;
-
-       }
-    }
-  }
-
-  /*if(num_complete > 0)
-    printf("===\n");
-
-  for(int seq=0; seq<num_complete; seq++)
-  { 
-    //if(seqcomplete[seq])
-    { for(int i=0; i<dim; i++)
-        printf("%.2f ", psds[i][seq].psd);
-      printf("\n");
-    }
-  }
-
-  if(num_complete > 0)
-    printf("===\n");
-  for(int seq=0; seq<num_complete; seq++)
-  { 
-    //if(seqcomplete[seq])
-    { for(int i=0; i<dim; i++)
-        printf("%d ", psds[i][seq].seqindex);
-      printf("\n");
-    }
-  }*/
-  
   return false;
 
 }
