@@ -723,7 +723,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     }*/
 }
 
-#ifdef SORTPSDS
 struct psd_holder {
 	int seqindex;
 	double psd;
@@ -735,14 +734,12 @@ int compare_psd_holders(const void* x, const void* y) {
 	else
 		return -1;
 }
-#endif
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
   int n = order;
   int dim = n/2+1;
   
-#ifdef SORTPSDS
   struct psd_holder psds[dim][4];
   int num_complete = 0;
 
@@ -775,7 +772,6 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       for(int i=0; i<dim; i++)
       { 
         double psd_i = fft_result[i][0]*fft_result[i][0];
-#ifdef SORTPSDS
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
 		psdsum[i] += psd_i;
@@ -824,14 +820,12 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       }
 
     }
-#ifdef SORTPSDS
     else
     {  for(int i=0; i<dim; i++)
        {  psds[i][seq].seqindex = -1;
           psds[i][seq].psd = -1;
        }
     }
-#endif
   }
 
   return false;
