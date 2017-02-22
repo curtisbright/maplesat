@@ -32,18 +32,18 @@ get_timestamp ()
   return  now.tv_usec + (timestamp_t)now.tv_sec * 1000000;
 }
 
-int calls1 = 0;
-int calls2 = 0;
+//int calls1 = 0;
+//int calls2 = 0;
 int calls3 = 0;
-//int calls4 = 0;
-int success1 = 0;
-int success2 = 0;
+int calls4 = 0;
+//int success1 = 0;
+//int success2 = 0;
 int success3 = 0;
-//int success4 = 0;
-double time1 = 0;
-double time2 = 0;
+int success4 = 0;
+//double time1 = 0;
+//double time2 = 0;
 double time3 = 0;
-//double time4 = 0;
+double time4 = 0;
 
 #ifndef NDEBUG
 #define PRINTCONF
@@ -100,12 +100,15 @@ static StringOption  opt_compstring(_cat, "compstring",   "A string which contai
 /*static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);*/
 /*static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);*/
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
+static BoolOption    opt_subseqfilt (_cat, "subseqfilt",  "Use subsequence PSD filtering programmatic check", false);
 
 int div1, div2;
 int compA[2][99];
 int compB[2][99];
 int compC[2][99];
 int compD[2][99];
+int divisors[99];
+int numdivisors;
 #ifdef PRINTCONF
 void printclause(vec<Lit>& cl);
 #endif
@@ -394,6 +397,23 @@ Solver::Solver() :
 		plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
 	}
     
+	if(opt_subseqfilt)
+	{	if(order == -1)
+			printf("need to set order\n"), exit(1);
+
+		numdivisors = 0;
+		for(int d=2; d<order; d++)
+		{	if(order % d == 0)
+			{	divisors[numdivisors] = d;
+				numdivisors++;
+			}
+		}
+
+		/*printf("divisors of %d: ", order);
+		for(int i=0; i<numdivisors; i++)
+			printf("%d ", divisors[i]);
+		printf("\n");*/
+	}
    
     /*if(compsums != NULL)
     {   FILE* compsum_file = fopen(compsums, "r");
@@ -702,6 +722,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         timestamp_t t1 = get_timestamp();
         time3 += (t1 - t0) / 1000000.0L;
     }
+
+    if(opt_subseqfilt)
+    {   
+		timestamp_t t0 = get_timestamp();
+		for(int i=0; i<numdivisors; i++)
+		{	calls4++;
+			if(subseqfilt_check(out_learnts, divisors[i]))
+		        success4++;
+		}
+	    timestamp_t t1 = get_timestamp();
+	    time4 += (t1 - t0) / 1000000.0L;
+    }
     
 #ifdef PRINTCONF
     for(int i=0; i<out_learnts.size(); i++)
@@ -733,6 +765,11 @@ int compare_psd_holders(const void* x, const void* y) {
 		return 1;
 	else
 		return -1;
+}
+
+bool Solver::subseqfilt_check(vec<vec<Lit> >& out_learnts, int d)
+{
+  return false;
 }
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
