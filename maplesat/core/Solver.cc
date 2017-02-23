@@ -784,19 +784,17 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   for(int i=0; i<dim; i++)
     psdsum[i] = 0;
 
-  bool seqcomplete[4] = {false, false, false, false};
-  
   for(int seq=0; seq<4; seq++)
   { 
-    seqcomplete[seq] = true;
+    bool seqcomplete = true;
     for(int i=seq*dim; i<(seq+1)*dim; i++)
     { if(assigns[i] == l_Undef)
-      { seqcomplete[seq] = false;
+      { seqcomplete = false;
         break;
       }
     }
 
-    if(seqcomplete[seq])
+    if(seqcomplete)
     { 
       num_complete++;
 
