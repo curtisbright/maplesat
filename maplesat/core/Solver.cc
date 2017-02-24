@@ -109,6 +109,9 @@ int compC[2][99];
 int compD[2][99];
 int divisors[99];
 int numdivisors;
+double* fft_signals[99];
+fftw_complex* fft_results[99];
+fftw_plan plans[99];
 #ifdef PRINTCONF
 void printclause(vec<Lit>& cl);
 #endif
@@ -116,9 +119,6 @@ void printclause(vec<Lit>& cl);
 void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 {
 	int index = c*(n/2+1);
-#ifdef PRINTCONF
-	printf("n %d d %d i %d c %d v %d index %d\n",n,d,i,c,v,index);
-#endif
 
 	if(v == -d)
 	{	// all variables -1 variable
@@ -396,15 +396,20 @@ Solver::Solver() :
 		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 		plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
 	}
+
+	numdivisors = 0;
     
 	if(opt_subseqfilt)
 	{	if(order == -1)
 			printf("need to set order\n"), exit(1);
 
-		numdivisors = 0;
 		for(int d=2; d<order; d++)
 		{	if(order % d == 0)
 			{	divisors[numdivisors] = d;
+				const int l = order/d;
+				fft_signals[numdivisors] = (double*)malloc(sizeof(double)*l);
+				fft_results[numdivisors] = (fftw_complex*)malloc(sizeof(fftw_complex)*l);
+				plans[numdivisors] = fftw_plan_dft_r2c_1d(l, fft_signals[numdivisors], fft_results[numdivisors], FFTW_ESTIMATE);
 				numdivisors++;
 			}
 		}
@@ -471,9 +476,14 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-    fftw_destroy_plan(plan);
-    free(fft_signal);
-    free(fft_result);
+	fftw_destroy_plan(plan);
+	free(fft_signal);
+	free(fft_result);
+	for(int i=0; i<numdivisors; i++)
+	{	fftw_destroy_plan(plans[i]);
+		free(fft_signals[i]);
+		free(fft_results[i]);
+	}
 }
 
 
@@ -728,7 +738,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		timestamp_t t0 = get_timestamp();
 		for(int i=0; i<numdivisors; i++)
 		{	calls4++;
-			if(subseqfilt_check(out_learnts, divisors[i]))
+			if(subseqfilt_check(out_learnts, i))
 		        success4++;
 		}
 	    timestamp_t t1 = get_timestamp();
@@ -767,18 +777,135 @@ int compare_psd_holders(const void* x, const void* y) {
 		return -1;
 }
 
-bool Solver::subseqfilt_check(vec<vec<Lit> >& out_learnts, int d)
+inline int minindex(int n, int i)
 {
+  return (i <= n/2) ? i : n-i;
+}
+
+bool Solver::subseqfilt_check(vec<vec<Lit> >& out_learnts, int divindex)
+{
+  const int d = divisors[divindex];
+  const int n = order;
+  const int n_dim = n/2+1;
+  const int dim = n/d;
+
+  struct psd_holder psds[dim/2+1][d][4];
+
+  double psdsum[dim/2+1];
+  for(int i=0; i<dim/2+1; i++)
+    psdsum[i] = 0;
+
+  for(int j=0; j<d; j++)
+  { for(int seq=0; seq<4; seq++)
+    { 
+      bool seqcomplete = true;
+      for(int i=0; i<dim; i++)
+      { const int index = seq*n_dim + minindex(n, d*i+j);
+        if(assigns[index] == l_Undef)
+        { seqcomplete = false;
+          break;
+        }
+      }
+
+      if(seqcomplete)
+      {
+        for(int i=0; i<dim; i++)
+        { const int index = seq*n_dim + minindex(n, d*i+j);
+          fft_signals[divindex][i] = (assigns[index] == l_True) ? 1 : -1;
+        }
+
+        fftw_execute(plans[divindex]);
+
+        for(int i=0; i<dim/2+1; i++)
+        { 
+          double psd_i = fft_results[divindex][i][0]*fft_results[divindex][i][0];
+          psds[i][j][seq].seqindex = seq + 4*j;
+          psds[i][j][seq].psd = psd_i;
+          psdsum[i] += psd_i;
+
+          if(psdsum[i] > 4*n+0.01)
+          {
+            // Sort PSDs
+#ifdef DEBUG
+            printf("subseqfilt len %d index %d sum %.2f PSDs before: ", 4*j+seq+1, i, psdsum[i]);
+            for(int s=0; s<4*j+seq+1; s++)
+              printf("%.2f %d ", psds[i][0][s].psd, psds[i][0][s].seqindex);
+            printf("\n");
+#endif
+            qsort(psds[i], 4*j+seq+1, sizeof(struct psd_holder), compare_psd_holders);
+#ifdef DEBUG
+            printf("subseqfilt PSDs after: ");
+            for(int s=0; s<4*j+seq+1; s++)
+              printf("%.2f %d ", psds[i][0][s].psd, psds[i][0][s].seqindex);
+            printf("\n");
+#endif
+            double this_psdsum = 0;
+            bool seqused[d][4];
+            for(int j=0; j<d; j++)
+              for(int k=0; k<4; k++)
+                seqused[j][k] = false;
+
+            for(int j=0; j<d; j++)
+            { for(int k=0; k<4; k++)
+              { 
+                assert(psds[i][j][k].seqindex >= 0);
+                seqused[psds[i][j][k].seqindex/4][psds[i][j][k].seqindex % 4] = true;
+                this_psdsum += psds[i][j][k].psd;
+
+                if(this_psdsum > 4*n+0.01)
+                { 
+
+                  int size = out_learnts.size();
+                  out_learnts.push();
+
+                  for(int t=0; t<d; t++)
+                  { for(int s=0; s<4; s++)
+                    {
+                      if(seqused[t][s])
+                      { for(int l=0; l<dim; l++)
+                        { const int index = s*n_dim + minindex(n, d*l+t);
+                          if(assigns[index] == l_True)
+                            out_learnts[size].push(mkLit(index, true));
+                          else if(assigns[index] == l_False)
+                            out_learnts[size].push(mkLit(index, false));
+                        }
+                      }
+                    }
+                  }
+
+#ifdef PRINTCONF
+                  printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+
+                  return true;
+                }
+              }
+            }
+
+          }
+
+        }
+
+      }
+      else
+      {  for(int i=0; i<dim/2+1; i++)
+         { psds[i][j][seq].seqindex = -1;
+           psds[i][j][seq].psd = -1;
+         }
+      }
+    }
+  }
+
   return false;
 }
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
-  int n = order;
-  int dim = n/2+1;
+  const int n = order;
+  const int dim = n/2+1;
   
   struct psd_holder psds[dim][4];
-  int num_complete = 0;
+  //int num_complete = 0;
 
   double psdsum[dim];
   for(int i=0; i<dim; i++)
@@ -796,7 +923,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
     if(seqcomplete)
     { 
-      num_complete++;
+      //num_complete++;
 
       for(int i=0; i<dim; i++)
       { fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
@@ -814,12 +941,25 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         if(psdsum[i] > 4*n+0.01)
         { 
           // Sort PSDs
+#ifdef DEBUG
+          printf("filtering PSDs before: ");
+          for(int s=0; s<seq+1; s++)
+            printf("%.2f ", psds[i][s].psd);
+          printf("\n");
+#endif
           qsort(psds[i], seq+1, sizeof(struct psd_holder), compare_psd_holders);
+#ifdef DEBUG
+          printf("filtering PSDs after: ");
+          for(int s=0; s<seq+1; s++)
+            printf("%.2f ", psds[i][s].psd);
+          printf("\n");
+#endif
           double this_psdsum = 0;
           bool seqused[4] = {false, false, false, false};
 
-          for(int seq=0; seq<num_complete; seq++)
+          for(int seq=0; seq<4; seq++)
           { 
+             assert(psds[i][seq].seqindex >= 0);
              seqused[psds[i][seq].seqindex] = true;
              this_psdsum += psds[i][seq].psd;
 
@@ -2384,6 +2524,7 @@ lbool Solver::solve_()
     /*printf("cardinality checks: %d/%d = %.5f, %.2f total time\n", success1, calls1, success1/(double)calls1, time1);*/
     /*printf("compression checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);*/
     printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success3, calls3, success3/(double)calls3, time3);
+    printf("subseqfilt  checks: %d/%d = %.5f, %.2f total time\n", success4, calls4, success4/(double)calls4, time4);
 
     if (status == l_True){
         // Extend & copy model:
