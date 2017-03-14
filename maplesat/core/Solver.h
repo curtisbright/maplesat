@@ -172,6 +172,7 @@ public:
     int order, carda, cardb, cardc, cardd;
     const char* compsums;
     const char* compstring;
+    const char* exhauststring;
 
 protected:
 

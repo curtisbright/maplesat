@@ -54,6 +54,8 @@ double time4 = 0;
 
 #include <fftw3.h>
 
+FILE* exhaustfile;
+
 double* fft_signal;
 fftw_complex* fft_result;
 fftw_plan plan;
@@ -100,6 +102,7 @@ static StringOption  opt_compstring(_cat, "compstring",   "A string which contai
 /*static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);*/
 /*static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);*/
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
+static StringOption    opt_exhaustive (_cat, "exhaustive",  "Output for exhaustive search");
 static BoolOption    opt_subseqfilt (_cat, "subseqfilt",  "Use subsequence PSD filtering programmatic check", false);
 
 int div1, div2;
@@ -352,6 +355,7 @@ Solver::Solver() :
   , order (opt_order) /*, carda (opt_carda), cardb (opt_cardb), cardc (opt_cardc), cardd (opt_cardd)*/
   /*, compsums (opt_compsums)*/
   , compstring (opt_compstring)
+  , exhauststring (opt_exhaustive)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -388,6 +392,10 @@ Solver::Solver() :
 		if(abs(cardd % 2) != order % 2)
 			printf("invalid cardd\n"), exit(1);
 	}*/
+
+    if(exhauststring != NULL)
+    {   exhaustfile = fopen(exhauststring, "a");
+    }
 
 	if(opt_filtering)
 	{	if(order == -1)
@@ -484,6 +492,10 @@ Solver::~Solver()
 		free(fft_signals[i]);
 		free(fft_results[i]);
 	}
+
+    if(exhauststring != NULL)
+    {   fclose(exhaustfile);
+    }
 }
 
 
@@ -903,6 +915,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
   const int n = order;
   const int dim = n/2+1;
+  bool allseqcomplete = true;
   
   struct psd_holder psds[dim][4];
   //int num_complete = 0;
@@ -1000,7 +1013,50 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
        {  psds[i][seq].seqindex = -1;
           psds[i][seq].psd = -1;
        }
+       allseqcomplete = false;
     }
+  }
+
+  if(allseqcomplete && exhauststring != NULL)
+  { printf("PSDs: ");
+    for(int i=0; i<dim; i++)
+       {  printf("%.2f ", psdsum[i]);
+       }
+    printf("Solution: ");
+    for(int k=0; k<4; k++)
+    { for(int i=0; i<dim; i++)
+        printf("%c", (assigns[k*dim+i] == l_True) ? '+' : '-');
+      printf(" ");
+    }
+    printf("\n");
+
+    for(int k=0; k<4; k++)
+    { for(int i=0; i<n; i++)
+      { int index = minindex(n, i);
+        fprintf(exhaustfile, "%s ", (assigns[k*dim+index] == l_True) ? "1" : "-1");
+      }
+    }
+    fprintf(exhaustfile, "\n");
+
+    int size = out_learnts.size();
+    out_learnts.push();
+
+    for(int s=0; s<4; s++)
+    {
+      for(int j=s*dim; j<(s+1)*dim; j++)
+      { if(assigns[j] == l_True)
+          out_learnts[size].push(mkLit(j, true));
+        else if(assigns[j] == l_False)
+          out_learnts[size].push(mkLit(j, false));
+      }
+    }
+
+#ifdef PRINTCONF
+    printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+
+    return true;
+
   }
 
   return false;
