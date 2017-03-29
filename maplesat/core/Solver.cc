@@ -104,6 +104,7 @@ static StringOption  opt_compstring(_cat, "compstring",   "A string which contai
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
 static StringOption    opt_exhaustive (_cat, "exhaustive",  "Output for exhaustive search");
 static BoolOption    opt_subseqfilt (_cat, "subseqfilt",  "Use subsequence PSD filtering programmatic check", false);
+static BoolOption    opt_usecos (_cat, "usecos",  "Use sum of cosines to compute the PSDs instead of FFT", false);
 
 int div1, div2;
 int compA[2][99];
@@ -911,6 +912,15 @@ bool Solver::subseqfilt_check(vec<vec<Lit> >& out_learnts, int divindex)
   return false;
 }
 
+int paf(const int n, int* A, int s)
+{
+  int ret = 0;
+  for(int i=0; i<n; i++)
+  { ret += A[i]*A[(i+s)%n];
+  }
+  return ret;
+}
+
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
   const int n = order;
@@ -938,18 +948,53 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     { 
       //num_complete++;
 
+      int sequence[n];
+      int pafs[dim];
+
       for(int i=0; i<dim; i++)
-      { fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+      { if(opt_usecos)
+          sequence[(n-i)%n] = sequence[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+        else
+          fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
       }
 
-      fftw_execute(plan);
+      if(opt_usecos)
+      {   
+        /*printf("sequence: ");
+        for(int i=0; i<n; i++)
+          printf("%d ", sequence[i]);
+        printf(" DFT: ");
+        for(int i=0; i<n; i++)
+          printf("%.2f ", fft_result[i][0]);*/
+
+        for(int i=0; i<dim; i++)
+        { pafs[i] = paf(n, sequence, i);
+        }
+
+        /*printf(" pafs: ");
+        for(int i=0; i<dim; i++)
+          printf("%d ", pafs[i]);
+        printf("\n");*/
+      }
+      else
+        fftw_execute(plan);
 
       for(int i=0; i<dim; i++)
       { 
-        double psd_i = fft_result[i][0]*fft_result[i][0];
+        double psd_i;
+        if(opt_usecos)
+        { psd_i = n;
+          for(int k=1; k<n/2+(n%2 == 0 ? 0 : 1); k++)
+            psd_i += 2*cos(2*M_PI*i*k/n)*pafs[k];
+          if(n%2==0)
+            psd_i += pafs[n/2]*(i % 2 == 0 ? 1 : -1);
+        }
+        else
+          psd_i = fft_result[i][0]*fft_result[i][0];
+
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
-		psdsum[i] += psd_i;
+        psdsum[i] += psd_i;
 
         if(psdsum[i] > 4*n+0.01)
         { 
