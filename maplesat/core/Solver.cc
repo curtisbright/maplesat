@@ -20,6 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 #include <cstdio>
+#include "cosarray.h"
 
 #include <sys/time.h>
 typedef unsigned long long timestamp_t;
@@ -960,21 +961,9 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
       if(opt_usecos)
       {   
-        /*printf("sequence: ");
-        for(int i=0; i<n; i++)
-          printf("%d ", sequence[i]);
-        printf(" DFT: ");
-        for(int i=0; i<n; i++)
-          printf("%.2f ", fft_result[i][0]);*/
-
         for(int i=0; i<dim; i++)
         { pafs[i] = paf(n, sequence, i);
         }
-
-        /*printf(" pafs: ");
-        for(int i=0; i<dim; i++)
-          printf("%d ", pafs[i]);
-        printf("\n");*/
       }
       else
         fftw_execute(plan);
@@ -985,7 +974,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         if(opt_usecos)
         { psd_i = n;
           for(int k=1; k<n/2+(n%2 == 0 ? 0 : 1); k++)
-            psd_i += 2*cos(2*M_PI*i*k/n)*pafs[k];
+            psd_i += 2*cosarray[n][(i*k)%n]*pafs[k];
           if(n%2==0)
             psd_i += pafs[n/2]*(i % 2 == 0 ? 1 : -1);
         }
