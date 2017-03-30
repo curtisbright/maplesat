@@ -968,7 +968,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       else
         fftw_execute(plan);
 
-      for(int i=0; i<dim; i++)
+      for(int i=1; i<dim; i++)
       { 
         double psd_i;
         if(opt_usecos)
