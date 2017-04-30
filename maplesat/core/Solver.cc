@@ -109,7 +109,9 @@ static StringOption  opt_compstring(_cat, "compstring",   "A string which contai
 /*static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);*/
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
 static BoolOption    opt_altrowsum (_cat, "altrowsum",  "Use alternating rowsum programmatic check", false);
+#ifdef USEPERMS
 static BoolOption    opt_permutations (_cat, "permutations",  "Generate conflict clauses for permutations of PSD filtered sequences", false);
+#endif
 static StringOption    opt_exhaustive (_cat, "exhaustive",  "Output for exhaustive search");
 
 #include "decomps.h"
@@ -713,9 +715,10 @@ inline int minindex(int n, int i)
   return (i <= n/2) ? i : n-i;
 }
 
-
+#ifdef USEPERMS
 std::set<std::string> myset;
 //#include <iostream>
+#endif
 
 bool Solver::altrowsum_check(vec<vec<Lit> >& out_learnts)
 {
@@ -876,7 +879,9 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
              seqused[psds[i][seq].seqindex] = true;
              this_psdsum += psds[i][seq].psd;
 
+#ifdef USEPERMS
              char charstring[10] = {};
+#endif
 
              if(this_psdsum > 4*n + 0.01)
              {
@@ -886,7 +891,9 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                 //vec<Lit> cl;
                 //cl.clear();
 
+#ifdef USEPERMS
                 std::string mystring = std::string();
+#endif
 
                 for(int s=0; s<4; s++)
                 {
@@ -895,14 +902,18 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                     { if(assigns[j] == l_True)
                       { out_learnts[size].push(mkLit(j, true)) /*, printf("+")*/;
                         //cl.push(mkLit(j, true));
+#ifdef USEPERMS
                         sprintf(charstring, "%d ", j+1);
                         mystring += charstring;
+#endif
                       }
                       else if(assigns[j] == l_False)
                       { out_learnts[size].push(mkLit(j, false))/*, printf("-")*/;
                         //cl.push(mkLit(j, false));
+#ifdef USEPERMS
                         sprintf(charstring, "-%d ", j+1);
                         mystring += charstring;
+#endif
                       }
                     }
                   }
@@ -910,7 +921,9 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                 }
                 //printf("\n");
 
+#ifdef USEPERMS
                 myset.insert(mystring);
+#endif
                 //out_learnts.push();
                 //cl.copyTo(out_learnts.last());
                 //addClause(cl);
@@ -919,6 +932,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                 fprintclause(out_learnt_file, out_learnts[size]);
 #endif
 
+#ifdef USEPERMS
                 if(opt_permutations)
                 {
                   for(int coprimeindex=0; coprimeindex < coprimelength[n]; coprimeindex++)
@@ -1046,6 +1060,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                     //printf("\n");
                   }
                 }
+#endif
 
 #ifdef PRINTCONF
                 printf("out_learnt "), printclause(out_learnts[size]);
