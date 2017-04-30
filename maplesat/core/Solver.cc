@@ -34,15 +34,15 @@ get_timestamp ()
 }
 
 //int calls1 = 0;
-//int calls2 = 0;
+int calls2 = 0;
 int calls3 = 0;
 int calls4 = 0;
 //int success1 = 0;
-//int success2 = 0;
+int success2 = 0;
 int success3 = 0;
 int success4 = 0;
 //double time1 = 0;
-//double time2 = 0;
+double time2 = 0;
 double time3 = 0;
 double time4 = 0;
 
@@ -108,8 +108,12 @@ static StringOption  opt_compstring(_cat, "compstring",   "A string which contai
 /*static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);*/
 /*static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);*/
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
+static BoolOption    opt_altrowsum (_cat, "altrowsum",  "Use alternating rowsum programmatic check", false);
 static BoolOption    opt_permutations (_cat, "permutations",  "Generate conflict clauses for permutations of PSD filtered sequences", false);
 static StringOption    opt_exhaustive (_cat, "exhaustive",  "Output for exhaustive search");
+
+#include "decomps.h"
+std::set<int> possiblealtrowsums[71];
 
 int div1, div2;
 int compA[2][99];
@@ -400,6 +404,17 @@ Solver::Solver() :
 		//fft_result2 = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 		//plan2 = fftw_plan_dft_r2c_1d(order, fft_signal2, fft_result2, FFTW_ESTIMATE);
 	}
+
+	if(opt_altrowsum)
+	{	for(int ord=2; ord<=70; ord++)
+		{	for(int len=0; len<decomps_len[ord]; len++)
+			{	for(int i=0; i<4; i++)
+				{	possiblealtrowsums[ord].insert(decomps[ord][len][i]);
+					possiblealtrowsums[ord].insert(-decomps[ord][len][i]);
+				}
+			}
+		}
+	}
     
 }
 
@@ -649,6 +664,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     if(order==-1)
         return;
 
+    bool skip = false;
+    if(opt_altrowsum && order%2==0)
+    {   calls2++;
+        timestamp_t t0 = get_timestamp();
+        if(altrowsum_check(out_learnts))
+            success2++, skip = true;
+        timestamp_t t1 = get_timestamp();
+        time2 += (t1 - t0) / 1000000.0L;
+        if(skip)
+            return;
+    }
+
     if(opt_filtering)
     {   calls3++;
         timestamp_t t0 = get_timestamp();
@@ -689,6 +716,77 @@ inline int minindex(int n, int i)
 
 std::set<std::string> myset;
 //#include <iostream>
+
+bool Solver::altrowsum_check(vec<vec<Lit> >& out_learnts)
+{
+	const int n = order;
+	assert(n%2 == 0);
+	const int dim = n/2+1;
+
+	for(int seq=0; seq<4; seq++)
+	{
+		bool seqcomplete = true;
+		int rowsum = 0;
+		int altrowsum = 0;
+		int alt = 1;
+		for(int i=seq*dim; i<(seq+1)*dim; i++)
+		{	if(assigns[i] == l_Undef)
+			{	seqcomplete = false;
+				break;
+			} else if(assigns[i] == l_True)
+			{	if(i == seq*dim || i == (seq+1)*dim-1)
+				{	rowsum += 1;
+					altrowsum += 1*alt;
+				}
+				else
+				{	rowsum += 2;
+					altrowsum += 2*alt;
+				}
+			} else if(assigns[i] == l_False)
+			{	if(i == seq*dim || i == (seq+1)*dim-1)
+				{	rowsum += -1;
+					altrowsum += -1*alt;
+				}
+				else
+				{	rowsum += -2;
+					altrowsum += -2*alt;
+				}
+			}
+			alt *= -1;
+		}
+
+		if(seqcomplete)
+		{	//printf("Alternating rowsum: %d\n", altrowsum);
+			if(possiblealtrowsums[n].find(rowsum) == possiblealtrowsums[n].end() || possiblealtrowsums[n].find(altrowsum) == possiblealtrowsums[n].end())
+			{	//printf("Alternating rowsum of %d is not possible!\n", altrowsum);
+				int size = out_learnts.size();
+				out_learnts.push();
+				for(int j=seq*dim; j<(seq+1)*dim; j++)
+				{	if(assigns[j] == l_True)
+					{	out_learnts[size].push(mkLit(j, true));
+						//sprintf(charstring, "%d ", j+1);
+						//mystring += charstring;
+					}
+					else if(assigns[j] == l_False)
+					{	out_learnts[size].push(mkLit(j, false));
+						//sprintf(charstring, "-%d ", j+1);
+						//mystring += charstring;
+					}
+				}
+
+#ifdef PRINTCONF
+				printf("out_learnt "), printclause(out_learnts[size]);
+#endif
+
+				return true;
+
+			}
+		}
+
+	}
+
+	return false;
+}
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
@@ -1904,7 +2002,7 @@ lbool Solver::solve_()
         printf("===============================================================================\n");
         
     /*printf("cardinality checks: %d/%d = %.5f, %.2f total time\n", success1, calls1, success1/(double)calls1, time1);*/
-    /*printf("compression checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);*/
+    printf("altrowsum   checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);
     printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success3, calls3, success3/(double)calls3, time3);
     //printf("subseqfilt  checks: %d/%d = %.5f, %.2f total time\n", success4, calls4, success4/(double)calls4, time4);
 
