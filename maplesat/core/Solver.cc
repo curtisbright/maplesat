@@ -33,6 +33,7 @@ get_timestamp ()
   return  now.tv_usec + (timestamp_t)now.tv_sec * 1000000;
 }
 
+int numsols = 0;
 //int calls1 = 0;
 int calls2 = 0;
 int calls3 = 0;
@@ -1096,10 +1097,12 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   }
 
   if(allseqcomplete && exhauststring != NULL)
-  { printf("PSDs: ");
+  { /*printf("PSDs: ");
     for(int i=0; i<dim; i++)
        {  printf("%.2f ", psdsum[i]);
-       }
+       }*/
+    numsols++;
+
     printf("Solution: ");
     for(int k=0; k<4; k++)
     { for(int i=0; i<dim; i++)
@@ -2031,6 +2034,7 @@ lbool Solver::solve_()
     printf("altrowsum   checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);
 #endif
     printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success3, calls3, success3/(double)calls3, time3);
+    printf("NUMSOLS: %d\n", numsols);
     //printf("subseqfilt  checks: %d/%d = %.5f, %.2f total time\n", success4, calls4, success4/(double)calls4, time4);
 
     if (status == l_True){
