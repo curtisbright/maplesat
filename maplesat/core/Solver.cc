@@ -108,14 +108,18 @@ static StringOption  opt_compstring(_cat, "compstring",   "A string which contai
 /*static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);*/
 /*static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);*/
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
+#ifdef ALTROW
 static BoolOption    opt_altrowsum (_cat, "altrowsum",  "Use alternating rowsum programmatic check", false);
+#endif
 #ifdef USEPERMS
 static BoolOption    opt_permutations (_cat, "permutations",  "Generate conflict clauses for permutations of PSD filtered sequences", false);
 #endif
 static StringOption    opt_exhaustive (_cat, "exhaustive",  "Output for exhaustive search");
 
 #include "decomps.h"
+#ifdef ALTROW
 std::set<int> possiblealtrowsums[71];
+#endif
 
 int div1, div2;
 int compA[2][99];
@@ -407,6 +411,7 @@ Solver::Solver() :
 		//plan2 = fftw_plan_dft_r2c_1d(order, fft_signal2, fft_result2, FFTW_ESTIMATE);
 	}
 
+#ifdef ALTROW
 	if(opt_altrowsum)
 	{	for(int ord=2; ord<=70; ord++)
 		{	for(int len=0; len<decomps_len[ord]; len++)
@@ -417,6 +422,7 @@ Solver::Solver() :
 			}
 		}
 	}
+#endif
     
 }
 
@@ -666,6 +672,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     if(order==-1)
         return;
 
+#ifdef ALTROW
     bool skip = false;
     if(opt_altrowsum && order%2==0)
     {   calls2++;
@@ -677,6 +684,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         if(skip)
             return;
     }
+#endif
 
     if(opt_filtering)
     {   calls3++;
@@ -720,6 +728,7 @@ std::set<std::string> myset;
 //#include <iostream>
 #endif
 
+#ifdef ALTROW
 bool Solver::altrowsum_check(vec<vec<Lit> >& out_learnts)
 {
 	const int n = order;
@@ -790,6 +799,7 @@ bool Solver::altrowsum_check(vec<vec<Lit> >& out_learnts)
 
 	return false;
 }
+#endif
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
@@ -2017,7 +2027,9 @@ lbool Solver::solve_()
         printf("===============================================================================\n");
         
     /*printf("cardinality checks: %d/%d = %.5f, %.2f total time\n", success1, calls1, success1/(double)calls1, time1);*/
+#ifdef ALTROW
     printf("altrowsum   checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);
+#endif
     printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success3, calls3, success3/(double)calls3, time3);
     //printf("subseqfilt  checks: %d/%d = %.5f, %.2f total time\n", success4, calls4, success4/(double)calls4, time4);
 

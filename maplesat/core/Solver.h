@@ -282,7 +282,9 @@ protected:
     bool     compression_check(vec<vec<Lit> >& out_learnts);*/
     bool     subseqfilt_check(vec<vec<Lit> >& out_learnts, int d);
     bool     filtering_check(vec<vec<Lit> >& out_learnts);
+#ifdef ALTROW
     bool     altrowsum_check(vec<vec<Lit> >& out_learnts);
+#endif
     
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
