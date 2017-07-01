@@ -241,33 +241,82 @@ void Solver::addCompClauses()
 			tmp++;
 		tmp++;
 
+		bool hadzero;
+		vec<Lit> cl;
+		const int n = order;
+		const int d = div1;
+		
+		hadzero = false;
 		for(int i=0; i<order/div1; i++)
 		{	sscanf(tmp, "%d", &compA[0][i]);
-			generateCompClauses(order, div1, i, 0, compA[0][i]);
+			if(d == 2 && compA[0][i] == 0 && hadzero == false)
+			{	hadzero = true;
+				cl.clear();
+				cl.push(mkLit(i, false));
+				addClause(cl);
+				cl.clear();
+				cl.push(mkLit(0*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
+				addClause(cl);
+			}
+			else
+				generateCompClauses(order, div1, i, 0, compA[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
+		hadzero = false;
 		for(int i=0; i<order/div1; i++)
 		{	sscanf(tmp, "%d", &compB[0][i]);
-			generateCompClauses(order, div1, i, 1, compB[0][i]);
+			if(d == 2 && compB[0][i] == 0 && hadzero == false)
+			{	hadzero = true;
+				cl.clear();
+				cl.push(mkLit(1*(n/2+1) + i, false));
+				addClause(cl);
+				cl.clear();
+				cl.push(mkLit(1*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
+				addClause(cl);
+			}
+			else
+				generateCompClauses(order, div1, i, 1, compB[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
+		hadzero = false;
 		for(int i=0; i<order/div1; i++)
 		{	sscanf(tmp, "%d", &compC[0][i]);
-			generateCompClauses(order, div1, i, 2, compC[0][i]);
+			if(d == 2 && compC[0][i] == 0 && hadzero == false)
+			{	hadzero = true;
+				cl.clear();
+				cl.push(mkLit(2*(n/2+1) + i, false));
+				addClause(cl);
+				cl.clear();
+				cl.push(mkLit(2*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
+				addClause(cl);
+			}
+			else
+				generateCompClauses(order, div1, i, 2, compC[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
+		hadzero = false;
 		for(int i=0; i<order/div1; i++)
 		{	sscanf(tmp, "%d", &compD[0][i]);
-			generateCompClauses(order, div1, i, 3, compD[0][i]);
+			if(d == 2 && compD[0][i] == 0 && hadzero == false)
+			{	hadzero = true;
+				cl.clear();
+				cl.push(mkLit(3*(n/2+1) + i, false));
+				addClause(cl);
+				cl.clear();
+				cl.push(mkLit(3*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
+				addClause(cl);
+			}
+			else
+				generateCompClauses(order, div1, i, 3, compD[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
