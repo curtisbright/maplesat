@@ -479,9 +479,11 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-	fftw_destroy_plan(plan);
-	free(fft_signal);
-	free(fft_result);
+    if(opt_filtering)
+    {   fftw_destroy_plan(plan);
+        free(fft_signal);
+        free(fft_result);
+    }
 	//fftw_destroy_plan(plan2);
 	//free(fft_signal2);
 	//free(fft_result2);
@@ -736,7 +738,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     }
 #endif
 
-    if(opt_filtering)
+    if(opt_filtering || exhauststring != NULL)
     {   calls3++;
         timestamp_t t0 = get_timestamp();
         if(filtering_check(out_learnts))
@@ -881,10 +883,13 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     bool seqcomplete = true;
     for(int i=seq*dim; i<(seq+1)*dim; i++)
     { if(assigns[i] == l_Undef)
-      { seqcomplete = false;
+      { allseqcomplete = seqcomplete = false;
         break;
       }
     }
+
+    if(!opt_filtering)
+      continue;
 
     if(seqcomplete)
     { 
@@ -1141,7 +1146,6 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
        {  psds[i][seq].seqindex = -1;
           psds[i][seq].psd = -1;
        }
-       allseqcomplete = false;
     }
   }
 
