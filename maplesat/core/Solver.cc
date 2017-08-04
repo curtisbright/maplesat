@@ -21,6 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <math.h>
 #include <cstdio>
 #include "coprimelist.h"
+#include "cosarray.h"
 
 #include <sys/time.h>
 typedef unsigned long long timestamp_t;
@@ -109,6 +110,7 @@ static StringOption  opt_compstring(_cat, "compstring",   "A string which contai
 /*static BoolOption    opt_xnormult  (_cat, "xnormult",   "Use XNOR multiplication for product variables", false);*/
 /*static BoolOption    opt_cardinality (_cat, "cardinality",  "Use cardinality programmatic check", false);*/
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
+static BoolOption    opt_usecos (_cat, "usecos",  "Use sum of cosines to compute the PSDs instead of FFT", false);
 #ifdef ALTROW
 static BoolOption    opt_altrowsum (_cat, "altrowsum",  "Use alternating rowsum programmatic check", false);
 #endif
@@ -453,9 +455,11 @@ Solver::Solver() :
 	if(opt_filtering)
 	{	if(order == -1)
 			printf("need to set order\n"), exit(1);
-		fft_signal = (double*)malloc(sizeof(double)*order);
-		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
-		plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
+		if(!opt_usecos)
+		{ fft_signal = (double*)malloc(sizeof(double)*order);
+		  fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
+		  plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
+	    }
         //fft_signal2 = (double*)malloc(sizeof(double)*order);
 		//fft_result2 = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 		//plan2 = fftw_plan_dft_r2c_1d(order, fft_signal2, fft_result2, FFTW_ESTIMATE);
@@ -479,7 +483,7 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-    if(opt_filtering)
+    if(opt_filtering && !opt_usecos)
     {   fftw_destroy_plan(plan);
         free(fft_signal);
         free(fft_result);
@@ -894,26 +898,57 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     if(seqcomplete)
     { 
 
-      for(int i=0; i<dim; i++)
-      { fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
-      }
+      //int sequence[n];
 
-      /*for(int i=0; i<n; i++)
-      {  printf("%c", fft_signal[i] == 1 ? '+' : '-');
-      }
-      printf(" : ");*/
+      if(!opt_usecos)
+      {  for(int i=0; i<dim; i++)
+        { fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+		  //sequence[(n-i)%n] = sequence[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+        }
 
-      fftw_execute(plan);
+        /*for(int i=0; i<n; i++)
+        {  printf("%c", fft_signal[i] == 1 ? '+' : '-');
+        }
+        printf(" : ");*/
 
-      /*for(int i=0; i<dim; i++)
-      {  printf("%.2f ", fft_result[i][0]*fft_result[i][0]);
+        fftw_execute(plan);
+
+        /*for(int i=0; i<dim; i++)
+        {  printf("%.2f ", fft_result[i][0]*fft_result[i][0]);
+        }
+        printf("\n");*/
       }
-      printf("\n");*/
 
       for(int i=0; i<dim; i++)
       { 
         double psd_i;
-        psd_i = fft_result[i][0]*fft_result[i][0];
+        
+        if(opt_usecos)
+        {  double psd_i_alt;
+          if(assigns[seq*dim] == l_True)
+            psd_i_alt = 1;
+          else
+            psd_i_alt = -1;
+          for(int k=1; k<n/2+(n%2 == 0 ? 0 : 1); k++)
+          {   if(assigns[k+seq*dim] == l_True) 
+		  	  psd_i_alt += 2*cosarray[n][(i*k)%n];
+			  else
+			    psd_i_alt -= 2*cosarray[n][(i*k)%n];
+		  }
+          if(n%2==0)
+          {   if(assigns[n/2+seq*dim] == l_True) 
+		  	    psd_i_alt += (i % 2 == 0 ? 1 : -1);
+			  else
+			    psd_i_alt -= (i % 2 == 0 ? 1 : -1);  
+		  }
+          psd_i_alt *= psd_i_alt;
+          psd_i = psd_i_alt;
+	    }
+        else    
+          psd_i = fft_result[i][0]*fft_result[i][0];
+
+        //if(abs(psd_i - psd_i_alt) > 0.0001)
+		//  printf("%.5f %.5f\n", psd_i, psd_i_alt);
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
