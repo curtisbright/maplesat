@@ -767,11 +767,17 @@ struct psd_holder {
 	double psd;
 };
 
-int compare_psd_holders(const void* x, const void* y) {
+/*int compare_psd_holders(const void* x, const void* y) {
 	if((((struct psd_holder*)y)->psd - ((struct psd_holder*)x)->psd) > 0)
 		return 1;
 	else
 		return -1;
+}*/
+
+void swap_psd_holders(struct psd_holder* x, struct psd_holder* y)
+{ struct psd_holder tmp = *x;
+  *x = *y;
+  *y = tmp;
 }
 
 inline int minindex(int n, int i)
@@ -901,9 +907,11 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       //int sequence[n];
 
       if(!opt_usecos)
-      {  for(int i=0; i<dim; i++)
-        { fft_signal[(n-i)%n] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
-		  //sequence[(n-i)%n] = sequence[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+      { fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
+		    //sequence[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
+		    for(int i=1; i<dim; i++)
+        { fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+		      //sequence[n-i] = sequence[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
         }
 
         /*for(int i=0; i<n; i++)
@@ -931,24 +939,24 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
             psd_i_alt = -1;
           for(int k=1; k<n/2+(n%2 == 0 ? 0 : 1); k++)
           {   if(assigns[k+seq*dim] == l_True) 
-		  	  psd_i_alt += 2*cosarray[n][(i*k)%n];
-			  else
-			    psd_i_alt -= 2*cosarray[n][(i*k)%n];
-		  }
+		  	        psd_i_alt += 2*cosarray[n][(i*k)%n];
+			        else
+			          psd_i_alt -= 2*cosarray[n][(i*k)%n];
+		      }
           if(n%2==0)
-          {   if(assigns[n/2+seq*dim] == l_True) 
-		  	    psd_i_alt += (i % 2 == 0 ? 1 : -1);
-			  else
-			    psd_i_alt -= (i % 2 == 0 ? 1 : -1);  
-		  }
+          { if(assigns[n/2+seq*dim] == l_True) 
+		  	      psd_i_alt += (i % 2 == 0 ? 1 : -1);
+			      else
+			        psd_i_alt -= (i % 2 == 0 ? 1 : -1);  
+		      }
           psd_i_alt *= psd_i_alt;
           psd_i = psd_i_alt;
-	    }
+	      }
         else    
           psd_i = fft_result[i][0]*fft_result[i][0];
 
         //if(abs(psd_i - psd_i_alt) > 0.0001)
-		//  printf("%.5f %.5f\n", psd_i, psd_i_alt);
+		    //  printf("%.5f %.5f\n", psd_i, psd_i_alt);
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
@@ -963,7 +971,36 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
             printf("%.2f ", psds[i][s].psd);
           printf("\n");
 #endif
-          qsort(psds[i], seq+1, sizeof(struct psd_holder), compare_psd_holders);
+
+          //qsort(psds[i], seq+1, sizeof(struct psd_holder), compare_psd_holders);
+          
+          if(seq==1)
+          { if(psds[i][0].psd < psds[i][1].psd)
+              swap_psd_holders(psds[i], psds[i]+1);
+          }
+          else if(seq==2)
+          { if(psds[i][1].psd < psds[i][2].psd)
+              swap_psd_holders(psds[i]+1, psds[i]+2);
+            if(psds[i][0].psd < psds[i][1].psd)
+              swap_psd_holders(psds[i], psds[i]+1);
+            if(psds[i][1].psd < psds[i][2].psd)
+              swap_psd_holders(psds[i]+1, psds[i]+2);
+          }
+          else if(seq==3)
+          { if(psds[i][0].psd < psds[i][1].psd)
+              swap_psd_holders(psds[i], psds[i]+1);
+            if(psds[i][2].psd < psds[i][3].psd)
+              swap_psd_holders(psds[i]+2, psds[i]+3);
+            if(psds[i][0].psd < psds[i][2].psd)
+              swap_psd_holders(psds[i], psds[i]+2);
+            if(psds[i][1].psd < psds[i][2].psd)
+              swap_psd_holders(psds[i]+1, psds[i]+2);
+            if(psds[i][1].psd < psds[i][3].psd)
+              swap_psd_holders(psds[i]+1, psds[i]+3);
+            if(psds[i][2].psd < psds[i][3].psd)
+              swap_psd_holders(psds[i]+2, psds[i]+3);
+          }
+
 #ifdef DEBUG
           printf("filtering PSDs after: ");
           for(int s=0; s<seq+1; s++)
@@ -1191,13 +1228,13 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
        }*/
     numsols++;
 
-    printf("Solution: ");
+    /*printf("Solution: ");
     for(int k=0; k<4; k++)
     { for(int i=0; i<dim; i++)
         printf("%c", (assigns[k*dim+i] == l_True) ? '+' : '-');
       printf(" ");
     }
-    printf("\n");
+    printf("\n");*/
 
     for(int k=0; k<4; k++)
     { for(int i=0; i<n; i++)
