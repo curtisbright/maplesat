@@ -932,7 +932,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         double psd_i;
         
         if(opt_usecos)
-        {  double psd_i_alt;
+        { double psd_i_alt;
           if(assigns[seq*dim] == l_True)
             psd_i_alt = 1;
           else
@@ -1014,7 +1014,30 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           { 
              assert(psds[i][seq].seqindex >= 0);
              seqused[psds[i][seq].seqindex] = true;
-             this_psdsum += psds[i][seq].psd;
+             //this_psdsum += psds[i][seq].psd;
+             
+             double psd_i_alt;
+             int seqindex = psds[i][seq].seqindex;
+             if(assigns[seqindex*dim] == l_True)
+               psd_i_alt = 1;
+             else
+               psd_i_alt = -1;
+             for(int k=1; k<n/2+(n%2 == 0 ? 0 : 1); k++)
+             { if(assigns[k+seqindex*dim] == l_True)
+                 psd_i_alt += 2*cosarray[n][(i*k)%n];
+               else
+                 psd_i_alt -= 2*cosarray[n][(i*k)%n];
+             }
+             if(n%2==0)
+             { if(assigns[n/2+seqindex*dim] == l_True)
+                 psd_i_alt += (i % 2 == 0 ? 1 : -1);
+               else
+                 psd_i_alt -= (i % 2 == 0 ? 1 : -1);
+             }
+             psd_i_alt *= psd_i_alt;
+             this_psdsum += psd_i_alt;
+             
+             assert(abs(psds[i][seq].psd-psd_i_alt) < 0.0001);
 
 #ifdef USEPERMS
              char charstring[10] = {};
