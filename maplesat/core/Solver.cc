@@ -327,8 +327,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int wait = 0;
-
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -341,15 +339,27 @@ int wait = 0;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
-    if (wait == 5 || complete) {
-        if (value(10) == l_True) {
-            out_learnts.push();
-            out_learnts[0].push(~mkLit(10));
-            out_learnts.push();
-            out_learnts[1].push(~mkLit(10));
-        }
-    }
+	
+	bool all_assigned = true;
+	for(int i=0; i<assigns.size(); i++)
+	{	printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+		if(assigns[i]==l_Undef)
+			all_assigned = false;
+	}
+	printf("\n");
+
+	if(all_assigned)
+	{
+		out_learnts.push();
+		for(int i=0; i<assigns.size(); i++)
+		{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+		}
+
+		printf("size %d\tconflict:", out_learnts[0].size());
+		for(int i=0; i<out_learnts[0].size(); i++)
+			printf(" %c%d", sign(out_learnts[0][i]) ? '-' : '+', var(out_learnts[0][i])+1);
+		printf("\n");
+	}
 }
 
 bool Solver::assertingClause(CRef confl) {
