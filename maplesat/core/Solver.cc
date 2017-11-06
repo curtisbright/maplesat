@@ -19,6 +19,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include <math.h>
+#include <fftw3.h>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -50,11 +51,16 @@ static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the 
 static BoolOption    opt_luby_restart      (_cat, "luby",        "Use the Luby restart sequence", true);
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
+static IntOption     opt_order             (_cat, "order",       "Order of the complex Golay sequences to search for", 0, IntRange(0, 100));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
+fftw_complex* in;
+fftw_complex* out;
+fftw_plan p1, p2;
+const int nchecks = 64;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -90,6 +96,7 @@ Solver::Solver() :
     // Parameters (the rest):
     //
   , learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
+  , order            (opt_order)
 
     // Parameters (experimental):
     //
@@ -127,11 +134,21 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+	in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nchecks);
+	out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nchecks);
+	p1 = fftw_plan_dft_1d(order, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	p2 = fftw_plan_dft_1d(nchecks, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	
+}
 
 
 Solver::~Solver()
 {
+	fftw_destroy_plan(p1);
+	fftw_destroy_plan(p2);
+	fftw_free(in);
+	fftw_free(out);
 }
 
 
@@ -327,8 +344,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int wait = 0;
-
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -340,16 +355,39 @@ int wait = 0;
 //           the simplification steps may have removed some variables! If complete is true,
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
-void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
-    if (wait == 5 || complete) {
-        if (value(10) == l_True) {
-            out_learnts.push();
-            out_learnts[0].push(~mkLit(10));
-            out_learnts.push();
-            out_learnts[1].push(~mkLit(10));
-        }
-    }
+void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
+{    
+	bool all_assigned = true;
+    
+	for(int i=0; i<2*order; i++)
+	{	printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+		if(assigns[i]==l_Undef)
+			all_assigned = false;
+	}
+	printf("\n");
+	
+	if(all_assigned)
+	{
+		int size = out_learnts.size();
+  
+		out_learnts.push();
+		for(int i=0; i<2*order; i++)
+		{	if(assigns[i]==l_True)
+				out_learnts[size].push(mkLit(i, true));
+			else if(assigns[i]==l_False)
+				out_learnts[size].push(mkLit(i, false));
+		}
+		
+		/*if(assigns[1]==l_True)
+		{	out_learnts.push();
+			out_learnts[0].push(mkLit(1, true));
+		}*/
+		
+		printf("size %d\tconflict:", out_learnts[size].size());
+		for(int i=0; i<out_learnts[size].size(); i++)
+			printf(" %c%d", sign(out_learnts[size][i]) ? '-' : '+', var(out_learnts[size][i])+1);
+		printf("\n");
+	}
 }
 
 bool Solver::assertingClause(CRef confl) {
