@@ -378,114 +378,14 @@ void printclause(vec<Lit>& cl)
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 {
      if(complete)
-          printf("complete\n");
+     {    printf("complete: ");
+          int mlen = makelalen();
+          for(int j=0; j<mlen; j++)
+               printf("%c", assigns[j] == l_True ? '1' : '0');
+          printf(" is a Makela word of length %d\n", mlen);
+          #include "addconflictclauses.inc"
 
-     //if(complete)
-     /*if((assigns[28] == l_False && assigns[29] == l_False && assigns[30] == l_False && assigns[31] == l_False))
-     {    printf("~29 && ~30 && ~31 && ~32\n");
-          //wait++;
-          //if(wait==1) {
-               int size = out_learnts.size();
-			out_learnts.push();
-			out_learnts[size].push(mkLit(28, false));
-			out_learnts[size].push(mkLit(29, false));
-			out_learnts[size].push(mkLit(30, false));
-			out_learnts[size].push(mkLit(31, false));
-               printf("out_learnt "), printclause(out_learnts[size]);
-		//}
-     }*/
-
-if(
-assigns[28]==l_False &&
-assigns[29]==l_False &&
-assigns[30]==l_False &&
-assigns[31]==l_False &&
-1) {
-out_learnts.push();
-out_learnts.last().push(mkLit(28));
-out_learnts.last().push(mkLit(29));
-out_learnts.last().push(mkLit(30));
-out_learnts.last().push(mkLit(31));
-printf("out_learnt "), printclause(out_learnts.last());
-}
-if(
-assigns[32]==l_False &&
-assigns[33]==l_False &&
-assigns[34]==l_False &&
-assigns[35]==l_False &&
-1) {
-out_learnts.push();
-out_learnts.last().push(mkLit(32));
-out_learnts.last().push(mkLit(33));
-out_learnts.last().push(mkLit(34));
-out_learnts.last().push(mkLit(35));
-printf("out_learnt "), printclause(out_learnts.last());
-}
-if(
-assigns[36]==l_False &&
-assigns[37]==l_False &&
-assigns[38]==l_False &&
-assigns[39]==l_False &&
-1) {
-out_learnts.push();
-out_learnts.last().push(mkLit(36));
-out_learnts.last().push(mkLit(37));
-out_learnts.last().push(mkLit(38));
-out_learnts.last().push(mkLit(39));
-printf("out_learnt "), printclause(out_learnts.last());
-}
-if(
-assigns[40]==l_False &&
-assigns[41]==l_False &&
-assigns[42]==l_False &&
-assigns[43]==l_False &&
-1) {
-out_learnts.push();
-out_learnts.last().push(mkLit(40));
-out_learnts.last().push(mkLit(41));
-out_learnts.last().push(mkLit(42));
-out_learnts.last().push(mkLit(43));
-printf("out_learnt "), printclause(out_learnts.last());
-}
-if(
-assigns[72]==l_False &&
-assigns[73]==l_False &&
-assigns[74]==l_False &&
-assigns[75]==l_False &&
-1) {
-out_learnts.push();
-out_learnts.last().push(mkLit(72));
-out_learnts.last().push(mkLit(73));
-out_learnts.last().push(mkLit(74));
-out_learnts.last().push(mkLit(75));
-printf("out_learnt "), printclause(out_learnts.last());
-}
-if(
-assigns[44]==l_False &&
-assigns[45]==l_False &&
-assigns[46]==l_False &&
-assigns[47]==l_False &&
-1) {
-out_learnts.push();
-out_learnts.last().push(mkLit(44));
-out_learnts.last().push(mkLit(45));
-out_learnts.last().push(mkLit(46));
-out_learnts.last().push(mkLit(47));
-printf("out_learnt "), printclause(out_learnts.last());
-}
-if(
-assigns[76]==l_False &&
-assigns[77]==l_False &&
-assigns[78]==l_False &&
-assigns[79]==l_False &&
-1) {
-out_learnts.push();
-out_learnts.last().push(mkLit(76));
-out_learnts.last().push(mkLit(77));
-out_learnts.last().push(mkLit(78));
-out_learnts.last().push(mkLit(79));
-printf("out_learnt "), printclause(out_learnts.last());
-}
+     }
 
 }
 
