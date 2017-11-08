@@ -57,6 +57,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
+FILE* fout;
 fftw_complex* in;
 fftw_complex* out;
 fftw_plan p1, p2;
@@ -139,6 +140,7 @@ Solver::Solver() :
 	out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nchecks);
 	p1 = fftw_plan_dft_1d(order, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 	p2 = fftw_plan_dft_1d(nchecks, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	fout = fopen("f.out", "w");
 	
 }
 
@@ -149,6 +151,7 @@ Solver::~Solver()
 	fftw_destroy_plan(p2);
 	fftw_free(in);
 	fftw_free(out);
+	fclose(fout);
 }
 
 
@@ -344,6 +347,8 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+int totalsolutions = 0;
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -359,34 +364,41 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 {    
 	bool all_assigned = true;
     
-	for(int i=0; i<2*order; i++)
-	{	printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
-		if(assigns[i]==l_Undef)
-			all_assigned = false;
-	}
-	printf("\n");
-	
-	if(all_assigned)
-	{
-		int size = out_learnts.size();
-  
-		out_learnts.push();
+    if(complete)
+    {		
 		for(int i=0; i<2*order; i++)
-		{	if(assigns[i]==l_True)
-				out_learnts[size].push(mkLit(i, true));
-			else if(assigns[i]==l_False)
-				out_learnts[size].push(mkLit(i, false));
+		{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+			if(assigns[i]==l_Undef)
+			{	all_assigned = false;
+				printf("Not all variables are assigned\n");
+				return;
+			}
+		}
+		//printf("\n");
+		
+		if(all_assigned)
+		{	  
+			out_learnts.push();
+			for(int i=0; i<2*order; i++)
+			{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+			}
+			
+			totalsolutions++;
+			
+			for(int i=0; i<order; i++)
+			{	if(assigns[2*i]==l_False)
+					fprintf(fout, "%c", assigns[2*i+1]==l_False ? '+' : '-');
+				else
+					fprintf(fout, "%c", assigns[2*i+1]==l_False ? 'i' : 'j');
+			}
+			fprintf(fout, "\n");
+			
+			/*printf("size %d\tconflict:", out_learnts[size].size());
+			for(int i=0; i<out_learnts[size].size(); i++)
+				printf(" %c%d", sign(out_learnts[size][i]) ? '-' : '+', var(out_learnts[size][i])+1);
+			printf("\n");*/
 		}
 		
-		/*if(assigns[1]==l_True)
-		{	out_learnts.push();
-			out_learnts[0].push(mkLit(1, true));
-		}*/
-		
-		printf("size %d\tconflict:", out_learnts[size].size());
-		for(int i=0; i<out_learnts[size].size(); i++)
-			printf(" %c%d", sign(out_learnts[size][i]) ? '-' : '+', var(out_learnts[size][i])+1);
-		printf("\n");
 	}
 }
 
@@ -1275,6 +1287,8 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
 
+
+	printf("Total solutions found: %d\n", totalsolutions);
 
     if (status == l_True){
         // Extend & copy model:
