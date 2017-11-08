@@ -1124,7 +1124,7 @@ lbool Solver::search(int nof_conflicts)
                 callbackFunction(next == lit_Undef, callbackLearntClauses);
                 if (callbackLearntClauses.size() > 0) {
                     conflicts++; conflictC++;
-                    int pending = learnts.size();
+                    int pending = clauses.size();
                     units.clear();
                     backtrack_level = decisionLevel();
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
@@ -1140,7 +1140,7 @@ lbool Solver::search(int nof_conflicts)
                             units.push(learnt_clause[0]);
                         } else {
                             CRef cr = ca.alloc(learnt_clause, true);
-                            learnts.push(cr);
+                            clauses.push(cr);
                             attachClause(cr);
 #if LBD_BASED_CLAUSE_DELETION
                             Clause& clause = ca[cr];
@@ -1162,8 +1162,8 @@ lbool Solver::search(int nof_conflicts)
                         // Make sure it wasn't assigned by one of the other callback learnt clauses.
                         if (value(l) == l_Undef) uncheckedEnqueue(l);
                     }
-                    for (int i = pending; i < learnts.size(); i++) {
-                        CRef cr = learnts[i];
+                    for (int i = pending; i < clauses.size(); i++) {
+                        CRef cr = clauses[i];
                         Clause& c = ca[cr];
                         bool asserting = assertingClause(cr);
                         if (asserting) uncheckedEnqueue(c[0], cr);
