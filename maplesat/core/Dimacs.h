@@ -18,6 +18,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+/* This file includes modifications for handling the iCNF format
+
+   Modifications (c) Siert Wieringa 2010-2011
+   
+   http://www.tcs.hut.fi/~swiering/icnf
+ */
+
 #ifndef Minisat_Dimacs_h
 #define Minisat_Dimacs_h
 
@@ -45,35 +52,60 @@ static void readClause(B& in, Solver& S, vec<Lit>& lits) {
 }
 
 template<class B, class Solver>
-static void parse_DIMACS_main(B& in, Solver& S) {
+static bool parse_DIMACS_main(B& in, Solver& S, vec<Lit>* assumptions = NULL) {
     vec<Lit> lits;
-    int vars    = 0;
-    int clauses = 0;
-    int cnt     = 0;
+    bool dimacsCNF = false;
+    bool incCNF    = false;   
+    int  vars      = 0;
+    int  clauses   = 0;
+    int  cnt       = 0;
+
+    if ( *in == EOF ) return false;    
+    if ( assumptions != NULL ) assumptions->clear();
+
     for (;;){
         skipWhitespace(in);
         if (*in == EOF) break;
         else if (*in == 'p'){
-            if (eagerMatch(in, "p cnf")){
-                vars    = parseInt(in);
-                clauses = parseInt(in);
-                // SATRACE'06 hack
-                // if (clauses > 4000000)
-                //     S.eliminate(true);
-            }else{
-                printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
+            if (eagerMatch(in,"p ")) {
+                if (*in == 'c' && eagerMatch(in,"cnf")) {
+                    vars     = parseInt(in);
+                    clauses  = parseInt(in);
+                    dimacsCNF= true;
+                    // SATRACE'06 hack
+                    // if (clauses > 4000000)
+                    //     S.eliminate(true);
+                }
+                else if (assumptions != NULL && 
+                         *in == 'i' && eagerMatch(in,"inccnf")) incCNF = true;
             }
-        } else if (*in == 'c' || *in == 'p')
+
+            if ( !dimacsCNF && !incCNF )
+                printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
+        } else if (assumptions != NULL && *in == 'a') {
+            ++in;
+            skipWhitespace(in);
+            readClause(in, S, *assumptions); // SW: Not reading a "clause" here, but a sequence of literals anyway
+
+            return true;
+        } else if (*in == 'c' || *in == 'p') {
             skipLine(in);
-        else{
+        } else {
             cnt++;
             readClause(in, S, lits);
-            S.addClause_(lits); }
+            S.addClause_(lits); 
+        }
     }
-    if (vars != S.nVars())
-        fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
-    if (cnt  != clauses)
-        fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
+
+    if (dimacsCNF) {
+        if (vars != S.nVars())
+            fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
+        if (cnt  != clauses)
+            fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");	
+	return true;
+    }
+
+    return false;
 }
 
 // Inserts problem into solver.

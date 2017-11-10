@@ -989,6 +989,15 @@ lbool Solver::solve_()
         ok = false;
 
     cancelUntil(0);
+
+#if 0
+    assert( activity.size() == nVars() );
+    fprintf(stderr, "activities");
+    for( int i = 0; i < nVars(); i++ )
+      fprintf(stderr, " %lf", activity[i]);
+    fprintf(stderr, "\n");
+#endif
+
     return status;
 }
 
