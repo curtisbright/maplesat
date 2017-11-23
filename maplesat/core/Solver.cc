@@ -54,6 +54,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
+static IntOption     opt_order             (_cat, "order",       "The order of the complex Golay sequence", -1, IntRange(1, INT32_MAX));
 
 
 //=================================================================================================
@@ -86,6 +87,7 @@ Solver::Solver() :
   , garbage_frac     (opt_garbage_frac)
   , restart_first    (opt_restart_first)
   , restart_inc      (opt_restart_inc)
+  , order            (opt_order)
 
     // Parameters (the rest):
     //

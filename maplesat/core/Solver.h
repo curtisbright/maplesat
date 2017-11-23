@@ -138,6 +138,7 @@ public:
     double    restart_inc;        // The factor with which the restart limit is multiplied in each restart.                    (default 1.5)
     double    learntsize_factor;  // The intitial limit for learnt clauses is a factor of the original clauses.                (default 1 / 3)
     double    learntsize_inc;     // The limit for learnt clauses is multiplied with this factor each restart.                 (default 1.1)
+    int order;
 
     int       learntsize_adjust_start_confl;
     double    learntsize_adjust_inc;
