@@ -19,6 +19,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include <math.h>
+#include <complex.h>
+#include <fftw3.h>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -55,7 +57,15 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static IntOption     opt_order             (_cat, "order",       "The order of the complex Golay sequence", -1, IntRange(1, INT32_MAX));
+static StringOption  opt_exhaustive        (_cat, "exhaustive",  "File to write solutions in", "");
 
+const int N = 256;
+int numsols = 0;
+int realconflicts = 0;
+int imagconflicts = 0;
+FILE* fexhaustive = NULL;
+fftw_complex *in, *out;
+fftw_plan p;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -88,6 +98,7 @@ Solver::Solver() :
   , restart_first    (opt_restart_first)
   , restart_inc      (opt_restart_inc)
   , order            (opt_order)
+  , exhaustive       (opt_exhaustive)
 
     // Parameters (the rest):
     //
@@ -129,11 +140,25 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    p = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+	for(int i=0; i<N; i++)
+		in[i] = 0;
+
+	if(exhaustive[0]!=0)
+		fexhaustive = fopen(exhaustive, "w");
+}
 
 
 Solver::~Solver()
 {
+    fftw_destroy_plan(p);
+    fftw_free(in);
+    fftw_free(out);
+	fclose(fexhaustive);
 }
 
 
@@ -329,8 +354,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int wait = 0;
-
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -343,15 +366,155 @@ int wait = 0;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
-    if (wait == 5 || complete) {
-        if (value(10) == l_True) {
-            out_learnts.push();
-            out_learnts[0].push(~mkLit(10));
-            out_learnts.push();
-            out_learnts[1].push(~mkLit(10));
-        }
-    }
+	const int n = order;
+	
+	bool filtered = false;
+
+	bool real_complete = true;
+	for(int i=0; i<3*n; i++)
+		if(assigns[i]==l_Undef)
+		{	real_complete = false;
+			break;
+		}
+
+	if(real_complete)
+	{
+		for(int i=0; i<n; i++)
+		{	if(assigns[3*i]==l_True)
+			{	in[i] = 1;
+			}
+			else if(assigns[3*i+2]==l_True)
+			{	in[i] = -1;
+			}
+			else
+			{	in[i] = 0;
+			}
+		}
+
+		fftw_execute(p);
+		for(int i=0; i<N; i++)
+		{	double psd = cabs(out[i]);
+			psd *= psd;
+			if(psd > 2*n + 0.001)
+			{	filtered = true;
+				break;
+			}
+		}
+
+		if(filtered)
+		{
+			realconflicts++;
+			out_learnts.push();
+			for(int i=0; i<3*n; i++)
+			{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+			}
+
+			return;
+		}
+	}
+
+	bool imag_complete = true;
+	for(int i=3*n; i<6*n; i++)
+		if(assigns[i]==l_Undef)
+		{	imag_complete = false;
+			break;
+		}
+
+	if(imag_complete)
+	{
+		for(int i=0; i<n; i++)
+		{	if(assigns[3*i+3*n]==l_True)
+			{	in[i] = I;
+			}
+			else if(assigns[3*i+2+3*n]==l_True)
+			{	in[i] = -I;
+			}
+			else
+			{	in[i] = 0;
+			}
+		}
+
+		fftw_execute(p);
+		for(int i=0; i<N; i++)
+		{	double psd = cabs(out[i]);
+			psd *= psd;
+			if(psd > 2*n + 0.001)
+			{	filtered = true;
+				break;
+			}
+		}
+
+		if(filtered)
+		{
+			imagconflicts++;
+			out_learnts.push();
+			for(int i=3*n; i<6*n; i++)
+			{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+			}
+
+			return;
+		}
+	}
+
+	if(complete)
+	{	
+		for(int i=0; i<n; i++)
+		{	if(assigns[3*i]==l_True)
+			{	in[i] = 1;
+			}
+			else if(assigns[3*i+2]==l_True)
+			{	in[i] = -1;
+			}
+			else if(assigns[3*i+3*n]==l_True)
+			{	in[i] = I;
+			}
+			else if(assigns[3*i+2+3*n]==l_True)
+			{	in[i] = -I;
+			}
+			else
+			{	in[i] = 0;
+			}
+		}
+
+		fftw_execute(p);
+		for(int i=0; i<N; i++)
+		{	double psd = cabs(out[i]);
+			psd *= psd;
+			if(psd > 2*n + 0.001)
+			{	filtered = true;
+				break;
+			}
+		}
+
+		out_learnts.push();
+		for(int i=0; i<6*n; i++)
+		{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+		}
+
+		if(!filtered)
+			numsols++;
+
+		if(!filtered && fexhaustive != NULL)
+		{	for(int i=0; i<n; i++)
+			{	if(assigns[3*i]==l_True)
+				{	fprintf(fexhaustive, "+");
+				}
+				else if(assigns[3*i+2]==l_True)
+				{	fprintf(fexhaustive, "-");
+				}
+				else if(assigns[3*i+3*n]==l_True)
+				{	fprintf(fexhaustive, "i");
+				}
+				else if(assigns[3*i+2+3*n]==l_True)
+				{	fprintf(fexhaustive, "j");
+				}
+				else
+				{	fprintf(fexhaustive, "0");
+				}
+			}
+			fprintf(fexhaustive, "\n");
+		}
+	}
 }
 
 bool Solver::assertingClause(CRef confl) {
@@ -1239,6 +1402,9 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
 
+	printf("Number of solutions: %d\n", numsols);
+	printf("Number of real conflicts generated: %d\n", realconflicts);
+	printf("Number of imag conflicts generated: %d\n", imagconflicts);
 
     if (status == l_True){
         // Extend & copy model:
