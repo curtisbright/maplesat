@@ -59,13 +59,61 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 static IntOption     opt_order             (_cat, "order",       "The order of the complex Golay sequence", -1, IntRange(1, INT32_MAX));
 static StringOption  opt_exhaustive        (_cat, "exhaustive",  "File to write solutions in", "");
 
-const int N = 256;
+const int decomps_len[] = {0, 1, 3, 2, 3, 3, 4, 4, 3, 5, 7, 4, 4, 6, 6, 7, 3, 6, 11, 7, 7, 9, 8, 8, 4, 10, 12, 13, 6, 9, 11, 11, 3, 14, 14, 12, 11, 13, 13, 14, 7};
+const int decomps[][14][2] = {{},
+ {{0, 1}}, // 1 
+ {{0, 0}, {0, 2}, {1, 1}}, // 2 
+ {{0, 1}, {1, 2}}, // 3 
+ {{0, 0}, {0, 2}, {2, 2}}, // 4 
+ {{0, 1}, {0, 3}, {1, 2}}, // 5 
+ {{0, 2}, {1, 1}, {1, 3}, {2, 2}}, // 6 
+ {{0, 1}, {0, 3}, {1, 2}, {2, 3}}, // 7 
+ {{0, 0}, {0, 4}, {2, 2}}, // 8 
+ {{0, 1}, {0, 3}, {1, 2}, {1, 4}, {2, 3}}, // 9 
+ {{0, 0}, {0, 2}, {0, 4}, {1, 1}, {1, 3}, {2, 4}, {3, 3}}, // 10 
+ {{0, 3}, {1, 2}, {1, 4}, {2, 3}}, // 11 
+ {{0, 2}, {0, 4}, {2, 2}, {2, 4}}, // 12 
+ {{0, 1}, {0, 3}, {0, 5}, {1, 4}, {2, 3}, {3, 4}}, // 13 
+ {{1, 1}, {1, 3}, {1, 5}, {2, 2}, {2, 4}, {3, 3}}, // 14 
+ {{0, 1}, {0, 5}, {1, 2}, {1, 4}, {2, 3}, {2, 5}, {3, 4}}, // 15 
+ {{0, 0}, {0, 4}, {4, 4}}, // 16 
+ {{0, 3}, {0, 5}, {1, 2}, {1, 4}, {2, 5}, {3, 4}}, // 17 
+ {{0, 0}, {0, 2}, {0, 4}, {0, 6}, {1, 1}, {1, 3}, {1, 5}, {2, 4}, {3, 3}, {3, 5}, {4, 4}}, // 18 
+ {{0, 1}, {0, 3}, {0, 5}, {1, 6}, {2, 3}, {2, 5}, {3, 4}}, // 19 
+ {{0, 0}, {0, 2}, {0, 6}, {2, 2}, {2, 4}, {2, 6}, {4, 4}}, // 20 
+ {{0, 1}, {0, 5}, {1, 2}, {1, 4}, {1, 6}, {2, 3}, {2, 5}, {3, 4}, {4, 5}}, // 21 
+ {{0, 2}, {0, 6}, {1, 3}, {1, 5}, {2, 2}, {2, 6}, {3, 3}, {3, 5}}, // 22 
+ {{0, 1}, {0, 3}, {1, 2}, {1, 4}, {1, 6}, {2, 5}, {3, 6}, {4, 5}}, // 23 
+ {{0, 4}, {2, 2}, {2, 6}, {4, 4}}, // 24 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 2}, {1, 6}, {2, 3}, {3, 4}, {3, 6}, {4, 5}}, // 25 
+ {{0, 0}, {0, 4}, {0, 6}, {1, 1}, {1, 5}, {1, 7}, {2, 4}, {3, 3}, {3, 5}, {4, 4}, {4, 6}, {5, 5}}, // 26 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 2}, {1, 4}, {1, 6}, {2, 3}, {2, 5}, {2, 7}, {3, 4}, {3, 6}, {4, 5}}, // 27 
+ {{0, 2}, {0, 4}, {0, 6}, {2, 4}, {2, 6}, {4, 6}}, // 28 
+ {{0, 3}, {0, 7}, {1, 2}, {1, 4}, {2, 3}, {2, 5}, {2, 7}, {3, 6}, {4, 5}}, // 29 
+ {{1, 1}, {1, 3}, {1, 5}, {1, 7}, {2, 2}, {2, 4}, {2, 6}, {3, 5}, {3, 7}, {4, 6}, {5, 5}}, // 30 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 4}, {1, 6}, {2, 3}, {2, 7}, {3, 4}, {3, 6}, {5, 6}}, // 31 
+ {{0, 0}, {0, 8}, {4, 4}}, // 32 
+ {{0, 1}, {0, 5}, {0, 7}, {1, 2}, {1, 4}, {1, 6}, {1, 8}, {2, 3}, {2, 5}, {2, 7}, {3, 4}, {4, 5}, {4, 7}, {5, 6}}, // 33 
+ {{0, 0}, {0, 2}, {0, 4}, {0, 6}, {0, 8}, {1, 3}, {1, 7}, {2, 8}, {3, 3}, {3, 5}, {3, 7}, {4, 4}, {4, 6}, {5, 5}}, // 34 
+ {{0, 3}, {0, 5}, {1, 2}, {1, 4}, {1, 8}, {2, 5}, {2, 7}, {3, 4}, {3, 6}, {4, 5}, {4, 7}, {5, 6}}, // 35 
+ {{0, 0}, {0, 2}, {0, 6}, {0, 8}, {2, 2}, {2, 4}, {2, 6}, {2, 8}, {4, 4}, {4, 6}, {6, 6}}, // 36 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 6}, {1, 8}, {2, 3}, {2, 5}, {3, 4}, {3, 6}, {3, 8}, {4, 7}, {5, 6}}, // 37 
+ {{0, 2}, {0, 6}, {1, 1}, {1, 5}, {1, 7}, {2, 2}, {2, 6}, {2, 8}, {3, 3}, {3, 7}, {5, 5}, {5, 7}, {6, 6}}, // 38 
+ {{0, 5}, {0, 7}, {1, 2}, {1, 4}, {1, 6}, {1, 8}, {2, 3}, {2, 5}, {2, 7}, {3, 4}, {3, 8}, {4, 5}, {4, 7}, {5, 6}}, // 39 
+ {{0, 0}, {0, 4}, {0, 8}, {2, 2}, {2, 6}, {4, 8}, {6, 6}} // 40 
+};
+
+const int N = 64;
 int numsols = 0;
 int realconflicts = 0;
 int imagconflicts = 0;
+int rowsumconflicts = 0;
+int altrowsumconflicts = 0;
+int irowsumconflicts = 0;
+int fullconflicts = 0;
 FILE* fexhaustive = NULL;
 fftw_complex *in, *out;
-fftw_plan p;
+fftw_plan p1, p2;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -143,7 +191,8 @@ Solver::Solver() :
 {
     in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
     out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-    p = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+    p1 = fftw_plan_dft_1d(order, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	p2 = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 
 	for(int i=0; i<N; i++)
 		in[i] = 0;
@@ -155,7 +204,8 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-    fftw_destroy_plan(p);
+    fftw_destroy_plan(p1);
+	fftw_destroy_plan(p2);
     fftw_free(in);
     fftw_free(out);
 	fclose(fexhaustive);
@@ -391,13 +441,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 
-		fftw_execute(p);
-		for(int i=0; i<N; i++)
-		{	double psd = cabs(out[i]);
-			psd *= psd;
-			if(psd > 2*n + 0.001)
+		fftw_execute(p1);
+		for(int i=0; i<n; i++)
+		{	double sqrt_psd = cabs(out[i]);
+			if(sqrt_psd - sqrt(2*n) > 0.001)
 			{	filtered = true;
 				break;
+			}
+		}
+		
+		if(!filtered)
+		{
+			fftw_execute(p2);
+			for(int i=0; i<N; i++)
+			{	double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					break;
+				}
 			}
 		}
 
@@ -434,13 +495,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 
-		fftw_execute(p);
-		for(int i=0; i<N; i++)
-		{	double psd = cabs(out[i]);
-			psd *= psd;
-			if(psd > 2*n + 0.001)
+		fftw_execute(p1);
+		for(int i=0; i<n; i++)
+		{	double sqrt_psd = cabs(out[i]);
+			if(sqrt_psd - sqrt(2*n) > 2*n + 0.001)
 			{	filtered = true;
 				break;
+			}
+		}
+		
+		if(!filtered)
+		{
+			fftw_execute(p2);
+			for(int i=0; i<N; i++)
+			{	double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					break;
+				}
 			}
 		}
 
@@ -475,14 +547,154 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			{	in[i] = 0;
 			}
 		}
+		// Check rowsum
+		fftw_complex sum = 0;
 
-		fftw_execute(p);
-		for(int i=0; i<N; i++)
-		{	double psd = cabs(out[i]);
-			psd *= psd;
-			if(psd > 2*n + 0.001)
+		for(int i=0; i<n; i++)
+		{	
+			sum += in[i];
+		}
+
+		int x = abs(round(creal(sum)));
+		int y = abs(round(cimag(sum)));
+
+		if(y<x)
+		{	int tmp = x;
+			x = y;
+			y = tmp;
+		}
+		
+		for(int i=0; i<decomps_len[n]; i++)
+		{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+			{	break;
+			}
+			if(i==decomps_len[n]-1)
 			{	filtered = true;
-				break;
+				rowsumconflicts++;
+			}
+		}
+		
+		/*if(filtered)
+		{
+			for(int i=0; i<n; i++)
+			{	if(assigns[3*i]==l_True)
+				{	printf("+");
+				}
+				else if(assigns[3*i+2]==l_True)
+				{	printf("-");
+				}
+				else if(assigns[3*i+3*n]==l_True)
+				{	printf("i");
+				}
+				else if(assigns[3*i+2+3*n]==l_True)
+				{	printf("j");
+				}
+				else
+				{	printf("0");
+				}
+			}
+			printf("\n");
+		}*/
+
+		if(!filtered)
+		{
+			// Check alternating rowsum
+			fftw_complex sum = 0;
+			
+			for(int i=0; i<n; i+=2)
+			{	
+				sum += in[i];
+			}
+			for(int i=1; i<n; i+=2)
+			{	
+				sum += in[i]*(-1);
+			}
+
+			int x = abs(round(creal(sum)));
+			int y = abs(round(cimag(sum)));
+
+			if(y<x)
+			{	int tmp = x;
+				x = y;
+				y = tmp;
+			}
+
+			for(int i=0; i<decomps_len[n]; i++)
+			{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+				{	break;
+				}
+				if(i==decomps_len[n]-1)
+				{	filtered = true;
+					altrowsumconflicts++;
+				}
+			}
+		}
+			
+		if(!filtered)
+		{
+			// Check I*in rowsum
+			fftw_complex sum = 0;
+
+			for(int i=0; i<n; i+=4)
+			{	
+				sum += in[i];
+			}
+			for(int i=1; i<n; i+=4)
+			{	
+				sum += in[i]*I;
+			}
+			for(int i=2; i<n; i+=4)
+			{	
+				sum += in[i]*(-1);
+			}
+			for(int i=3; i<n; i+=4)
+			{	
+				sum += in[i]*(-I);
+			}
+
+			int x = abs(round(creal(sum)));
+			int y = abs(round(cimag(sum)));
+
+			if(y<x)
+			{	int tmp = x;
+				x = y;
+				y = tmp;
+			}
+
+			for(int i=0; i<decomps_len[n]; i++)
+			{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+				{	break;
+				}
+				if(i==decomps_len[n]-1)
+				{	filtered = true;
+					irowsumconflicts++;
+				}
+			}
+		}
+
+		if(!filtered)
+		{
+			fftw_execute(p1);
+			for(int i=0; i<n; i++)
+			{	double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					fullconflicts++;
+					break;
+				}
+			}
+		}
+
+		if(!filtered)
+		{
+			fftw_execute(p2);
+			for(int i=0; i<N; i++)
+			{	double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					fullconflicts++;
+					break;
+				}
 			}
 		}
 
@@ -1405,6 +1617,10 @@ lbool Solver::solve_()
 	printf("Number of solutions: %d\n", numsols);
 	printf("Number of real conflicts generated: %d\n", realconflicts);
 	printf("Number of imag conflicts generated: %d\n", imagconflicts);
+	printf("Number of rowsum conflicts generated: %d\n", rowsumconflicts);
+	printf("Number of altrowsum conflicts generated: %d\n", altrowsumconflicts);
+	printf("Number of I*rowsum conflicts generated: %d\n", irowsumconflicts);
+	printf("Number of full conflicts generated: %d\n", fullconflicts);
 
     if (status == l_True){
         // Extend & copy model:
