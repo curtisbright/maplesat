@@ -35,7 +35,7 @@ get_timestamp ()
 int numsols = 0;
 int calls = 0;
 int success = 0;
-double time = 0;
+double time1 = 0;
 
 #define NC 64
 
@@ -606,7 +606,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         if(filtering_check(out_learnts))
             success++;
         timestamp_t t1 = get_timestamp();
-        time += (t1 - t0) / 1000000.0L;
+        time1 += (t1 - t0) / 1000000.0L;
     }
     
 #ifdef PRINTCONF
@@ -685,8 +685,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
       for(int i=0; i<=nchecks/2; i++)
       { 
-        double psd_i = cabs(fft_result[i]);
-        psd_i *= psd_i;
+        double psd_i = fft_result[i][0]*fft_result[i][0] + fft_result[i][1]*fft_result[i][1];
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
@@ -1725,7 +1724,7 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
         
-    printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success, calls, success/(double)calls, time);
+    printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success, calls, success/(double)calls, time1);
     printf("NUMSOLS: %d\n", numsols);
 
     if (status == l_True){
