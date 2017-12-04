@@ -19,7 +19,7 @@ RCOBJS     = $(addsuffix r,  $(COBJS))
 
 
 CXX       ?= g++
-CFLAGS    ?= -Wall -Wno-parentheses $(CMD_CFLAGS)
+CFLAGS    ?= -Wall -Wno-parentheses $(CMD_CFLAGS) -std=c++98
 LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3

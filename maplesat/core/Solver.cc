@@ -19,6 +19,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include <math.h>
+#include <complex.h>
 #include <fftw3.h>
 
 #include "mtl/Sort.h"
@@ -52,16 +53,69 @@ static BoolOption    opt_luby_restart      (_cat, "luby",        "Use the Luby r
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static IntOption     opt_order             (_cat, "order",       "Order of the complex Golay sequences to search for", 0, IntRange(0, 100));
+static StringOption  opt_exhaustive        (_cat, "exhaustive",  "File to write solutions in", "");
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
-FILE* fout;
+const int decomps_len[] = {0, 1, 3, 2, 3, 3, 4, 4, 3, 5, 7, 4, 4, 6, 6, 7, 3, 6, 11, 7, 7, 9, 8, 8, 4, 10, 12, 13, 6, 9, 11, 11, 3, 14, 14, 12, 11, 13, 13, 14, 7};
+const int decomps[][14][2] = {{},
+ {{0, 1}}, // 1 
+ {{0, 0}, {0, 2}, {1, 1}}, // 2 
+ {{0, 1}, {1, 2}}, // 3 
+ {{0, 0}, {0, 2}, {2, 2}}, // 4 
+ {{0, 1}, {0, 3}, {1, 2}}, // 5 
+ {{0, 2}, {1, 1}, {1, 3}, {2, 2}}, // 6 
+ {{0, 1}, {0, 3}, {1, 2}, {2, 3}}, // 7 
+ {{0, 0}, {0, 4}, {2, 2}}, // 8 
+ {{0, 1}, {0, 3}, {1, 2}, {1, 4}, {2, 3}}, // 9 
+ {{0, 0}, {0, 2}, {0, 4}, {1, 1}, {1, 3}, {2, 4}, {3, 3}}, // 10 
+ {{0, 3}, {1, 2}, {1, 4}, {2, 3}}, // 11 
+ {{0, 2}, {0, 4}, {2, 2}, {2, 4}}, // 12 
+ {{0, 1}, {0, 3}, {0, 5}, {1, 4}, {2, 3}, {3, 4}}, // 13 
+ {{1, 1}, {1, 3}, {1, 5}, {2, 2}, {2, 4}, {3, 3}}, // 14 
+ {{0, 1}, {0, 5}, {1, 2}, {1, 4}, {2, 3}, {2, 5}, {3, 4}}, // 15 
+ {{0, 0}, {0, 4}, {4, 4}}, // 16 
+ {{0, 3}, {0, 5}, {1, 2}, {1, 4}, {2, 5}, {3, 4}}, // 17 
+ {{0, 0}, {0, 2}, {0, 4}, {0, 6}, {1, 1}, {1, 3}, {1, 5}, {2, 4}, {3, 3}, {3, 5}, {4, 4}}, // 18 
+ {{0, 1}, {0, 3}, {0, 5}, {1, 6}, {2, 3}, {2, 5}, {3, 4}}, // 19 
+ {{0, 0}, {0, 2}, {0, 6}, {2, 2}, {2, 4}, {2, 6}, {4, 4}}, // 20 
+ {{0, 1}, {0, 5}, {1, 2}, {1, 4}, {1, 6}, {2, 3}, {2, 5}, {3, 4}, {4, 5}}, // 21 
+ {{0, 2}, {0, 6}, {1, 3}, {1, 5}, {2, 2}, {2, 6}, {3, 3}, {3, 5}}, // 22 
+ {{0, 1}, {0, 3}, {1, 2}, {1, 4}, {1, 6}, {2, 5}, {3, 6}, {4, 5}}, // 23 
+ {{0, 4}, {2, 2}, {2, 6}, {4, 4}}, // 24 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 2}, {1, 6}, {2, 3}, {3, 4}, {3, 6}, {4, 5}}, // 25 
+ {{0, 0}, {0, 4}, {0, 6}, {1, 1}, {1, 5}, {1, 7}, {2, 4}, {3, 3}, {3, 5}, {4, 4}, {4, 6}, {5, 5}}, // 26 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 2}, {1, 4}, {1, 6}, {2, 3}, {2, 5}, {2, 7}, {3, 4}, {3, 6}, {4, 5}}, // 27 
+ {{0, 2}, {0, 4}, {0, 6}, {2, 4}, {2, 6}, {4, 6}}, // 28 
+ {{0, 3}, {0, 7}, {1, 2}, {1, 4}, {2, 3}, {2, 5}, {2, 7}, {3, 6}, {4, 5}}, // 29 
+ {{1, 1}, {1, 3}, {1, 5}, {1, 7}, {2, 2}, {2, 4}, {2, 6}, {3, 5}, {3, 7}, {4, 6}, {5, 5}}, // 30 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 4}, {1, 6}, {2, 3}, {2, 7}, {3, 4}, {3, 6}, {5, 6}}, // 31 
+ {{0, 0}, {0, 8}, {4, 4}}, // 32 
+ {{0, 1}, {0, 5}, {0, 7}, {1, 2}, {1, 4}, {1, 6}, {1, 8}, {2, 3}, {2, 5}, {2, 7}, {3, 4}, {4, 5}, {4, 7}, {5, 6}}, // 33 
+ {{0, 0}, {0, 2}, {0, 4}, {0, 6}, {0, 8}, {1, 3}, {1, 7}, {2, 8}, {3, 3}, {3, 5}, {3, 7}, {4, 4}, {4, 6}, {5, 5}}, // 34 
+ {{0, 3}, {0, 5}, {1, 2}, {1, 4}, {1, 8}, {2, 5}, {2, 7}, {3, 4}, {3, 6}, {4, 5}, {4, 7}, {5, 6}}, // 35 
+ {{0, 0}, {0, 2}, {0, 6}, {0, 8}, {2, 2}, {2, 4}, {2, 6}, {2, 8}, {4, 4}, {4, 6}, {6, 6}}, // 36 
+ {{0, 1}, {0, 3}, {0, 5}, {0, 7}, {1, 6}, {1, 8}, {2, 3}, {2, 5}, {3, 4}, {3, 6}, {3, 8}, {4, 7}, {5, 6}}, // 37 
+ {{0, 2}, {0, 6}, {1, 1}, {1, 5}, {1, 7}, {2, 2}, {2, 6}, {2, 8}, {3, 3}, {3, 7}, {5, 5}, {5, 7}, {6, 6}}, // 38 
+ {{0, 5}, {0, 7}, {1, 2}, {1, 4}, {1, 6}, {1, 8}, {2, 3}, {2, 5}, {2, 7}, {3, 4}, {3, 8}, {4, 5}, {4, 7}, {5, 6}}, // 39 
+ {{0, 0}, {0, 4}, {0, 8}, {2, 2}, {2, 6}, {4, 8}, {6, 6}} // 40 
+};
+
+FILE* fexhaustive = NULL;
+int totalsolutions = 0;
+int realconflicts = 0;
+int imagconflicts = 0;
+int rowsumconflicts = 0;
+int altrowsumconflicts = 0;
+int irowsumconflicts = 0;
+int fullconflicts = 0;
 fftw_complex* in;
 fftw_complex* out;
 fftw_plan p1, p2;
 const int nchecks = 64;
+const int N = nchecks;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -98,6 +152,7 @@ Solver::Solver() :
     //
   , learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
   , order            (opt_order)
+  , exhaustive       (opt_exhaustive)
 
     // Parameters (experimental):
     //
@@ -140,8 +195,12 @@ Solver::Solver() :
 	out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nchecks);
 	p1 = fftw_plan_dft_1d(order, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 	p2 = fftw_plan_dft_1d(nchecks, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-	fout = fopen("f.out", "w");
-	
+
+     for(int i=0; i<nchecks; i++)
+          in[i] = 0;
+
+	if(exhaustive[0]!=0)
+		fexhaustive = fopen(exhaustive, "w");
 }
 
 
@@ -151,7 +210,8 @@ Solver::~Solver()
 	fftw_destroy_plan(p2);
 	fftw_free(in);
 	fftw_free(out);
-	fclose(fout);
+     if(exhaustive[0]!=0)
+	     fclose(fexhaustive);
 }
 
 
@@ -347,8 +407,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int totalsolutions = 0;
-
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -362,44 +420,361 @@ int totalsolutions = 0;
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 {    
-	bool all_assigned = true;
+     //return;
+     const int n = order;
+	bool A_assigned = true;
+     bool B_assigned = true;
+     bool filtered = false;
     
-    if(complete)
-    {		
-		for(int i=0; i<2*order; i++)
-		{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
-			if(assigns[i]==l_Undef)
-			{	all_assigned = false;
-				printf("Not all variables are assigned\n");
-				return;
+     for(int i=0; i<2*order; i++)
+     {	if(assigns[i]==l_Undef)
+          {	A_assigned = false;
+               return;
+          }
+     }
+         
+     if(A_assigned)
+     {	
+          for(int i=0; i<order; i++)
+          {    if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+                    in[i] = 1;
+               else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+                    in[i] = I;
+               else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+                    in[i] = -1;
+               else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+                    in[i] = -I;
+          }
+
+		// Check rowsum
+		fftw_complex sum = 0;
+
+		for(int i=0; i<n; i++)
+		{	
+			sum += in[i];
+		}
+
+		int x = abs(round(creal(sum)));
+		int y = abs(round(cimag(sum)));
+
+		if(y<x)
+		{	int tmp = x;
+			x = y;
+			y = tmp;
+		}
+		
+		for(int i=0; i<decomps_len[n]; i++)
+		{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+			{	break;
+			}
+			if(i==decomps_len[n]-1)
+			{	filtered = true;
+				rowsumconflicts++;
 			}
 		}
-		//printf("\n");
-		
-		if(all_assigned)
-		{	  
-			out_learnts.push();
-			for(int i=0; i<2*order; i++)
-			{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+
+		if(!filtered)
+		{
+			// Check alternating rowsum
+			fftw_complex sum = 0;
+			
+			for(int i=0; i<n; i+=2)
+			{	
+				sum += in[i];
 			}
-			
-			totalsolutions++;
-			
-			for(int i=0; i<order; i++)
-			{	if(assigns[2*i]==l_False)
-					fprintf(fout, "%c", assigns[2*i+1]==l_False ? '+' : '-');
-				else
-					fprintf(fout, "%c", assigns[2*i+1]==l_False ? 'i' : 'j');
+			for(int i=1; i<n; i+=2)
+			{	
+				sum += in[i]*(-1);
 			}
-			fprintf(fout, "\n");
+
+			int x = abs(round(creal(sum)));
+			int y = abs(round(cimag(sum)));
+
+			if(y<x)
+			{	int tmp = x;
+				x = y;
+				y = tmp;
+			}
+
+			for(int i=0; i<decomps_len[n]; i++)
+			{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+				{	break;
+				}
+				if(i==decomps_len[n]-1)
+				{	filtered = true;
+					altrowsumconflicts++;
+				}
+			}
+		}
 			
-			/*printf("size %d\tconflict:", out_learnts[size].size());
-			for(int i=0; i<out_learnts[size].size(); i++)
-				printf(" %c%d", sign(out_learnts[size][i]) ? '-' : '+', var(out_learnts[size][i])+1);
-			printf("\n");*/
+		if(!filtered)
+		{
+			// Check I*in rowsum
+			fftw_complex sum = 0;
+
+			for(int i=0; i<n; i+=4)
+			{	
+				sum += in[i];
+			}
+			for(int i=1; i<n; i+=4)
+			{	
+				sum += in[i]*I;
+			}
+			for(int i=2; i<n; i+=4)
+			{	
+				sum += in[i]*(-1);
+			}
+			for(int i=3; i<n; i+=4)
+			{	
+				sum += in[i]*(-I);
+			}
+
+			int x = abs(round(creal(sum)));
+			int y = abs(round(cimag(sum)));
+
+			if(y<x)
+			{	int tmp = x;
+				x = y;
+				y = tmp;
+			}
+
+			for(int i=0; i<decomps_len[n]; i++)
+			{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+				{	break;
+				}
+				if(i==decomps_len[n]-1)
+				{	filtered = true;
+					irowsumconflicts++;
+				}
+			}
+		}
+
+		if(!filtered)
+		{
+			fftw_execute(p1);
+			for(int i=0; i<n; i++)
+			{	//double psd = out[i][0]*out[i][0] + out[i][1]*out[i][1];
+				//if(psd - 2*n > 0.001)
+                    double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					fullconflicts++;
+					break;
+				}
+			}
+		}
+
+		if(!filtered)
+		{
+			fftw_execute(p2);
+			for(int i=0; i<N; i++)
+			{	//double psd = out[i][0]*out[i][0] + out[i][1]*out[i][1];
+				//if(psd - 2*n > 0.001)
+                    double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					fullconflicts++;
+					break;
+				}
+			}
+		}
+  
+          if(filtered)
+          {    out_learnts.push();
+               for(int i=0; i<2*order; i++)
+               {	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+               }
+          }          
+     }
+
+     for(int i=0; i<2*order; i++)
+     {	if(assigns[i+2*n]==l_Undef)
+          {	B_assigned = false;
+               return;
+          }
+     }
+         
+     if(B_assigned)
+     {	
+          for(int i=0; i<order; i++)
+          {    if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_False)
+                    in[i] = 1;
+               else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_False)
+                    in[i] = I;
+               else if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_True)
+                    in[i] = -1;
+               else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_True)
+                    in[i] = -I;
+          }
+
+		// Check rowsum
+		fftw_complex sum = 0;
+
+		for(int i=0; i<n; i++)
+		{	
+			sum += in[i];
+		}
+
+		int x = abs(round(creal(sum)));
+		int y = abs(round(cimag(sum)));
+
+		if(y<x)
+		{	int tmp = x;
+			x = y;
+			y = tmp;
 		}
 		
-	}
+		for(int i=0; i<decomps_len[n]; i++)
+		{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+			{	break;
+			}
+			if(i==decomps_len[n]-1)
+			{	filtered = true;
+				rowsumconflicts++;
+			}
+		}
+
+		if(!filtered)
+		{
+			// Check alternating rowsum
+			fftw_complex sum = 0;
+			
+			for(int i=0; i<n; i+=2)
+			{	
+				sum += in[i];
+			}
+			for(int i=1; i<n; i+=2)
+			{	
+				sum += in[i]*(-1);
+			}
+
+			int x = abs(round(creal(sum)));
+			int y = abs(round(cimag(sum)));
+
+			if(y<x)
+			{	int tmp = x;
+				x = y;
+				y = tmp;
+			}
+
+			for(int i=0; i<decomps_len[n]; i++)
+			{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+				{	break;
+				}
+				if(i==decomps_len[n]-1)
+				{	filtered = true;
+					altrowsumconflicts++;
+				}
+			}
+		}
+			
+		if(!filtered)
+		{
+			// Check I*in rowsum
+			fftw_complex sum = 0;
+
+			for(int i=0; i<n; i+=4)
+			{	
+				sum += in[i];
+			}
+			for(int i=1; i<n; i+=4)
+			{	
+				sum += in[i]*I;
+			}
+			for(int i=2; i<n; i+=4)
+			{	
+				sum += in[i]*(-1);
+			}
+			for(int i=3; i<n; i+=4)
+			{	
+				sum += in[i]*(-I);
+			}
+
+			int x = abs(round(creal(sum)));
+			int y = abs(round(cimag(sum)));
+
+			if(y<x)
+			{	int tmp = x;
+				x = y;
+				y = tmp;
+			}
+
+			for(int i=0; i<decomps_len[n]; i++)
+			{	if(x == decomps[n][i][0] && y == decomps[n][i][1])
+				{	break;
+				}
+				if(i==decomps_len[n]-1)
+				{	filtered = true;
+					irowsumconflicts++;
+				}
+			}
+		}
+
+		if(!filtered)
+		{
+			fftw_execute(p1);
+			for(int i=0; i<n; i++)
+			{	//double psd = out[i][0]*out[i][0] + out[i][1]*out[i][1];
+				//if(psd - 2*n > 0.001)
+                    double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					fullconflicts++;
+					break;
+				}
+			}
+		}
+
+		if(!filtered)
+		{
+			fftw_execute(p2);
+			for(int i=0; i<N; i++)
+			{	//double psd = out[i][0]*out[i][0] + out[i][1]*out[i][1];
+				//if(psd - 2*n > 0.001)
+                    double sqrt_psd = cabs(out[i]);
+				if(sqrt_psd - sqrt(2*n) > 0.001)
+				{	filtered = true;
+					fullconflicts++;
+					break;
+				}
+			}
+		}
+  
+          if(filtered)
+          {    out_learnts.push();
+               for(int i=0; i<2*order; i++)
+               {	out_learnts[0].push(mkLit(i+2*n, assigns[i+2*n]==l_True));
+               }
+          }          
+     }
+
+     if(A_assigned && B_assigned && !filtered)
+     {
+          totalsolutions++;
+     }
+
+     if(A_assigned && B_assigned && !filtered && fexhaustive != NULL)
+     {
+          out_learnts.push();
+          for(int i=0; i<4*order; i++)
+          {    out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+          }
+
+          for(int i=0; i<order; i++)
+          {	if(assigns[2*i]==l_False)
+                    fprintf(fexhaustive, "%c", assigns[2*i+1]==l_False ? '+' : '-');
+               else
+                    fprintf(fexhaustive, "%c", assigns[2*i+1]==l_False ? 'i' : 'j');
+          }
+          fprintf(fexhaustive, " ");
+          for(int i=0; i<order; i++)
+          {	if(assigns[2*i+2*n]==l_False)
+                    fprintf(fexhaustive, "%c", assigns[2*i+1+2*n]==l_False ? '+' : '-');
+               else
+                    fprintf(fexhaustive, "%c", assigns[2*i+1+2*n]==l_False ? 'i' : 'j');
+          }
+          fprintf(fexhaustive, "\n");
+     }
 }
 
 bool Solver::assertingClause(CRef confl) {
@@ -1288,7 +1663,13 @@ lbool Solver::solve_()
         printf("===============================================================================\n");
 
 
-	printf("Total solutions found: %d\n", totalsolutions);
+    printf("Total solutions found: %d\n", totalsolutions);
+    printf("Number of real conflicts generated: %d\n", realconflicts);
+    printf("Number of imag conflicts generated: %d\n", imagconflicts);
+    printf("Number of rowsum conflicts generated: %d\n", rowsumconflicts);
+    printf("Number of altrowsum conflicts generated: %d\n", altrowsumconflicts);
+    printf("Number of I*rowsum conflicts generated: %d\n", irowsumconflicts);
+    printf("Number of full conflicts generated: %d\n", fullconflicts);
 
     if (status == l_True){
         // Extend & copy model:
