@@ -582,8 +582,77 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
           if(filtered)
           {    out_learnts.push();
                for(int i=0; i<2*order; i++)
-               {	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+               {	out_learnts.last().push(mkLit(i, assigns[i]==l_True));
                }
+               out_learnts.push();
+				for(int i=0; i<order; i++)
+				{  if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+					{	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, false));
+					}
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+				   {	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				   else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+				   {	// ith entry is not 1
+					   out_learnts.last().push(mkLit(2*i, false));
+					   out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+					{	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, true));
+					}
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				   else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+				   {	// ith entry is not I
+					   out_learnts.last().push(mkLit(2*i, true));
+					   out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+					{	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, true));
+					}
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				   else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+				   {	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+				   {	// ith entry is not -1
+					   out_learnts.last().push(mkLit(2*i, false));
+					   out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				}
           }          
      }
 
@@ -743,8 +812,77 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
           if(filtered)
           {    out_learnts.push();
                for(int i=0; i<2*order; i++)
-               {	out_learnts[0].push(mkLit(i+2*n, assigns[i+2*n]==l_True));
+               {	out_learnts.last().push(mkLit(i+2*n, assigns[i+2*n]==l_True));
                }
+				out_learnts.push();
+				for(int i=0; i<order; i++)
+				{  if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_False)
+					{	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+					}
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_False)
+				   {	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				   else if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not 1
+					   out_learnts.last().push(mkLit(2*i+2*n, false));
+					   out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_False)
+					{	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+					}
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_False)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				   else if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not I
+					   out_learnts.last().push(mkLit(2*i+2*n, true));
+					   out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_False)
+					{	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+					}
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_False)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				   else if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not -1
+					   out_learnts.last().push(mkLit(2*i+2*n, false));
+					   out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				}
           }          
      }
 
@@ -757,8 +895,146 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
      {
           out_learnts.push();
           for(int i=0; i<4*order; i++)
-          {    out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+          {    out_learnts.last().push(mkLit(i, assigns[i]==l_True));
           }
+               out_learnts.push();
+				for(int i=0; i<order; i++)
+				{  if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+					{	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, false));
+					}
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+				   {	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				   else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+				   {	// ith entry is not 1
+					   out_learnts.last().push(mkLit(2*i, false));
+					   out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+					{	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, true));
+					}
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				   else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+				   {	// ith entry is not I
+					   out_learnts.last().push(mkLit(2*i, true));
+					   out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+					{	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, true));
+					}
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i, false));
+						out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				   else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+				   {	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i, true));
+						out_learnts.last().push(mkLit(2*i+1, false));
+				   }
+				   else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+				   {	// ith entry is not -1
+					   out_learnts.last().push(mkLit(2*i, false));
+					   out_learnts.last().push(mkLit(2*i+1, true));
+				   }
+				}
+				out_learnts.push();
+				for(int i=0; i<order; i++)
+				{  if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_False)
+					{	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+					}
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_False)
+				   {	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				   else if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not 1
+					   out_learnts.last().push(mkLit(2*i+2*n, false));
+					   out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_False)
+					{	// ith entry is not -1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+					}
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_False)
+				   {	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				   else if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not I
+					   out_learnts.last().push(mkLit(2*i+2*n, true));
+					   out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				}
+              out_learnts.push();
+				for(int i=0; i<order; i++)
+				{	if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_False)
+					{	// ith entry is not -I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, true));
+					}
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_False)
+				   {	// ith entry is not 1
+						out_learnts.last().push(mkLit(2*i+2*n, false));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				   else if(assigns[2*i+2*n]==l_False && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not I
+						out_learnts.last().push(mkLit(2*i+2*n, true));
+						out_learnts.last().push(mkLit(2*i+1+2*n, false));
+				   }
+				   else if(assigns[2*i+2*n]==l_True && assigns[2*i+1+2*n]==l_True)
+				   {	// ith entry is not -1
+					   out_learnts.last().push(mkLit(2*i+2*n, false));
+					   out_learnts.last().push(mkLit(2*i+1+2*n, true));
+				   }
+				}
 
           for(int i=0; i<order; i++)
           {	if(assigns[2*i]==l_False)
