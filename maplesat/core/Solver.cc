@@ -19,6 +19,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include <math.h>
+#include <complex.h>
+#include <fftw3.h>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -50,11 +52,23 @@ static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the 
 static BoolOption    opt_luby_restart      (_cat, "luby",        "Use the Luby restart sequence", true);
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
+static IntOption     opt_order             (_cat, "order",       "Order of the complex Golay sequences to search for", 0, IntRange(0, 100));
+static StringOption  opt_seqone            (_cat, "seqone",      "Complex Golay sequence to construct pair for");
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
+fftw_complex* nafs;
+
+fftw_complex naf(fftw_complex* A, int n, int s)
+{
+	fftw_complex ret = 0;
+	for(int i=0; i<n-s; i++)
+	{	ret += A[i]*conj(A[i+s]);
+	}
+	return ret;
+}
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -89,8 +103,10 @@ Solver::Solver() :
 
     // Parameters (the rest):
     //
-  , learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
 
+  , learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
+  , order            (opt_order)
+  , seqone           (opt_seqone)
     // Parameters (experimental):
     //
   , learntsize_adjust_start_confl (100)
@@ -127,11 +143,31 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+	fftw_complex* A = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*order);
+	for(int i=0; i<order; i++)
+	{	if(seqone[i]=='+')
+			A[i] = 1;
+		else if(seqone[i]=='-')
+			A[i] = -1;
+		else if(seqone[i]=='i')
+			A[i] = I;
+		else if(seqone[i]=='j')
+			A[i] = -I;
+	}
+	nafs = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*order);
+	printf("A: %s\n", seqone);
+	for(int s=0; s<order; s++)
+	{	nafs[s] = naf(A, order, s);
+		printf("NAF_A(%d): %d %d\n", s, (int)round(creal(nafs[s])), (int)round(cimag(nafs[s])));
+	}
+	fftw_free(A);
+}
 
 
 Solver::~Solver()
 {
+	fftw_free(nafs);
 }
 
 
@@ -327,8 +363,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int wait = 0;
-
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -340,16 +374,11 @@ int wait = 0;
 //           the simplification steps may have removed some variables! If complete is true,
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
-void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
-    if (wait == 5 || complete) {
-        if (value(10) == l_True) {
-            out_learnts.push();
-            out_learnts[0].push(~mkLit(10));
-            out_learnts.push();
-            out_learnts[1].push(~mkLit(10));
-        }
-    }
+void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
+{
+	/*for(int i=0; i<order; i++)
+	{	
+	}*/
 }
 
 bool Solver::assertingClause(CRef confl) {
