@@ -144,7 +144,7 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-	fftw_complex* A = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*order);
+	fftw_complex* A = fftw_alloc_complex(order);
 	for(int i=0; i<order; i++)
 	{	if(seqone[i]=='+')
 			A[i] = 1;
@@ -155,7 +155,7 @@ Solver::Solver() :
 		else if(seqone[i]=='j')
 			A[i] = -I;
 	}
-	nafs = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*order);
+	nafs = fftw_alloc_complex(order);
 	printf("A: %s\n", seqone);
 	for(int s=0; s<order; s++)
 	{	nafs[s] = naf(A, order, s);
@@ -363,6 +363,33 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+
+void printarray(fftw_complex* B, int n)
+{	
+	printf("B: ");
+	for(int j=0; j<n; j++)
+	{	if(B[j]==1)
+			printf("+");
+		else if(B[j]==-1)
+			printf("-");
+		else if(B[j]==I)
+			printf("i");
+		else if(B[j]==-I)
+			printf("j");
+		else
+			printf("0");
+		//	printf("(%d %d)", (int)round(creal(B[j])), (int)round(cimag(B[j])));
+	}
+	printf("\n");
+}
+
+void printclause(vec<Lit>& cl)
+{
+	for(int i=0; i<cl.size(); i++)
+		printf("%s%d ", sign(cl[i]) ? "-" : "", var(cl[i])+1);
+	printf("\n");
+}
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -376,9 +403,67 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 {
-	/*for(int i=0; i<order; i++)
-	{	
-	}*/
+	const int n = order;
+	vec<Lit> learnt;
+	fftw_complex* B = fftw_alloc_complex(order);
+	for(int s=n-1; s>0; s--)
+	{	const int i = n-1-s;
+		if(assigns[2*i]!=l_Undef && assigns[2*i+1]!=l_Undef && assigns[2*s]!=l_Undef && assigns[2*s+1]!=l_Undef)
+		{
+			if(assigns[2*i]==l_False && assigns[2*i+1]==l_False)
+				B[i] = 1;
+			else if(assigns[2*i]==l_False && assigns[2*i+1]==l_True)
+				B[i] = -1;
+			else if(assigns[2*i]==l_True && assigns[2*i+1]==l_False)
+				B[i] = I;
+			else if(assigns[2*i]==l_True && assigns[2*i+1]==l_True)
+				B[i] = -I;
+
+			if(assigns[2*s]==l_False && assigns[2*s+1]==l_False)
+				B[s] = 1;
+			else if(assigns[2*s]==l_False && assigns[2*s+1]==l_True)
+				B[s] = -1;
+			else if(assigns[2*s]==l_True && assigns[2*s+1]==l_False)
+				B[s] = I;
+			else if(assigns[2*s]==l_True && assigns[2*s+1]==l_True)
+				B[s] = -I;
+
+			if(i<=s)
+			{	learnt.push(mkLit(2*i, assigns[2*i]==l_True));
+				learnt.push(mkLit(2*i+1, assigns[2*i+1]==l_True));
+				if(i!=s)
+				{	learnt.push(mkLit(2*s, assigns[2*s]==l_True));
+					learnt.push(mkLit(2*s+1, assigns[2*s+1]==l_True));
+				}
+			}
+
+			printarray(B, order);
+
+			if(nafs[s]+naf(B, n, s)!=0)
+			{
+				fftw_complex N = naf(B, n, s);
+				printf("NAF(%d): %d %d. Needed: %d %d\n", s, (int)round(creal(N)), (int)round(cimag(N)), -(int)round(creal(nafs[s])), -(int)round(cimag(nafs[s])));
+
+				out_learnts.push();
+				for(int j=0; j<learnt.size(); j++)
+					out_learnts[0].push(learnt[j]);
+
+				printclause(out_learnts[0]);
+				return;
+
+			}
+
+		}
+		else
+			break;
+	}
+
+	if(complete)
+	{	printf("complete ");
+		printarray(B, order);
+	}
+
+	fftw_free(B);
 }
 
 bool Solver::assertingClause(CRef confl) {
