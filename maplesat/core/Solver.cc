@@ -437,18 +437,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 				}
 			}
 
+			#ifdef DEBUG
 			printarray(B, order);
+			#endif
 
 			if(nafs[s]+naf(B, n, s)!=0)
 			{
+				#ifdef DEBUG
 				fftw_complex N = naf(B, n, s);
 				printf("NAF(%d): %d %d. Needed: %d %d\n", s, (int)round(creal(N)), (int)round(cimag(N)), -(int)round(creal(nafs[s])), -(int)round(cimag(nafs[s])));
+				#endif
 
 				out_learnts.push();
 				for(int j=0; j<learnt.size(); j++)
 					out_learnts[0].push(learnt[j]);
 
+				#ifdef DEBUG
 				printclause(out_learnts[0]);
+				#endif
 				return;
 
 			}
@@ -458,10 +464,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 			break;
 	}
 
+	#ifdef DEBUG
 	if(complete)
 	{	printf("complete ");
 		printarray(B, order);
 	}
+	#endif
 
 	fftw_free(B);
 }
