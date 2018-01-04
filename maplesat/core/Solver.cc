@@ -54,6 +54,7 @@ static IntOption     opt_restart_first     (_cat, "rfirst",      "The base resta
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static IntOption     opt_order             (_cat, "order",       "Order of the complex Golay sequences to search for", 0, IntRange(0, 100));
 static StringOption  opt_seqone            (_cat, "seqone",      "Complex Golay sequence to construct pair for");
+static StringOption  opt_exhaustive        (_cat, "exhaustive",  "File to store all constructed sequences");
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
@@ -107,6 +108,7 @@ Solver::Solver() :
   , learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
   , order            (opt_order)
   , seqone           (opt_seqone)
+  , exhaustive       (opt_exhaustive)
     // Parameters (experimental):
     //
   , learntsize_adjust_start_confl (100)
@@ -162,12 +164,17 @@ Solver::Solver() :
 		printf("NAF_A(%d): %d %d\n", s, (int)round(creal(nafs[s])), (int)round(cimag(nafs[s])));
 	}
 	fftw_free(A);
+	if(exhaustive!=NULL)
+	{	exhaustivefile = fopen(exhaustive, "a");
+	}
 }
 
 
 Solver::~Solver()
 {
 	fftw_free(nafs);
+	if(exhaustivefile!=NULL)
+		fclose(exhaustivefile);
 }
 
 
@@ -363,6 +370,22 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+void fprintarray(FILE* f, const fftw_complex* B, const int n)
+{	
+	for(int j=0; j<n; j++)
+	{	if(B[j]==1)
+			fprintf(f, "+");
+		else if(B[j]==-1)
+			fprintf(f, "-");
+		else if(B[j]==I)
+			fprintf(f, "i");
+		else if(B[j]==-I)
+			fprintf(f, "j");
+		else
+			fprintf(f, "0");
+	}
+	fprintf(f, "\n");
+}
 
 void printarray(fftw_complex* B, int n)
 {	
@@ -470,6 +493,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 		printarray(B, order);
 	}
 	#endif
+
+	if(complete && exhaustivefile!=NULL)
+	{	fprintarray(exhaustivefile, B, order);
+		out_learnts.push();
+		for(int j=0; j<learnt.size(); j++)
+			out_learnts[0].push(learnt[j]);
+	}
 
 	fftw_free(B);
 }
