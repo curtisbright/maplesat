@@ -495,7 +495,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 	#endif
 
 	if(complete && exhaustivefile!=NULL)
-	{	fprintarray(exhaustivefile, B, order);
+	{	
+		fprintf(exhaustivefile, "%s ", seqone);
+		fprintarray(exhaustivefile, B, order);
 		out_learnts.push();
 		for(int j=0; j<learnt.size(); j++)
 			out_learnts[0].push(learnt[j]);
