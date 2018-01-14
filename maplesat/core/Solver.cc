@@ -20,7 +20,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 #include <complex.h>
-#include <fftw3.h>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -60,6 +59,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
+typedef double complex fftw_complex;
 fftw_complex* nafs;
 
 fftw_complex naf(fftw_complex* A, int n, int s)
@@ -146,7 +146,7 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-	fftw_complex* A = fftw_alloc_complex(order);
+	fftw_complex* A = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 	for(int i=0; i<order; i++)
 	{	if(seqone[i]=='+')
 			A[i] = 1;
@@ -157,13 +157,13 @@ Solver::Solver() :
 		else if(seqone[i]=='j')
 			A[i] = -I;
 	}
-	nafs = fftw_alloc_complex(order);
+	nafs = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 	printf("A: %s\n", seqone);
 	for(int s=0; s<order; s++)
 	{	nafs[s] = naf(A, order, s);
 		printf("NAF_A(%d): %d %d\n", s, (int)round(creal(nafs[s])), (int)round(cimag(nafs[s])));
 	}
-	fftw_free(A);
+	free(A);
 	if(exhaustive!=NULL)
 	{	exhaustivefile = fopen(exhaustive, "a");
 	}
@@ -172,7 +172,7 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-	fftw_free(nafs);
+	free(nafs);
 	if(exhaustivefile!=NULL)
 		fclose(exhaustivefile);
 }
@@ -428,7 +428,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 {
 	const int n = order;
 	vec<Lit> learnt;
-	fftw_complex* B = fftw_alloc_complex(order);
+	fftw_complex* B = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 	for(int s=n-1; s>0; s--)
 	{	const int i = n-1-s;
 		if(assigns[2*i]!=l_Undef && assigns[2*i+1]!=l_Undef && assigns[2*s]!=l_Undef && assigns[2*s+1]!=l_Undef)
@@ -503,7 +503,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 			out_learnts[0].push(learnt[j]);
 	}
 
-	fftw_free(B);
+	free(B);
 }
 
 bool Solver::assertingClause(CRef confl) {
