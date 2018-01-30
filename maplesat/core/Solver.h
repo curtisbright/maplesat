@@ -41,6 +41,8 @@ public:
     Solver();
     virtual ~Solver();
 
+    void    addProdClauses();
+
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.

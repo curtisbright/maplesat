@@ -177,6 +177,44 @@ Solver::~Solver()
 		fclose(exhaustivefile);
 }
 
+#ifdef DEBUG
+void printclause(vec<Lit>& cl)
+{
+	for(int i=0; i<cl.size(); i++)
+		printf("%s%d ", sign(cl[i]) ? "-" : "", var(cl[i])+1);
+	printf("\n");
+}
+#endif
+
+void Solver::addProdClauses()
+{    for(int k=0; k<order/2; k++)
+     {    int numreal = 0;
+          if(seqone[k]=='+' || seqone[k]=='-')
+               numreal++;
+          if(seqone[order-k-1]=='+' || seqone[order-k-1]=='-')
+               numreal++;
+          if(numreal==1)
+          {    vec<Lit> cl;
+               cl.push(mkLit(2*k, false));
+               cl.push(mkLit(2*(order-k-1), false));
+               addClause(cl);
+               vec<Lit> cl2;
+               cl2.push(mkLit(2*k, true));
+               cl2.push(mkLit(2*(order-k-1), true));
+               addClause(cl2);
+          }
+          else
+          {    vec<Lit> cl;
+               cl.push(mkLit(2*k, false));
+               cl.push(mkLit(2*(order-k-1), true));
+               addClause(cl);
+               vec<Lit> cl2;
+               cl2.push(mkLit(2*k, true));
+               cl2.push(mkLit(2*(order-k-1), false));
+               addClause(cl2);
+          }
+     }
+}
 
 //=================================================================================================
 // Minor methods:
@@ -403,13 +441,6 @@ void printarray(fftw_complex* B, int n)
 			printf("0");
 		//	printf("(%d %d)", (int)round(creal(B[j])), (int)round(cimag(B[j])));
 	}
-	printf("\n");
-}
-
-void printclause(vec<Lit>& cl)
-{
-	for(int i=0; i<cl.size(); i++)
-		printf("%s%d ", sign(cl[i]) ? "-" : "", var(cl[i])+1);
 	printf("\n");
 }
 
