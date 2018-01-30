@@ -158,13 +158,16 @@ Solver::Solver() :
 			A[i] = -I;
 	}
 	nafs = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
-     #ifdef DEBUG
+	#ifdef DEBUG
 	printf("A: %s\n", seqone);
+	#endif
 	for(int s=0; s<order; s++)
 	{	nafs[s] = naf(A, order, s);
+		#ifdef DEBUG
 		printf("NAF_A(%d): %d %d\n", s, (int)round(creal(nafs[s])), (int)round(cimag(nafs[s])));
+		#endif
 	}
-     #endif
+	#endif
 	free(A);
 	if(exhaustive!=NULL)
 	{	exhaustivefile = fopen(exhaustive, "a");
