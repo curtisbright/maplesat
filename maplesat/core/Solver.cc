@@ -167,7 +167,6 @@ Solver::Solver() :
 		printf("NAF_A(%d): %d %d\n", s, (int)round(creal(nafs[s])), (int)round(cimag(nafs[s])));
 		#endif
 	}
-	#endif
 	free(A);
 	if(exhaustive!=NULL)
 	{	exhaustivefile = fopen(exhaustive, "a");
