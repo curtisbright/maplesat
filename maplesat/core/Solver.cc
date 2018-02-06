@@ -2181,8 +2181,10 @@ lbool Solver::solve_()
 #ifdef ALTROW
     printf("altrowsum   checks: %d/%d = %.5f, %.2f total time\n", success2, calls2, success2/(double)calls2, time2);
 #endif
+#ifdef DEBUG
     printf("filtering   checks: %d/%d = %.5f, %.2f total time\n", success3, calls3, success3/(double)calls3, time3);
     printf("NUMSOLS: %d\n", numsols);
+#endif
     //printf("subseqfilt  checks: %d/%d = %.5f, %.2f total time\n", success4, calls4, success4/(double)calls4, time4);
 
     if (status == l_True){
