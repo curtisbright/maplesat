@@ -84,7 +84,9 @@ int main(int argc, char** argv)
 #if defined(__linux__) && defined(_FPU_EXTENDED) && defined(_FPU_DOUBLE) && defined(_FPU_GETCW)
         fpu_control_t oldcw, newcw;
         _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
+	   #ifdef DEBUG
         printf("WARNING: for repeatability, setting FPU to use double precision\n");
+	   #endif
 #endif
         // Extra options:
         //
@@ -173,8 +175,8 @@ int main(int argc, char** argv)
                 printf("===============================================================================\n");
                 printf("Solved by simplification\n");
                 printStats(S);
-                printf("\n"); }
-            printf("UNSATISFIABLE\n");
+                printf("\n"); 
+            printf("UNSATISFIABLE\n"); }
             exit(20);
         }
 
@@ -222,8 +224,8 @@ int main(int argc, char** argv)
         
         if (S.verbosity > 0){
             printStats(S);
-            printf("\n"); }
-        printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            printf("\n"); 
+        printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n"); }
         if (res != NULL){
             if (ret == l_True){
                 fprintf(res, "SAT\n");
