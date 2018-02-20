@@ -184,6 +184,80 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			}
 		}
 	}
+	else if(v == -d+4)
+	{	// at least two 1 variables
+		for(int j=0; j<d; j++)
+		{
+			vec<Lit> cl;
+			cl.clear();
+			for(int k=0; k<d; k++)
+			{	if(k==j)
+					continue;
+				int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+				cl.push(mkLit(newindex, false));
+			}
+			addClause(cl);
+#ifdef PRINTCONF
+			printclause(cl);
+#endif
+		}
+		// at most two 1 variables
+		for(int j=0; j<d; j++)
+		{	int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			for(int k=j+1; k<d; k++)
+			{	int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+				for(int l=k+1; l<d; l++)
+				{	vec<Lit> cl;
+					cl.clear();
+					int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
+					cl.push(mkLit(newindex_j, true));
+					cl.push(mkLit(newindex_k, true));
+					cl.push(mkLit(newindex_l, true));
+					addClause(cl);
+#ifdef PRINTCONF
+					printclause(cl);
+#endif
+				}
+			}
+		}
+	}
+	else if(v == d-4)
+	{	// at least two -1 variables
+		for(int j=0; j<d; j++)
+		{
+			vec<Lit> cl;
+			cl.clear();
+			for(int k=0; k<d; k++)
+			{	if(k==j)
+					continue;
+				int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+				cl.push(mkLit(newindex, true));
+			}
+			addClause(cl);
+#ifdef PRINTCONF
+			printclause(cl);
+#endif
+		}
+		// at most two -1 variables
+		for(int j=0; j<d; j++)
+		{	int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+			for(int k=j+1; k<d; k++)
+			{	int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+				for(int l=k+1; l<d; l++)
+				{	vec<Lit> cl;
+					cl.clear();
+					int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
+					cl.push(mkLit(newindex_j, false));
+					cl.push(mkLit(newindex_k, false));
+					cl.push(mkLit(newindex_l, false));
+					addClause(cl);
+#ifdef PRINTCONF
+					printclause(cl);
+#endif
+				}
+			}
+		}
+	}
 	else if(v == d-2)
 	{	// at least one -1 variable
 		vec<Lit> cl;
