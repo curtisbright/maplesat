@@ -1088,8 +1088,9 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           { 
              assert(psds[i][seq].seqindex >= 0);
              seqused[psds[i][seq].seqindex] = true;
-             //this_psdsum += psds[i][seq].psd;
-             
+#ifdef NDEBUG
+             this_psdsum += psds[i][seq].psd;
+#else
              double psd_i_alt;
              int seqindex = psds[i][seq].seqindex;
              if(assigns[seqindex*dim] == l_True)
@@ -1110,6 +1111,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
              }
              psd_i_alt *= psd_i_alt;
              this_psdsum += psd_i_alt;
+#endif
              
              assert(abs(psds[i][seq].psd-psd_i_alt) < 0.0001);
 
