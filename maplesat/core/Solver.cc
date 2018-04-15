@@ -147,7 +147,7 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 		{	vec<Lit> cl;
 			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
 			cl.clear();
-			cl.push(mkLit(newindex, true));
+			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? false : true));
 			addClause(cl);
 #ifdef PRINTCONF
 			printclause(cl);
@@ -161,7 +161,7 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 		for(int j=0; j<d; j++)
 		{
 			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.push(mkLit(newindex, false));
+			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? true : false));
 		}
 		addClause(cl);
 #ifdef PRINTCONF
@@ -175,8 +175,8 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			{	vec<Lit> cl;
 				cl.clear();
 				int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex_j, true));
-				cl.push(mkLit(newindex_k, true));
+				cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? false : true));
+				cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? false : true));
 				addClause(cl);
 #ifdef PRINTCONF
 				printclause(cl);
@@ -194,7 +194,7 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			{	if(k==j)
 					continue;
 				int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex, false));
+				cl.push(mkLit(newindex, c==0 && i+k*(n/d) > n/2 ? true : false));
 			}
 			addClause(cl);
 #ifdef PRINTCONF
@@ -210,9 +210,9 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 				{	vec<Lit> cl;
 					cl.clear();
 					int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
-					cl.push(mkLit(newindex_j, true));
-					cl.push(mkLit(newindex_k, true));
-					cl.push(mkLit(newindex_l, true));
+					cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? false : true));
+					cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? false : true));
+					cl.push(mkLit(newindex_l, c==0 && i+l*(n/d) > n/2 ? false : true));
 					addClause(cl);
 #ifdef PRINTCONF
 					printclause(cl);
@@ -231,7 +231,7 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			{	if(k==j)
 					continue;
 				int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex, true));
+				cl.push(mkLit(newindex, c==0 && i+k*(n/d) > n/2 ? false : true));
 			}
 			addClause(cl);
 #ifdef PRINTCONF
@@ -247,9 +247,9 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 				{	vec<Lit> cl;
 					cl.clear();
 					int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
-					cl.push(mkLit(newindex_j, false));
-					cl.push(mkLit(newindex_k, false));
-					cl.push(mkLit(newindex_l, false));
+					cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? true : false));
+					cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? true : false));
+					cl.push(mkLit(newindex_l, c==0 && i+l*(n/d) > n/2 ? true : false));
 					addClause(cl);
 #ifdef PRINTCONF
 					printclause(cl);
@@ -265,7 +265,7 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 		for(int j=0; j<d; j++)
 		{
 			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.push(mkLit(newindex, true));
+			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? false : true));
 		}
 		addClause(cl);
 #ifdef PRINTCONF
@@ -279,8 +279,8 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			{	vec<Lit> cl;
 				cl.clear();
 				int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex_j, false));
-				cl.push(mkLit(newindex_k, false));
+				cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? true : false));
+				cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? true : false));
 				addClause(cl);
 #ifdef PRINTCONF
 				printclause(cl);
@@ -294,7 +294,7 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 		{	vec<Lit> cl;
 			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
 			cl.clear();
-			cl.push(mkLit(newindex, false));
+			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? true : false));
 			addClause(cl);
 #ifdef PRINTCONF
 			printclause(cl);
@@ -987,6 +987,11 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         { fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
 		      //sequence[n-i] = sequence[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
         }
+        
+        if(seq==0)
+        {	for(int i=dim; i<n; i++)
+				fft_signal[i] *= -1;
+		}
 
         /*for(int i=0; i<n; i++)
         {  printf("%c", fft_signal[i] == 1 ? '+' : '-');
@@ -1027,7 +1032,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           psd_i = psd_i_alt;
 	      }
         else    
-          psd_i = fft_result[i][0]*fft_result[i][0];
+          psd_i = fft_result[i][0]*fft_result[i][0]+fft_result[i][1]*fft_result[i][1];
 
         //if(abs(psd_i - psd_i_alt) > 0.0001)
 		    //  printf("%.5f %.5f\n", psd_i, psd_i_alt);
@@ -1088,9 +1093,9 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           { 
              assert(psds[i][seq].seqindex >= 0);
              seqused[psds[i][seq].seqindex] = true;
-             //this_psdsum += psds[i][seq].psd;
+             this_psdsum += psds[i][seq].psd;
              
-             double psd_i_alt;
+             /*double psd_i_alt;
              int seqindex = psds[i][seq].seqindex;
              if(assigns[seqindex*dim] == l_True)
                psd_i_alt = 1;
@@ -1111,7 +1116,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
              psd_i_alt *= psd_i_alt;
              this_psdsum += psd_i_alt;
              
-             assert(abs(psds[i][seq].psd-psd_i_alt) < 0.0001);
+             assert(abs(psds[i][seq].psd-psd_i_alt) < 0.0001);*/
 
 #ifdef USEPERMS
              char charstring[10] = {};
@@ -1333,7 +1338,15 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     }
     printf("\n");*/
 
-    for(int k=0; k<4; k++)
+	for(int i=0; i<dim; i++)
+    { int index = minindex(n, i);
+  	  fprintf(exhaustfile, "%s ", (assigns[index] == l_True) ? "1" : "-1");
+    }
+    for(int i=dim; i<n; i++)
+    { int index = minindex(n, i);
+  	  fprintf(exhaustfile, "%s ", (assigns[index] == l_True) ? "-1" : "1");
+    }
+    for(int k=1; k<4; k++)
     { for(int i=0; i<n; i++)
       { int index = minindex(n, i);
         fprintf(exhaustfile, "%s ", (assigns[k*dim+index] == l_True) ? "1" : "-1");
