@@ -54,7 +54,11 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
+static IntOption     opt_n                 (_cat, "n",           "Length of walk", -1, IntRange(1, INT32_MAX));
+static IntOption     opt_k                 (_cat, "k",           "Number of collinear points to avoid", -1, IntRange(1, INT32_MAX));
 
+unsigned int n;
+unsigned int k;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -127,7 +131,13 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+	if(opt_n < 1 || opt_k < 1)
+		printf("Need to assign n and k.\n"), exit(1);
+		
+	n = opt_n;
+	k = opt_k;
+}
 
 
 Solver::~Solver()
@@ -327,7 +337,20 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int wait = 0;
+#include <iostream>
+//#include <iomanip>
+#include <utility>
+#include <vector>
+#include <set>
+
+typedef unsigned int uint;
+typedef std::pair<int, int> point;
+typedef std::pair<double,double> line;
+
+//struct classcomp {
+//  bool operator() (const line& x, const line& y) const
+//  {return lhs<rhs;}
+//};
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -341,15 +364,77 @@ int wait = 0;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
-    if (wait == 5 || complete) {
-        if (value(10) == l_True) {
-            out_learnts.push();
-            out_learnts[0].push(~mkLit(10));
-            out_learnts.push();
-            out_learnts[1].push(~mkLit(10));
-        }
-    }
+    /*for(uint i=0; i<n; i++)
+	{	if(assigns[i] == l_True)
+			std::cout << 'T';
+		else if(assigns[i] == l_False)
+			std::cout << 'F';
+		else
+		{	complete = false;
+			std::cout << '?';
+		}
+	}
+	std::cout << '\n';*/
+    
+    if(complete)
+    {	std::vector<point> path;
+		point last_point = std::make_pair(0, 0);
+		path.push_back(last_point);
+		for(uint i=0; i<n; i++)
+		{	if(assigns[i] == l_True)
+			{	last_point = std::make_pair(last_point.first+1, last_point.second);
+			}
+			else if(assigns[i] == l_False)
+			{	last_point = std::make_pair(last_point.first, last_point.second+1);
+			}
+			path.push_back(last_point);
+		}
+		
+		/*for(uint i=0; i<n; i++)
+		{	if(assigns[i] == l_True)
+				std::cout << 'T';
+			else if(assigns[i] == l_False)
+				std::cout << 'F';
+			else
+				std::cout << '?';
+		}
+		std::cout << '\n';
+		
+		for(std::vector<point>::iterator it = path.begin(); it != path.end(); ++it)
+		{	std::cout << '(' << it->first << ',' << it->second << ')'; 
+		}
+		std::cout << '\n';*/
+		
+		std::multiset<line> myset; 
+		
+		for(std::vector<point>::iterator it1 = path.begin(); it1 != path.end(); ++it1)
+		{	for(std::vector<point>::iterator it2 = it1+1; it2 != path.end(); ++it2)
+			{	int rise = it2->second - it1->second;
+				int run = it2->first - it1->first;
+				double slope = INFINITY;
+				if(run != 0)
+					slope = rise/(double)run;
+				double b = it2->second - slope*it2->first;
+				
+				myset.insert(std::make_pair(slope, b));
+				//std::cout << std::fixed << std::setprecision(3) << slope << ' ' << b << '\n';
+			}
+		}
+		
+		for(std::multiset<line>::iterator it = myset.begin(); it != myset.end(); ++it)
+		{	//std::cout << myset.count(*it) << " duplicate lines y = " << it->first << " x + " << it->second << "\n";
+			if(myset.count(*it) >= k*(k-1)/2)
+			{	int size = out_learnts.size();
+				out_learnts.push();
+				for(uint i=0; i<n; i++)
+				{	if(assigns[i] == l_True)
+						out_learnts[size].push(mkLit(i, true));
+					else
+						out_learnts[size].push(mkLit(i, false));
+				}
+			}
+		}
+	}
 }
 
 bool Solver::assertingClause(CRef confl) {
