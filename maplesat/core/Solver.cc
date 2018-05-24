@@ -412,9 +412,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			{	int rise = it2->second - it1->second;
 				int run = it2->first - it1->first;
 				double slope = INFINITY;
+				double b = it2->first;
 				if(run != 0)
-					slope = rise/(double)run;
-				double b = it2->second - slope*it2->first;
+				{	slope = rise/(double)run;
+					b = it2->second - slope*it2->first;
+				}
 				
 				myset.insert(std::make_pair(slope, b));
 				//std::cout << std::fixed << std::setprecision(3) << slope << ' ' << b << '\n';
