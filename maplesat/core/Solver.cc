@@ -345,6 +345,7 @@ Lit Solver::pickBranchLit()
 
 typedef unsigned int uint;
 typedef std::pair<int, int> point;
+typedef std::pair<uint, uint> run;
 typedef std::pair<double,double> line;
 
 //struct classcomp {
@@ -364,23 +365,45 @@ typedef std::pair<double,double> line;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    /*for(uint i=0; i<n; i++)
+	/*for(uint i=0; i<n; i++)
 	{	if(assigns[i] == l_True)
 			std::cout << 'T';
 		else if(assigns[i] == l_False)
 			std::cout << 'F';
 		else
-		{	complete = false;
+		{	//complete = false;
 			std::cout << '?';
 		}
 	}
 	std::cout << '\n';*/
-    
-    if(complete)
-    {	std::vector<point> path;
+
+	std::vector<run> runlist;
+	uint runlen = 0;
+	uint runstart = 0;
+	for(uint i=0; i<=n; i++)
+	{	if(i<n && assigns[i] != l_Undef)
+		{	runlen++;
+		} else
+		{	
+			if(runlen >= k)
+				runlist.push_back(std::make_pair(runlen, runstart));
+			
+			runlen = 0;
+			runstart = i+1;
+		}
+	}
+
+	/*for(std::vector<run>::iterator it = runlist.begin(); it != runlist.end(); ++it)
+	{	std::cout << '(' << it->first << ',' << it->second << ')';
+	}
+	std::cout << '\n';*/
+	
+	for(std::vector<run>::iterator runit = runlist.begin(); runit != runlist.end(); ++runit)
+	{	
+		std::vector<point> path;
 		point last_point = std::make_pair(0, 0);
 		path.push_back(last_point);
-		for(uint i=0; i<n; i++)
+		for(uint i=runit->second; i < runit->second + runit->first; i++)
 		{	if(assigns[i] == l_True)
 			{	last_point = std::make_pair(last_point.first+1, last_point.second);
 			}
@@ -428,7 +451,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			if(myset.count(*it) >= k*(k-1)/2)
 			{	int size = out_learnts.size();
 				out_learnts.push();
-				for(uint i=0; i<n; i++)
+				for(uint i=runit->second; i < runit->second + runit->first; i++)
 				{	if(assigns[i] == l_True)
 						out_learnts[size].push(mkLit(i, true));
 					else
