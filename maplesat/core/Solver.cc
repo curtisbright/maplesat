@@ -446,7 +446,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 		
-		for(std::multiset<line>::iterator it = myset.begin(); it != myset.end(); ++it)
+		for(std::multiset<line>::iterator it = myset.begin(); it != myset.end(); it = myset.upper_bound(*it))
 		{	//std::cout << myset.count(*it) << " duplicate lines y = " << it->first << " x + " << it->second << "\n";
 			if(myset.count(*it) >= k*(k-1)/2)
 			{	int size = out_learnts.size();
