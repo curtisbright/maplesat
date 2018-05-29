@@ -453,7 +453,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				if(run != 0)
 				{	slope = (rise/g)/(double)(run/g);
 					int g2 = gcd(run*it2->second - rise*it2->first, run);
-					b = ((run*it2->second - rise*it2->first)/g2)/(run/g2);
+					b = ((run*it2->second - rise*it2->first)/g2)/(double)(run/g2);
 				}
 				
 				myset.insert(std::make_pair(slope, b));
