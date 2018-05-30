@@ -344,13 +344,13 @@ Lit Solver::pickBranchLit()
 #include <set>
 
 typedef unsigned int uint;
-typedef std::pair<int, int> point;
+typedef std::pair<long, long> point;
 typedef std::pair<uint, uint> run;
 typedef std::pair<double,double> line;
 
-int gcd (int a, int b)
+long gcd (long a, long b)
 {
-	int r;
+	long r;
 	while (b > 0)
 	{
 		r = a % b;
@@ -445,14 +445,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		
 		for(std::vector<point>::iterator it1 = path.begin(); it1 != path.end(); ++it1)
 		{	for(std::vector<point>::iterator it2 = it1+1; it2 != path.end(); ++it2)
-			{	int rise = it2->second - it1->second;
-				int run = it2->first - it1->first;
-				int g = gcd(rise, run);
+			{	long rise = it2->second - it1->second;
+				long run = it2->first - it1->first;
+				long g = gcd(rise, run);
 				double slope = INFINITY;
 				double b = it2->first;
 				if(run != 0)
 				{	slope = (rise/g)/(double)(run/g);
-					int g2 = gcd(run*it2->second - rise*it2->first, run);
+					long g2 = gcd(run*it2->second - rise*it2->first, run);
 					b = ((run*it2->second - rise*it2->first)/g2)/(double)(run/g2);
 				}
 				
