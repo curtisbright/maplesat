@@ -472,6 +472,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					else
 						out_learnts[size].push(mkLit(i, false));
 				}
+				break;
 			}
 		}
 	}
