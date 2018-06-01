@@ -20,6 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 
+#include "gmp.h"
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
@@ -59,6 +60,7 @@ static IntOption     opt_k                 (_cat, "k",           "Number of coll
 
 unsigned int n;
 unsigned int k;
+mpq_t slope, temp;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -137,11 +139,13 @@ Solver::Solver() :
 		
 	n = opt_n;
 	k = opt_k;
+	mpq_inits(slope, temp, NULL);
 }
 
 
 Solver::~Solver()
 {
+	mpq_clears(slope, temp, NULL);
 }
 
 
@@ -337,34 +341,16 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-#include <iostream>
+//#include <iostream>
 //#include <iomanip>
 #include <utility>
 #include <vector>
 #include <set>
 
 typedef unsigned int uint;
-typedef std::pair<long, long> point;
+typedef std::pair<int, int> point;
 typedef std::pair<uint, uint> run;
 typedef std::pair<double,double> line;
-
-long gcd (long a, long b)
-{
-	long r;
-	while (b > 0)
-	{
-		r = a % b;
-		a = b;
-		b = r;
-	}
-
-	return a;
-}
-
-//struct classcomp {
-//  bool operator() (const line& x, const line& y) const
-//  {return lhs<rhs;}
-//};
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -445,18 +431,26 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		
 		for(std::vector<point>::iterator it1 = path.begin(); it1 != path.end(); ++it1)
 		{	for(std::vector<point>::iterator it2 = it1+1; it2 != path.end(); ++it2)
-			{	long rise = it2->second - it1->second;
-				long run = it2->first - it1->first;
-				long g = gcd(rise, run);
-				double slope = INFINITY;
+			{	int rise = it2->second - it1->second;
+				int run = it2->first - it1->first;
+				double slope_dbl = INFINITY;
 				double b = it2->first;
 				if(run != 0)
-				{	slope = (rise/g)/(double)(run/g);
-					long g2 = gcd(run*it2->second - rise*it2->first, run);
-					b = ((run*it2->second - rise*it2->first)/g2)/(double)(run/g2);
+				{	//mpq_t slope, temp;
+					//mpq_inits(slope, temp, NULL);
+					mpq_set_ui(slope, rise, run);
+					mpq_canonicalize(slope);
+					slope_dbl = mpq_get_d(slope);
+					mpq_set_ui(temp, it2->first, 1);
+					mpq_mul(slope, slope, temp);
+					mpq_set_ui(temp, it2->second, 1);
+					mpq_sub(temp, temp, slope);
+					//b = y-m*x
+					b = mpq_get_d(temp);
+					//mpq_clears(slope, temp, NULL);
 				}
 				
-				myset.insert(std::make_pair(slope, b));
+				myset.insert(std::make_pair(slope_dbl, b));
 				//std::cout << std::fixed << std::setprecision(3) << slope << ' ' << b << '\n';
 			}
 		}
