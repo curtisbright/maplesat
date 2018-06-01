@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 
-#include "gmp.h"
+//#include "gmp.h"
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
@@ -60,7 +60,8 @@ static IntOption     opt_k                 (_cat, "k",           "Number of coll
 
 unsigned int n;
 unsigned int k;
-mpq_t slope, temp;
+//mpq_t slope, temp;
+//#include <fenv.h>
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -139,13 +140,14 @@ Solver::Solver() :
 		
 	n = opt_n;
 	k = opt_k;
-	mpq_inits(slope, temp, NULL);
+	//mpq_inits(slope, temp, NULL);
+	//fesetround(FE_TOWARDZERO);
 }
 
 
 Solver::~Solver()
 {
-	mpq_clears(slope, temp, NULL);
+	//mpq_clears(slope, temp, NULL);
 }
 
 
@@ -352,6 +354,18 @@ typedef std::pair<int, int> point;
 typedef std::pair<uint, uint> run;
 typedef std::pair<double,double> line;
 
+int gcd(int a, int b)
+{
+    int temp;
+    while (b != 0)
+    {
+        temp = a % b;
+        a = b;
+        b = temp;
+    }
+    return a;
+}
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -436,7 +450,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				double slope_dbl = INFINITY;
 				double b = it2->first;
 				if(run != 0)
-				{	//mpq_t slope, temp;
+				{	/*//mpq_t slope, temp;
 					//mpq_inits(slope, temp, NULL);
 					mpq_set_ui(slope, rise, run);
 					mpq_canonicalize(slope);
@@ -447,7 +461,17 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					mpq_sub(temp, temp, slope);
 					//b = y-m*x
 					b = mpq_get_d(temp);
-					//mpq_clears(slope, temp, NULL);
+					//mpq_clears(slope, temp, NULL);*/
+					const int g = gcd(rise, run);
+					const int g2 = gcd(abs(it2->second*run-rise*it2->first), run);
+					slope_dbl = (rise/g)/(double)(run/g);
+					b = ((it2->second*run - rise*it2->first)/g2)/(double)(run/g2);
+					/*double slope_alt = (rise/g)/(double)(run/g);
+					double b_alt = ((it2->second*run - rise*it2->first)/g2)/(double)(run/g2);
+					if(slope_dbl != slope_alt)
+						std::cout << std::fixed << std::setprecision(30) << 's' << slope_dbl << ' ' << slope_alt << ' ' << slope_dbl-slope_alt << '\n';
+					if(b != b_alt)
+						std::cout << std::fixed << std::setprecision(30) << 'b' << b << ' ' << b_alt << ' ' << b-b_alt << '\n';*/
 				}
 				
 				myset.insert(std::make_pair(slope_dbl, b));
