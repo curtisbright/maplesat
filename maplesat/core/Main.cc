@@ -18,6 +18,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+/* This file includes modifications for handling the iCNF format
+
+   Modifications (c) Siert Wieringa 2010-2011
+   
+   http://www.tcs.hut.fi/~swiering/icnf
+ */
+
 #include <errno.h>
 
 #include <signal.h>
@@ -84,11 +91,15 @@ int main(int argc, char** argv)
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption    from_bound("MAIN", "from-bound","Start solving from this bound.\n", 0, IntRange(0, INT32_MAX));
+        IntOption    to_bound  ("MAIN", "to-bound","Stop solving at this bound.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption    inc_bound  ("MAIN", "inc-bound","After solving a bound increment it by this amount.\n", 1, IntRange(1, INT32_MAX));
         
+	BoolOption   stopAtSat  ("MAIN", "stop-at-sat", "Stop solving if a bound is found SATISFIABLE.\n", false);
+	BoolOption   stopAtUnsat("MAIN", "stop-at-unsat", "Stop solving if a bound is found UNSATISFIABLE.\n", false);
         parseOptions(argc, argv, true);
 
         Solver S;
-        double initial_time = cpuTime();
 
         S.verbosity = verb;
         
@@ -126,64 +137,76 @@ int main(int argc, char** argv)
         if (in == NULL)
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         
-        if (S.verbosity > 0){
-            printf("============================[ Problem Statistics ]=============================\n");
-            printf("|                                                                             |\n"); }
-        
-        parse_DIMACS(in, S);
-        gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
-        
-        if (S.verbosity > 0){
-            printf("|  Number of variables:  %12d                                         |\n", S.nVars());
-            printf("|  Number of clauses:    %12d                                         |\n", S.nClauses()); }
-        
-        double parsed_time = cpuTime();
-        if (S.verbosity > 0){
-            printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
-            printf("|                                                                             |\n"); }
- 
-        // Change to signal-handlers that will only notify the solver and allow it to terminate
-        // voluntarily:
-        signal(SIGINT, SIGINT_interrupt);
-        signal(SIGXCPU,SIGINT_interrupt);
+	
+	// Change to signal-handlers that will only notify the solver and allow it to terminate
+	// voluntarily:
+	signal(SIGINT, SIGINT_interrupt);
+	signal(SIGXCPU,SIGINT_interrupt);
+	    
+	lbool ret = l_Undef;
+	vec<Lit> assumptions;
+	int bound = 0;
+	int next_solve_bound = from_bound;
+	StreamBuffer streamBuf(in);
+        while ( parse_DIMACS_main(streamBuf, S, &assumptions ) ) {
+	  if ( bound < next_solve_bound ) goto nextBound;
+
+	  if (S.verbosity > 0){
+	    printf("============================[ Problem Statistics ]=============================\n");
+	    printf("|                                                                             |\n"); 
+	    printf("|  Bound:                %12d                                         |\n", bound);
+	    printf("|  Number of variables:  %12d                                         |\n", S.nVars());
+	    printf("|  Number of clauses:    %12d                                         |\n", S.nClauses()); }      
        
-        if (!S.simplify()){
-            if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
-            if (S.verbosity > 0){
-                printf("===============================================================================\n");
-                printf("Solved by unit propagation\n");
-                printStats(S);
-                printf("\n"); }
-            printf("UNSATISFIABLE\n");
-            exit(20);
-        }
-        
-        vec<Lit> dummy;
-        lbool ret = S.solveLimited(dummy);
-        if (S.verbosity > 0){
-            printStats(S);
-            printf("\n"); }
-        printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
-        if (res != NULL){
-            if (ret == l_True){
-                fprintf(res, "SAT\n");
-                for (int i = 0; i < S.nVars(); i++)
-                    if (S.model[i] != l_Undef)
-                        fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-                fprintf(res, " 0\n");
-            }else if (ret == l_False)
-                fprintf(res, "UNSAT\n");
-            else
-                fprintf(res, "INDET\n");
-            fclose(res);
-        }
-        
-#ifdef NDEBUG
-        exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
-#else
-        return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
-#endif
+	  if (!S.simplify()){
+	    if (res != NULL) fprintf(res, "UNSAT\n");
+	    if (S.verbosity > 0){
+	      printf("===============================================================================\n");
+	      printf("Solved by unit propagation\n");
+	      printStats(S);
+	      printf("\n"); }
+	    printf("Bound %d is UNSATISFIABLE by IUP\n", bound);
+	    break;
+	  }
+	    
+	  ret = S.solveLimited(assumptions);
+	  if (S.verbosity > 0){
+	    printStats(S);
+	    printf("\n"); }
+	  printf("Bound %d is %s\n", bound, 
+		 ret == l_True ? "SATISFIABLE" : ret == l_False ? "UNSATISFIABLE" : "INDETERMINATE");
+	  if (res != NULL){
+	    if (ret == l_True){
+	      fprintf(res, "SAT ");
+	      for (int i = 0; i < S.nVars(); i++)
+		if (S.model[i] != l_Undef)
+		  fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+	      fprintf(res, " 0\n");
+	    }else if (ret == l_False)
+	      fprintf(res, "UNSAT\n");
+	    else
+	      fprintf(res, "INDET\n");            
+	  }
+
+	  if ( ret == l_Undef ) break;
+	  next_solve_bound+= inc_bound;
+
+nextBound:;
+	  if ( ( ++bound > to_bound )
+	       || ( ret == l_True && stopAtSat ) 
+	       || ( ret == l_False && stopAtUnsat ) 
+	       ) break;
+	}
+	if (res != NULL) fclose(res);
+	gzclose(in);
+
+	if (S.verbosity == 0){
+	  printf("\n");
+	  printStats(S);
+	  printf("\n"); }
+
+	return 0;
     } catch (OutOfMemoryException&){
         printf("===============================================================================\n");
         printf("INDETERMINATE\n");
