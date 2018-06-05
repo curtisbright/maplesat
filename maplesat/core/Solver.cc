@@ -359,6 +359,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	const int m = opt_m;
 	const int n = assigns.size()/m;
 
+	#ifdef DEBUG
+	for(int i=0; i<assigns.size(); i++)
+		printf("%s", assigns[i] == l_True? "T" : assigns[i] == l_False ? "F" : "?");
+	printf("\n");
+	#endif
+
 	//bool isset[n];
 	int word[n];
 	std::vector<run> runlist;
@@ -389,6 +395,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			runlen++;
 	}
 
+	#ifdef DEBUG
+	for(int i=0; i<n; i++)
+		printf("%d ", word[i]);
+	printf("\n");
+	#endif
+
 	if(runlen >= 2)
 		runlist.push_back(std::make_pair(runlen, runstart));
 	
@@ -397,29 +409,32 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		const int start = runit->second;
 		for(int i=1; i<=len/2; i++)
 		{	
-			if(start+2*i-1 >= start+len)
-				break;
-			
-			int sum1 = 0;
-			for(int j=start; j<start+i; j++)
-				sum1 += word[j];
-			
-			int sum2 = 0;
-			for(int j=start+i; j<start+2*i; j++)
-				sum2 += word[j];
-
-			if(sum1 == sum2)
+			for(int k=0; k<len; k++)
 			{
-				const int size = out_learnts.size();
-				out_learnts.push();
-				for(int j=start; j<start+2*i; j++)
-				{	out_learnts[size].push(mkLit(m*j+word[j], true));
+				if(start+k+2*i-1 >= start+len)
+					break;
+				
+				int sum1 = 0;
+				for(int j=start+k; j<start+k+i; j++)
+					sum1 += word[j];
+				
+				int sum2 = 0;
+				for(int j=start+k+i; j<start+k+2*i; j++)
+					sum2 += word[j];
+
+				if(sum1 == sum2)
+				{
+					const int size = out_learnts.size();
+					out_learnts.push();
+					for(int j=start+k; j<start+k+2*i; j++)
+					{	out_learnts[size].push(mkLit(m*j+word[j], true));
+					}
+					#ifdef DEBUG
+					printf("start %d len %d i %d k %d sum1 %d sum2 %d\n", start, len, i, k, sum1, sum2);
+					printclause(out_learnts[size]);
+					#endif
+					//return;
 				}
-				#ifdef DEBUG
-				printf("start %d len %d i %d\n", start, len, i);
-				printclause(out_learnts[size]);
-				#endif
-				//return;
 			}
 		}
 	}
