@@ -55,6 +55,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
+static IntOption     opt_m                 (_cat, "m",      "The alphabet size", 0, IntRange(0, INT32_MAX));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -127,7 +128,10 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+	if(opt_m==0)
+		printf("Need to set m\n"), exit(0);
+}
 
 
 Solver::~Solver()
@@ -327,7 +331,18 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int wait = 0;
+#include <utility>
+#include <vector>
+
+typedef std::pair<int, int> run;
+
+#ifdef DEBUG
+void printclause(vec<Lit>& cl)
+{	for(int i=0; i<cl.size(); i++)
+		printf("%c%d ", sign(cl[i]) ? '-' : '+', var(cl[i])+1);
+	printf("0\n");
+}
+#endif
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -341,15 +356,73 @@ int wait = 0;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
-    if (wait == 5 || complete) {
-        if (value(10) == l_True) {
-            out_learnts.push();
-            out_learnts[0].push(~mkLit(10));
-            out_learnts.push();
-            out_learnts[1].push(~mkLit(10));
-        }
-    }
+	const int m = opt_m;
+	const int n = assigns.size()/m;
+
+	//bool isset[n];
+	int word[n];
+	std::vector<run> runlist;
+	int runlen = 0;
+	int runstart = 0;
+
+	for(int i=0; i<n; i++)
+	{	//isset[i] = true;
+		int j;
+		for(j=0; j<m; j++)
+		{	if(assigns[m*i+j]==l_Undef)
+			{	//isset[i] = false;
+				word[i] = -1;
+
+				if(runlen >= 2)
+					runlist.push_back(std::make_pair(runlen, runstart));
+				
+				runlen = 0;
+				runstart = i+1;
+
+				break;
+			}
+			else if(assigns[m*i+j]==l_True)
+			{	word[i] = j;
+			}
+		}
+		if(j==m)
+			runlen++;
+	}
+
+	if(runlen >= 2)
+		runlist.push_back(std::make_pair(runlen, runstart));
+	
+	for(std::vector<run>::iterator runit = runlist.begin(); runit != runlist.end(); ++runit)
+	{	const int len = runit->first;
+		const int start = runit->second;
+		for(int i=1; i<=len/2; i++)
+		{	
+			if(start+2*i-1 >= start+len)
+				break;
+			
+			int sum1 = 0;
+			for(int j=start; j<start+i; j++)
+				sum1 += word[j];
+			
+			int sum2 = 0;
+			for(int j=start+i; j<start+2*i; j++)
+				sum2 += word[j];
+
+			if(sum1 == sum2)
+			{
+				const int size = out_learnts.size();
+				out_learnts.push();
+				for(int j=start; j<start+2*i; j++)
+				{	out_learnts[size].push(mkLit(m*j+word[j], true));
+				}
+				#ifdef DEBUG
+				printf("start %d len %d i %d\n", start, len, i);
+				printclause(out_learnts[size]);
+				#endif
+				//return;
+			}
+		}
+	}
 }
 
 bool Solver::assertingClause(CRef confl) {
