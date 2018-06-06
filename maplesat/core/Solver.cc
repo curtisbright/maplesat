@@ -407,7 +407,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	for(std::vector<run>::iterator runit = runlist.begin(); runit != runlist.end(); ++runit)
 	{	const int len = runit->first;
 		const int start = runit->second;
-		for(int i=1; i<=len/2; i++)
+		for(int i=2; i<=len/2; i++)
 		{	bool tobreak = false;
 			for(int k=0; k<len; k++)
 			{
