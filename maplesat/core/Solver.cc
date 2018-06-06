@@ -331,10 +331,10 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-#include <utility>
-#include <vector>
+//#include <utility>
+//#include <vector>
 
-typedef std::pair<int, int> run;
+//typedef std::pair<int, int> run;
 
 #ifdef DEBUG
 void printclause(vec<Lit>& cl)
@@ -343,6 +343,47 @@ void printclause(vec<Lit>& cl)
 	printf("0\n");
 }
 #endif
+
+void learn_clause(const int len, const int start, vec<vec<Lit> >& out_learnts, const int* word)
+{	
+	const int m = opt_m;
+	//const int n = assigns.size()/m;
+	
+	for(int i=2; i<=len/2; i++)
+	{	bool tobreak = false;
+		for(int k=0; k<len; k++)
+		{
+			if(start+k+2*i-1 >= start+len)
+				break;
+			
+			int sum1 = 0;
+			for(int j=start+k; j<start+k+i; j++)
+				sum1 += word[j];
+			
+			int sum2 = 0;
+			for(int j=start+k+i; j<start+k+2*i; j++)
+				sum2 += word[j];
+
+			if(sum1 == sum2)
+			{
+				const int size = out_learnts.size();
+				out_learnts.push();
+				for(int j=start+k; j<start+k+2*i; j++)
+				{	out_learnts[size].push(mkLit(m*j+word[j], true));
+				}
+				#ifdef DEBUG
+				printf("start %d len %d i %d k %d sum1 %d sum2 %d\n", start, len, i, k, sum1, sum2);
+				printclause(out_learnts[size]);
+				#endif
+				//return;
+				tobreak = true;
+				break;
+			}
+		}
+		if(tobreak)
+			break;
+	}
+}
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -367,7 +408,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 	//bool isset[n];
 	int word[n];
-	std::vector<run> runlist;
+	//std::vector<run> runlist;
 	int runlen = 0;
 	int runstart = 0;
 
@@ -380,7 +421,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				word[i] = -1;
 
 				if(runlen >= 2)
-					runlist.push_back(std::make_pair(runlen, runstart));
+					learn_clause(runlen, runstart, out_learnts, word);
+					//runlist.push_back(std::make_pair(runlen, runstart));
 				
 				runlen = 0;
 				runstart = i+1;
@@ -402,9 +444,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	#endif
 
 	if(runlen >= 2)
-		runlist.push_back(std::make_pair(runlen, runstart));
+		learn_clause(runlen, runstart, out_learnts, word);
+		//runlist.push_back(std::make_pair(runlen, runstart));
 	
-	for(std::vector<run>::iterator runit = runlist.begin(); runit != runlist.end(); ++runit)
+	/*for(std::vector<run>::iterator runit = runlist.begin(); runit != runlist.end(); ++runit)
 	{	const int len = runit->first;
 		const int start = runit->second;
 		for(int i=2; i<=len/2; i++)
@@ -441,7 +484,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			if(tobreak)
 				break;
 		}
-	}
+	}*/
 }
 
 bool Solver::assertingClause(CRef confl) {
