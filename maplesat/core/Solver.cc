@@ -55,10 +55,10 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
-//static IntOption     opt_n                 (_cat, "n",           "Length of walk", -1, IntRange(1, INT32_MAX));
+static IntOption     opt_n                 (_cat, "n",           "Length of walk", -1, IntRange(1, INT32_MAX));
 static IntOption     opt_k                 (_cat, "k",           "Number of collinear points to avoid", -1, IntRange(1, INT32_MAX));
 
-//unsigned int n;
+unsigned int n;
 unsigned int k;
 //mpq_t slope, temp;
 //#include <fenv.h>
@@ -135,10 +135,10 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-	if(opt_k < 1)
+	if(opt_n < 1 || opt_k < 1)
 		printf("Need to assign n and k.\n"), exit(1);
 		
-	//n = opt_n;
+	n = opt_n;
 	k = opt_k;
 	//mpq_inits(slope, temp, NULL);
 	//fesetround(FE_TOWARDZERO);
@@ -389,7 +389,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 	}
 	std::cout << '\n';*/
-	const uint n = assigns.size();
 
 	std::vector<run> runlist;
 	uint runlen = 0;
@@ -1391,15 +1390,6 @@ lbool Solver::solve_()
         ok = false;
 
     cancelUntil(0);
-
-#if 0
-    assert( activity.size() == nVars() );
-    fprintf(stderr, "activities");
-    for( int i = 0; i < nVars(); i++ )
-      fprintf(stderr, " %lf", activity[i]);
-    fprintf(stderr, "\n");
-#endif
-
     return status;
 }
 
