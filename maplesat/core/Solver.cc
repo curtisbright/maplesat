@@ -351,11 +351,8 @@ void learn_clause(const int len, const int start, vec<vec<Lit> >& out_learnts, c
 	
 	for(int i=2; i<=len/2; i++)
 	{	bool tobreak = false;
-		for(int k=0; k<len; k++)
+		for(int k=0; start+k+2*i <= start+len; k++)
 		{
-			if(start+k+2*i-1 >= start+len)
-				break;
-			
 			int sum1 = 0;
 			for(int j=start+k; j<start+k+i; j++)
 				sum1 += word[j];
