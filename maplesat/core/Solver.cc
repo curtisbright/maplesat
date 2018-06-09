@@ -60,6 +60,9 @@ static IntOption     opt_m                 (_cat, "m",      "The alphabet size",
 //=================================================================================================
 // Constructor/Destructor:
 
+#ifdef DEBUG
+int totals[50];
+#endif
 
 Solver::Solver() :
 
@@ -369,6 +372,7 @@ void learn_clause(const int len, const int start, vec<vec<Lit> >& out_learnts, c
 				{	out_learnts[size].push(mkLit(m*j+word[j], true));
 				}
 				#ifdef DEBUG
+				totals[out_learnts[size].size()]++;
 				printf("start %d len %d i %d k %d sum1 %d sum2 %d\n", start, len, i, k, sum1, sum2);
 				printclause(out_learnts[size]);
 				#endif
@@ -1369,6 +1373,12 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
 
+    #ifdef DEBUG
+    for(int i=0; i<50; i++)
+    {   if(totals[i] > 0)
+            printf("size %d: %d\n", i, totals[i]);
+    }
+    #endif
 
     if (status == l_True){
         // Extend & copy model:
