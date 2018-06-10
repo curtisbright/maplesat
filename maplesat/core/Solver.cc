@@ -346,14 +346,13 @@ Lit Solver::pickBranchLit()
 #ifdef DEBUG
 #include <iostream>
 #endif
-//#include <iomanip>
 #include <utility>
-#include <vector>
-#include <set>
+#include <map>
 
 typedef unsigned int uint;
 typedef std::pair<int, int> point;
-//typedef std::pair<uint, uint> run;
+typedef std::pair<uint, uint> runs;
+typedef std::pair<uint, runs> data;
 typedef std::pair<double,double> line;
 
 int gcd(int a, int b)
@@ -370,20 +369,19 @@ int gcd(int a, int b)
 
 void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_learnts)
 {	
-	std::vector<point> path;
-	point last_point = std::make_pair(0, 0);
-	path.push_back(last_point);
+	point path[len+1];
+	path[0] = std::make_pair(0, 0);
+	int last_x = 0;
+	int last_y = 0;
 	for(uint i=start; i < start + len; i++)
 	{	if(assigns[i] == l_True)
-		{	last_point = std::make_pair(last_point.first+1, last_point.second);
-		}
+			last_x++;
 		else if(assigns[i] == l_False)
-		{	last_point = std::make_pair(last_point.first, last_point.second+1);
-		}
-		path.push_back(last_point);
+			last_y++;
+		path[i-start+1] = std::make_pair(last_x, last_y);
 	}
 
-	#ifdef DEBUG	
+	#ifdef DEBUG
 	for(uint i=0; i<n; i++)
 	{	if(assigns[i] == l_True)
 			std::cout << 'T';
@@ -393,63 +391,75 @@ void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_
 			std::cout << '?';
 	}
 	std::cout << '\n';
-	
-	for(std::vector<point>::iterator it = path.begin(); it != path.end(); ++it)
-	{	std::cout << '(' << it->first << ',' << it->second << ')'; 
-	}
-	std::cout << '\n';
 	#endif
 	
-	std::multiset<line> myset; 
+	std::map<line, data> myset;
 	
-	for(std::vector<point>::iterator it1 = path.begin(); it1 != path.end(); ++it1)
-	{	for(std::vector<point>::iterator it2 = it1+1; it2 != path.end(); ++it2)
-		{	int rise = it2->second - it1->second;
-			int run = it2->first - it1->first;
-			double slope_dbl = INFINITY;
-			double b = it2->first;
-			if(run != 0)
-			{	/*//mpq_t slope, temp;
-				//mpq_inits(slope, temp, NULL);
-				mpq_set_ui(slope, rise, run);
-				mpq_canonicalize(slope);
-				slope_dbl = mpq_get_d(slope);
-				mpq_set_ui(temp, it2->first, 1);
-				mpq_mul(slope, slope, temp);
-				mpq_set_ui(temp, it2->second, 1);
-				mpq_sub(temp, temp, slope);
-				//b = y-m*x
-				b = mpq_get_d(temp);
-				//mpq_clears(slope, temp, NULL);*/
-				const int g = gcd(rise, run);
-				const int g2 = gcd(abs(it2->second*run-rise*it2->first), run);
-				slope_dbl = (rise/g)/(double)(run/g);
-				b = ((it2->second*run - rise*it2->first)/g2)/(double)(run/g2);
-				/*double slope_alt = (rise/g)/(double)(run/g);
-				double b_alt = ((it2->second*run - rise*it2->first)/g2)/(double)(run/g2);
-				if(slope_dbl != slope_alt)
-					std::cout << std::fixed << std::setprecision(30) << 's' << slope_dbl << ' ' << slope_alt << ' ' << slope_dbl-slope_alt << '\n';
-				if(b != b_alt)
-					std::cout << std::fixed << std::setprecision(30) << 'b' << b << ' ' << b_alt << ' ' << b-b_alt << '\n';*/
+	for(uint i=0; i<=len; i++)
+	{	for(uint j=i+1; j<=len; j++)
+		{	const int rise = path[j].second - path[i].second;
+			const int run = path[j].first - path[i].first;
+			if(rise != 0 && run != 0)
+			{	const int g = gcd(rise, run);
+				const int g2 = gcd(abs(path[j].second*run-rise*path[i].first), run);
+				const double slope_dbl = (rise/g)/(double)(run/g);
+				const double b = ((path[j].second*run - rise*path[j].first)/g2)/(double)(run/g2);
+				const line myline = std::make_pair(slope_dbl, b);
+				const runs myrun = std::make_pair(i, j);
+				std::map<line, data>::iterator search = myset.find(myline);
+				if(search == myset.end())
+					myset.insert(std::make_pair(myline, std::make_pair(1, myrun)));
+				else
+				{	search->second.first++;
+					const runs prevrun = search->second.second;
+					if(myrun.second-myrun.first > prevrun.second-prevrun.first)
+						search->second.second = myrun;
+				}
 			}
-			
-			myset.insert(std::make_pair(slope_dbl, b));
-			//std::cout << std::fixed << std::setprecision(3) << slope << ' ' << b << '\n';
 		}
 	}
+
+	uint min_lens = 999999;
+	uint min_start_point;
+	uint min_end_point;
 	
-	for(std::multiset<line>::iterator it = myset.begin(); it != myset.end(); it = myset.upper_bound(*it))
-	{	//std::cout << myset.count(*it) << " duplicate lines y = " << it->first << " x + " << it->second << "\n";
-		if(myset.count(*it) >= k*(k-1)/2)
-		{	int size = out_learnts.size();
-			out_learnts.push();
-			for(uint i=start; i < start + len; i++)
-			{	if(assigns[i] == l_True)
-					out_learnts[size].push(mkLit(i, true));
-				else
-					out_learnts[size].push(mkLit(i, false));
+	for(std::map<line, data>::iterator it = myset.begin(); it != myset.end(); ++it)
+	{	const uint dupes = it->second.first;
+		if(dupes >= k*(k-1)/2)
+		{	const uint start_point = ((it->second).second).first;
+			const uint end_point = ((it->second).second).second;
+
+			if(end_point - start_point < min_lens)
+			{	min_lens = end_point - start_point;
+				min_start_point = start_point;
+				min_end_point = end_point;
 			}
-			break;
+
+			#ifdef DEBUG
+			std::cout << dupes << " duplicate lines y = " << it->first.first << " x + " << it->first.second << "; points " << it->second.second.first << " to " << it->second.second.second <<  "\n";
+			for(uint i = start + start_point; i < start + end_point; i++)
+			{	if(assigns[i] == l_True)
+					std::cout << "U";
+				else
+					std::cout << "R";
+			}
+			std::cout << "\n";
+			for(uint i=start_point; i<=end_point; i++)
+				std::cout << "(" << path[i].first << ", " << path[i].second << ") ";
+			std::cout << "\n";
+			#endif
+		}
+	}
+
+	if(min_lens < 999999)
+	{
+		const int size = out_learnts.size();
+		out_learnts.push();
+		for(uint i = start + min_start_point; i < start + min_end_point; i++)
+		{	if(assigns[i] == l_True)
+				out_learnts[size].push(mkLit(i, true));
+			else
+				out_learnts[size].push(mkLit(i, false));
 		}
 	}
 }
@@ -477,6 +487,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 	}
 	std::cout << '\n';*/
+
+	//if(complete)
+	//	learn_clause(n, 0, out_learnts);
 
 	//std::vector<run> runlist;
 	uint runlen = 0;
