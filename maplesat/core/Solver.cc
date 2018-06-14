@@ -57,7 +57,9 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static IntOption     opt_n                 (_cat, "n",           "Length of walk", -1, IntRange(1, INT32_MAX));
 static IntOption     opt_k                 (_cat, "k",           "Number of collinear points to avoid", -1, IntRange(1, INT32_MAX));
+static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
 
+FILE* exhaustfile = NULL;
 unsigned int n;
 unsigned int k;
 //mpq_t slope, temp;
@@ -137,7 +139,10 @@ Solver::Solver() :
 {
 	if(opt_n < 1 || opt_k < 1)
 		printf("Need to assign n and k.\n"), exit(1);
-		
+
+	if(opt_exhaustive != NULL)
+		exhaustfile = fopen(opt_exhaustive, "a");
+
 	n = opt_n;
 	k = opt_k;
 	//mpq_inits(slope, temp, NULL);
@@ -147,6 +152,8 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
+	if(exhaustfile != NULL)
+		fclose(exhaustfile);
 	//mpq_clears(slope, temp, NULL);
 }
 
@@ -500,7 +507,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		} else
 		{	
 			if(runlen >= k)
-				learn_clause(runlen, runstart, out_learnts);
+			{	learn_clause(runlen, runstart, out_learnts);
+				if(out_learnts.size() > 0)
+					return;
+			}
 				//runlist.push_back(std::make_pair(runlen, runstart));
 			
 			runlen = 0;
@@ -509,7 +519,29 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 
 	if(runlen >= k)
-		learn_clause(runlen, runstart, out_learnts);
+	{	learn_clause(runlen, runstart, out_learnts);
+		if(out_learnts.size() > 0)
+			return;
+	}
+
+	if(complete && exhaustfile != NULL)
+	{	const int size = out_learnts.size();
+		out_learnts.push();
+		for(uint i=0; i<n; i++)
+		{	if(assigns[i] == l_True)
+			{	fprintf(exhaustfile, "U");
+				//printf("U");
+				out_learnts[size].push(mkLit(i, true));
+			}
+			else
+			{	fprintf(exhaustfile, "R");
+				//printf("R");
+				out_learnts[size].push(mkLit(i, false));
+			}
+		}
+		fprintf(exhaustfile, "\n");
+		//printf("\n");
+	}
 
 	/*for(std::vector<run>::iterator it = runlist.begin(); it != runlist.end(); ++it)
 	{	std::cout << '(' << it->first << ',' << it->second << ')';
