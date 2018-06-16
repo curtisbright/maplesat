@@ -56,9 +56,9 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static IntOption     opt_n                 (_cat, "n",           "Length of walk", -1, IntRange(1, INT32_MAX));
 static IntOption     opt_k                 (_cat, "k",           "Number of collinear points to avoid", -1, IntRange(1, INT32_MAX));
-//static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
+static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
 
-//FILE* exhaustfile = NULL;
+FILE* exhaustfile = NULL;
 unsigned int n;
 unsigned int k;
 //mpq_t slope, temp;
@@ -139,8 +139,8 @@ Solver::Solver() :
 	if(opt_n < 1 || opt_k < 1)
 		printf("Need to assign n and k.\n"), exit(1);
 
-	//if(opt_exhaustive != NULL)
-	//	exhaustfile = fopen(opt_exhaustive, "a");
+	if(opt_exhaustive != NULL)
+		exhaustfile = fopen(opt_exhaustive, "a");
 
 	n = opt_n;
 	k = opt_k;
@@ -149,8 +149,8 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-	//if(exhaustfile != NULL)
-	//	fclose(exhaustfile);
+	if(exhaustfile != NULL)
+		fclose(exhaustfile);
 }
 
 
@@ -555,24 +555,17 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 	}
 
-	/*if(complete && exhaustfile != NULL)
-	{	const int size = out_learnts.size();
-		out_learnts.push();
-		for(uint i=0; i<n; i++)
-		{	if(assigns[i] == l_True)
-			{	fprintf(exhaustfile, "U");
-				//printf("U");
-				out_learnts[size].push(mkLit(i, true));
+	if(exhaustfile != NULL)
+	{	out_learnts.push();
+		for(uint i=1; i<n; i++)
+		{	if(i==n-1 || ((path[i+1].first == path[i].first) != (path[i].first == path[i-1].first)))
+			{	out_learnts[0].push(mkLit(varno(path[i].first, path[i].second), true));
 			}
-			else
-			{	fprintf(exhaustfile, "R");
-				//printf("R");
-				out_learnts[size].push(mkLit(i, false));
-			}
+			fprintf(exhaustfile, "%d ", varno(path[i].first, path[i].second));
 		}
-		fprintf(exhaustfile, "\n");
-		//printf("\n");
-	}*/
+		fprintf(exhaustfile, "0\n");
+		return;
+	}
 }
 
 bool Solver::assertingClause(CRef confl) {
