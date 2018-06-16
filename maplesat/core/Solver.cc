@@ -20,7 +20,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 
-//#include "gmp.h"
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
@@ -57,9 +56,9 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static IntOption     opt_n                 (_cat, "n",           "Length of walk", -1, IntRange(1, INT32_MAX));
 static IntOption     opt_k                 (_cat, "k",           "Number of collinear points to avoid", -1, IntRange(1, INT32_MAX));
-static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
+//static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
 
-FILE* exhaustfile = NULL;
+//FILE* exhaustfile = NULL;
 unsigned int n;
 unsigned int k;
 //mpq_t slope, temp;
@@ -140,21 +139,18 @@ Solver::Solver() :
 	if(opt_n < 1 || opt_k < 1)
 		printf("Need to assign n and k.\n"), exit(1);
 
-	if(opt_exhaustive != NULL)
-		exhaustfile = fopen(opt_exhaustive, "a");
+	//if(opt_exhaustive != NULL)
+	//	exhaustfile = fopen(opt_exhaustive, "a");
 
 	n = opt_n;
 	k = opt_k;
-	//mpq_inits(slope, temp, NULL);
-	//fesetround(FE_TOWARDZERO);
 }
 
 
 Solver::~Solver()
 {
-	if(exhaustfile != NULL)
-		fclose(exhaustfile);
-	//mpq_clears(slope, temp, NULL);
+	//if(exhaustfile != NULL)
+	//	fclose(exhaustfile);
 }
 
 
@@ -358,8 +354,8 @@ Lit Solver::pickBranchLit()
 
 typedef unsigned int uint;
 typedef std::pair<int, int> point;
-typedef std::pair<uint, uint> runs;
-typedef std::pair<uint, runs> data;
+//typedef std::pair<uint, uint> runs;
+//typedef std::pair<uint, runs> data;
 typedef std::pair<double,double> line;
 
 int gcd(int a, int b)
@@ -374,7 +370,7 @@ int gcd(int a, int b)
     return a;
 }
 
-void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_learnts)
+/*void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_learnts)
 {	
 	point path[len+1];
 	path[0] = std::make_pair(0, 0);
@@ -469,6 +465,10 @@ void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_
 				out_learnts[size].push(mkLit(i, false));
 		}
 	}
+}*/
+
+int varno(const int x, const int y)
+{	return x + n*y - y*(y-1)/2;
 }
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
@@ -483,48 +483,79 @@ void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-	/*for(uint i=0; i<n; i++)
-	{	if(assigns[i] == l_True)
-			std::cout << 'T';
-		else if(assigns[i] == l_False)
-			std::cout << 'F';
+
+	if(!complete)
+		return;
+		
+	point path[n];
+	path[0] = std::make_pair(0, 0);
+	int last_x = 0;
+	int last_y = 0;
+	for(uint i=1; i<n; i++)
+	{	if(assigns[varno(last_x+1, last_y)] == l_True)
+			last_x++;
 		else
-		{	//complete = false;
-			std::cout << '?';
-		}
+			last_y++;
+		path[i] = std::make_pair(last_x, last_y);
 	}
-	std::cout << '\n';*/
 
-	//if(complete)
-	//	learn_clause(n, 0, out_learnts);
-
-	//std::vector<run> runlist;
-	uint runlen = 0;
-	uint runstart = 0;
-	for(uint i=0; i<n; i++)
-	{	if(assigns[i] != l_Undef)
-		{	runlen++;
-		} else
-		{	
-			if(runlen >= k)
-			{	learn_clause(runlen, runstart, out_learnts);
-				if(out_learnts.size() > 0)
-					return;
+	std::map<line, uint> myset;
+	
+	for(uint j=1; j<n; j++)
+	{	for(uint i=0; i<j; i++)
+		{	const int rise = path[j].second - path[i].second;
+			const int run = path[j].first - path[i].first;
+			if(rise != 0 && run != 0)
+			{	const int g = gcd(rise, run);
+				const int g2 = gcd(abs(path[j].second*run-rise*path[i].first), run);
+				const int min_run = run/g;
+				const int min_rise = rise/g;
+				const double slope_dbl = (min_rise)/(double)(min_run);
+				const double b = ((path[j].second*run - rise*path[j].first)/g2)/(double)(run/g2);
+				const line myline = std::make_pair(slope_dbl, b);
+				std::map<line, uint>::iterator search = myset.find(myline);
+				if(search == myset.end())
+					myset.insert(std::make_pair(myline, 1));
+				else
+				{	search->second++;
+					if(search->second == k*(k-1)/2)
+					{	out_learnts.push();
+						//printf("conflict: line y = %.5f x + %.5f with points (%d %d) and (%d %d), rise = %d, run = %d\n", slope_dbl, b, path[j].first, path[j].second, path[i].first, path[i].second, min_rise, min_run);
+						int last_x=path[j].first, last_y=path[j].second;
+						for(uint count=0; count<k; last_x -= min_run, last_y -= min_rise)
+						{	//printf("count: %d, (%d %d)\n", count, last_x, last_y);
+							if(assigns[varno(last_x, last_y)] == l_True)
+							{	out_learnts[0].push(mkLit(varno(last_x, last_y), true));
+								count++;
+							}
+							/*if(last_x < 0 || last_y < 0)
+							{	printf("last_x: %d, last_y: %d\n", last_x, last_y);
+								for(int i=0; i < n; i++)
+								{	printf("(%d %d) ", path[i].first, path[i].second);
+								}
+								printf("\n");
+								int c = 0;
+								for(int i=0; i<n; i++)
+								{	for(int j=0; j<n-i; j++)
+									{	if(assigns[c] == l_True)
+											printf("X");
+										else
+											printf(".");
+										c++;
+									}
+									printf("\n");
+								}
+								exit(1);
+							}*/
+						}
+						return;
+					}
+				}
 			}
-				//runlist.push_back(std::make_pair(runlen, runstart));
-			
-			runlen = 0;
-			runstart = i+1;
 		}
 	}
 
-	if(runlen >= k)
-	{	learn_clause(runlen, runstart, out_learnts);
-		if(out_learnts.size() > 0)
-			return;
-	}
-
-	if(complete && exhaustfile != NULL)
+	/*if(complete && exhaustfile != NULL)
 	{	const int size = out_learnts.size();
 		out_learnts.push();
 		for(uint i=0; i<n; i++)
@@ -541,64 +572,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "\n");
 		//printf("\n");
-	}
-
-	/*for(std::vector<run>::iterator it = runlist.begin(); it != runlist.end(); ++it)
-	{	std::cout << '(' << it->first << ',' << it->second << ')';
-	}
-	std::cout << '\n';*/
-	
-	/*for(std::vector<run>::iterator runit = runlist.begin(); runit != runlist.end(); ++runit)
-	{	const int len = runit->first;
-		const int start = runit->second;
-		std::vector<point> path;
-		point last_point = std::make_pair(0, 0);
-		path.push_back(last_point);
-		for(uint i=start; i < start + len; i++)
-		{	if(assigns[i] == l_True)
-			{	last_point = std::make_pair(last_point.first+1, last_point.second);
-			}
-			else if(assigns[i] == l_False)
-			{	last_point = std::make_pair(last_point.first, last_point.second+1);
-			}
-			path.push_back(last_point);
-		}
-		
-		
-		std::multiset<line> myset; 
-		
-		for(std::vector<point>::iterator it1 = path.begin(); it1 != path.end(); ++it1)
-		{	for(std::vector<point>::iterator it2 = it1+1; it2 != path.end(); ++it2)
-			{	int rise = it2->second - it1->second;
-				int run = it2->first - it1->first;
-				double slope_dbl = INFINITY;
-				double b = it2->first;
-				if(run != 0)
-				{	const int g = gcd(rise, run);
-					const int g2 = gcd(abs(it2->second*run-rise*it2->first), run);
-					slope_dbl = (rise/g)/(double)(run/g);
-					b = ((it2->second*run - rise*it2->first)/g2)/(double)(run/g2);
-				}
-				
-				myset.insert(std::make_pair(slope_dbl, b));
-				//std::cout << std::fixed << std::setprecision(3) << slope << ' ' << b << '\n';
-			}
-		}
-		
-		for(std::multiset<line>::iterator it = myset.begin(); it != myset.end(); it = myset.upper_bound(*it))
-		{	//std::cout << myset.count(*it) << " duplicate lines y = " << it->first << " x + " << it->second << "\n";
-			if(myset.count(*it) >= k*(k-1)/2)
-			{	int size = out_learnts.size();
-				out_learnts.push();
-				for(uint i=start; i < start + len; i++)
-				{	if(assigns[i] == l_True)
-						out_learnts[size].push(mkLit(i, true));
-					else
-						out_learnts[size].push(mkLit(i, false));
-				}
-				break;
-			}
-		}
 	}*/
 }
 
