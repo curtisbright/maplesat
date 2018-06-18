@@ -84,6 +84,7 @@ int main(int argc, char** argv)
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+	StringOption assums ("MAIN", "assums", "Comma-separated list of assumptions to use.");
         
         parseOptions(argc, argv, true);
 
@@ -160,6 +161,23 @@ int main(int argc, char** argv)
         }
         
         vec<Lit> dummy;
+        if (assums) {
+            const char* the_assums = assums;
+            char* tmp = (char*)the_assums;
+            int i = 0;
+            while (sscanf(tmp, "%d", &i) == 1) {
+                Var v = abs(i) - 1;
+                Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                dummy.push(l);
+                while(*tmp != ',' && *tmp != '\0')
+                    tmp++;
+                if(*tmp == ',')
+                    tmp++;
+            }
+        }
+        /*for(int i = 0; i < dummy.size(); i++) {
+            printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
+        }*/
         lbool ret = S.solveLimited(dummy);
         if (S.verbosity > 0){
             printStats(S);
