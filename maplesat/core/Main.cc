@@ -188,12 +188,14 @@ int main(int argc, char** argv)
                     tmp++;
             }
         }
+        #ifdef DEBUG
         printf("n: %d k: %d Starting points: ", S.n, S.k);
         for(uint i = 0; i <= S.m; i++) {
             printf("(%d %d) ", S.starting_points[i].first, S.starting_points[i].second);
         }
         printf("\n");
         printf("blocking points: ");
+        #endif
 
         for(uint j=1; j<=S.m; j++)
         {   for(uint i=0; i<j; i++)
@@ -212,20 +214,46 @@ int main(int argc, char** argv)
                         S.starting_lines.insert(std::make_pair(myline, 1));
                     else
                     {   search->second++;
-                        if(search->second == (S.k-1)*(S.k-2)/2)
+                        /*if(search->second == (S.k-1)*(S.k-2)/2)
                         {   uint last_x = S.starting_points[j].first, last_y = S.starting_points[j].second;
                             while(last_x+last_y < S.n)
                             {   last_x += min_run;
                                 last_y += min_rise;
                                 dummy.push(~mkLit(S.varno(last_x, last_y)));
+                                #ifdef DEBUG
                                 printf("(%d %d) ", last_x, last_y);
+                                #endif
                             }
+                        }
+                        else*/ if(search->second == (S.k-2)*(S.k-3)/2)
+                        {   uint last_x_1 = S.starting_points[j].first, last_y_1 = S.starting_points[j].second;
+                            uint last_x_2 = last_x_1+min_run, last_y_2 = last_y_1+min_rise;
+                            while(last_x_1+last_y_1 < S.n)
+                            {   while(last_x_2+last_y_2 < S.n)
+                                {   
+                                    last_x_2 += min_run;
+                                    last_y_2 += min_rise;
+                                    S.addClause(~mkLit(S.varno(last_x_1, last_y_1)), ~mkLit(S.varno(last_x_2, last_y_2)));
+                                    #ifdef DEBUG
+                                    printf("[(%d %d) (%d %d)] ", last_x_1, last_y_1, last_x_2, last_y_2);
+                                    #endif
+                                }
+                                last_x_1 += min_run;
+                                last_y_1 += min_rise;
+                                last_x_2 = last_x_1+min_run;
+                                last_y_2 = last_y_1+min_rise;
+                            }
+                            #ifdef DEBUG
+                            printf("\n");
+                            #endif
                         }
                     }
                 }
             }
         }
+        #ifdef DEBUG
         printf("\n");
+        #endif
 
         lbool ret = S.solveLimited(dummy);
         if (S.verbosity > 0){
