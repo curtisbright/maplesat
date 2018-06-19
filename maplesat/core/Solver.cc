@@ -59,10 +59,6 @@ static IntOption     opt_k                 (_cat, "k",           "Number of coll
 static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
 
 FILE* exhaustfile = NULL;
-unsigned int n;
-unsigned int k;
-//mpq_t slope, temp;
-//#include <fenv.h>
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -349,16 +345,8 @@ Lit Solver::pickBranchLit()
 #ifdef DEBUG
 #include <iostream>
 #endif
-#include <utility>
-#include <map>
 
-typedef unsigned int uint;
-typedef std::pair<int, int> point;
-//typedef std::pair<uint, uint> runs;
-//typedef std::pair<uint, runs> data;
-typedef std::pair<double,double> line;
-
-int gcd(int a, int b)
+int Solver::gcd(int a, int b)
 {
     int temp;
     while (b != 0)
@@ -370,104 +358,7 @@ int gcd(int a, int b)
     return a;
 }
 
-/*void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_learnts)
-{	
-	point path[len+1];
-	path[0] = std::make_pair(0, 0);
-	int last_x = 0;
-	int last_y = 0;
-	for(uint i=start; i < start + len; i++)
-	{	if(assigns[i] == l_True)
-			last_x++;
-		else if(assigns[i] == l_False)
-			last_y++;
-		path[i-start+1] = std::make_pair(last_x, last_y);
-	}
-
-	#ifdef DEBUG
-	for(uint i=0; i<n; i++)
-	{	if(assigns[i] == l_True)
-			std::cout << 'T';
-		else if(assigns[i] == l_False)
-			std::cout << 'F';
-		else
-			std::cout << '?';
-	}
-	std::cout << '\n';
-	#endif
-	
-	std::map<line, data> myset;
-	
-	for(uint i=0; i<=len; i++)
-	{	for(uint j=i+1; j<=len; j++)
-		{	const int rise = path[j].second - path[i].second;
-			const int run = path[j].first - path[i].first;
-			if(rise != 0 && run != 0)
-			{	const int g = gcd(rise, run);
-				const int g2 = gcd(abs(path[j].second*run-rise*path[i].first), run);
-				const double slope_dbl = (rise/g)/(double)(run/g);
-				const double b = ((path[j].second*run - rise*path[j].first)/g2)/(double)(run/g2);
-				const line myline = std::make_pair(slope_dbl, b);
-				const runs myrun = std::make_pair(i, j);
-				std::map<line, data>::iterator search = myset.find(myline);
-				if(search == myset.end())
-					myset.insert(std::make_pair(myline, std::make_pair(1, myrun)));
-				else
-				{	search->second.first++;
-					const runs prevrun = search->second.second;
-					if(myrun.second-myrun.first > prevrun.second-prevrun.first)
-						search->second.second = myrun;
-				}
-			}
-		}
-	}
-
-	uint min_lens = 999999;
-	uint min_start_point;
-	uint min_end_point;
-	
-	for(std::map<line, data>::iterator it = myset.begin(); it != myset.end(); ++it)
-	{	const uint dupes = it->second.first;
-		if(dupes >= k*(k-1)/2)
-		{	const uint start_point = ((it->second).second).first;
-			const uint end_point = ((it->second).second).second;
-
-			if(end_point - start_point < min_lens)
-			{	min_lens = end_point - start_point;
-				min_start_point = start_point;
-				min_end_point = end_point;
-			}
-
-			#ifdef DEBUG
-			std::cout << dupes << " duplicate lines y = " << it->first.first << " x + " << it->first.second << "; points " << it->second.second.first << " to " << it->second.second.second <<  "\n";
-			for(uint i = start + start_point; i < start + end_point; i++)
-			{	if(assigns[i] == l_True)
-					std::cout << "U";
-				else
-					std::cout << "R";
-			}
-			std::cout << "\n";
-			for(uint i=start_point; i<=end_point; i++)
-				std::cout << "(" << path[i].first << ", " << path[i].second << ") ";
-			std::cout << "\n";
-			#endif
-		}
-	}
-
-	if(min_lens < 999999)
-	{
-		const int size = out_learnts.size();
-		out_learnts.push();
-		for(uint i = start + min_start_point; i < start + min_end_point; i++)
-		{	if(assigns[i] == l_True)
-				out_learnts[size].push(mkLit(i, true));
-			else
-				out_learnts[size].push(mkLit(i, false));
-		}
-	}
-}*/
-
-int varno(const int x, const int y)
+int Solver::varno(const int x, const int y)
 {	return x + n*y - y*(y-1)/2;
 }
 
@@ -499,9 +390,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		path[i] = std::make_pair(last_x, last_y);
 	}
 
-	std::map<line, uint> myset;
+	std::map<line, uint> myset = starting_lines;
 	
-	for(uint j=1; j<n; j++)
+	for(uint j=m+1; j<n; j++)
 	{	for(uint i=0; i<j; i++)
 		{	const int rise = path[j].second - path[i].second;
 			const int run = path[j].first - path[i].first;

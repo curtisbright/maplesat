@@ -27,6 +27,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Options.h"
 #include "core/SolverTypes.h"
 
+#include <utility>
+#include <map>
+
+typedef unsigned int uint;
+typedef std::pair<int, int> point;
+typedef std::pair<double,double> line;
 
 namespace Minisat {
 
@@ -110,6 +116,14 @@ public:
     vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
     vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
                                   // this vector represent the final conflict clause expressed in the assumptions.
+
+    uint      m;
+    uint      k;
+    uint      n;
+    int       varno(const int x, const int y);
+    int       gcd(int a, int b);
+    point     starting_points[50];
+    std::map<line, uint> starting_lines;
 
     // Mode of operation:
     //
