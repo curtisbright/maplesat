@@ -410,7 +410,20 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				else
 				{	search->second++;
 					if(search->second == k*(k-1)/2)
-					{	out_learnts.push();
+					{	
+						printf("Error: %d collinear points found on line y = %.5f x + %.5f\n", k, slope_dbl, b);
+						for(int y=n-1; y>=0; y--)
+						{	for(uint x=0; x+y<n; x++)
+							{	if(assigns[varno(x,y)]==l_True)
+									printf("X");
+								else
+									printf(".");
+							}
+							printf("\n");
+						}
+
+						exit(0);
+						out_learnts.push();
 						//printf("conflict: line y = %.5f x + %.5f with points (%d %d) and (%d %d), rise = %d, run = %d\n", slope_dbl, b, path[j].first, path[j].second, path[i].first, path[i].second, min_rise, min_run);
 						int last_x=path[j].first, last_y=path[j].second;
 						for(uint count=0; count<k; last_x -= min_run, last_y -= min_rise)
