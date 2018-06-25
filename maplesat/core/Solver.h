@@ -122,7 +122,7 @@ public:
     uint      n;
     int       varno(const int x, const int y);
     int       gcd(int a, int b);
-    point     starting_points[50];
+    point     starting_points[500];
     std::map<line, uint> starting_lines;
 
     // Mode of operation:

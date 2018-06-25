@@ -132,14 +132,12 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-	if(opt_n < 1 || opt_k < 1)
-		printf("Need to assign n and k.\n"), exit(1);
-
 	if(opt_exhaustive != NULL)
 		exhaustfile = fopen(opt_exhaustive, "a");
-
-	n = opt_n;
-	k = opt_k;
+	if(opt_n != -1)
+		n = opt_n;
+	if(opt_k != -1)
+		k = opt_k;
 }
 
 
@@ -375,7 +373,7 @@ int Solver::varno(const int x, const int y)
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
-	if(!complete)
+	if(!complete && opt_n != -1 && opt_k != -1)
 		return;
 		
 	point path[n];

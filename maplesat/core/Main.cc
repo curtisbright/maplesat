@@ -84,8 +84,9 @@ int main(int argc, char** argv)
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
-	StringOption assums ("MAIN", "assums", "Comma-separated list of assumptions to use.");
-        
+        StringOption assums ("MAIN", "assums", "Comma-separated list of assumptions to use.");
+        StringOption tikz   ("MAIN", "tikz",   "File in which to write TikZ commands.");
+ 
         parseOptions(argc, argv, true);
 
         Solver S;
@@ -161,97 +162,135 @@ int main(int argc, char** argv)
         }
         
         vec<Lit> dummy;
-        if (assums) {
-            S.starting_points[0] = std::make_pair(0, 0);
-            int last_x = 0;
-            int last_y = 0;
-            int last_i = 1;
+        if (assums)
+        {
+                S.starting_points[0] = std::make_pair(0, 0);
+                int last_x = 0;
+                int last_y = 0;
+                int last_i = 1;
 
-            const char* the_assums = assums;
-            char* tmp = (char*)the_assums;
-            int i;
-            while (sscanf(tmp, "%d", &i) == 1) {
-                if(i == last_i+1)
-                    last_x++;
-                else
-                    last_y++;
-                last_i = i;
-                S.m++;
-                S.starting_points[S.m] = std::make_pair(last_x, last_y);
+                const char* the_assums = assums;
+                char* tmp = (char*)the_assums;
+                int i;
+                while (sscanf(tmp, "%d", &i) == 1)
+                {       
+                        if(i == last_i+1)
+                            last_x++;
+                        else
+                            last_y++;
+                        last_i = i;
+                        S.m++;
+                        S.starting_points[S.m] = std::make_pair(last_x, last_y);
 
-                Var v = abs(i) - 1;
-                Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
-                dummy.push(l);
-                while(*tmp != ',' && *tmp != '\0')
-                    tmp++;
-                if(*tmp == ',')
-                    tmp++;
-            }
-        }
-        #ifdef DEBUG
-        printf("n: %d k: %d Starting points: ", S.n, S.k);
-        for(uint i = 0; i <= S.m; i++) {
-            printf("(%d %d) ", S.starting_points[i].first, S.starting_points[i].second);
-        }
-        printf("\n");
-        printf("blocking points: ");
-        #endif
+                        Var v = abs(i) - 1;
+                        Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                        dummy.push(l);
+                        while(*tmp != ',' && *tmp != '\0')
+                            tmp++;
+                        if(*tmp == ',')
+                            tmp++;
+                }
+                
+                #ifdef DEBUG
+                printf("n: %d k: %d Starting points: ", S.n, S.k);
+                for(uint i = 0; i <= S.m; i++) {
+                    printf("(%d %d) ", S.starting_points[i].first, S.starting_points[i].second);
+                }
+                printf("\n");
+                printf("blocking points: ");
+                #endif
 
-        for(uint j=1; j<=S.m; j++)
-        {   for(uint i=0; i<j; i++)
-            {   const int rise = S.starting_points[j].second - S.starting_points[i].second;
-                const int run = S.starting_points[j].first - S.starting_points[i].first;
-                if(rise != 0 && run != 0)
-                {   const int g = S.gcd(rise, run);
-                    const int g2 = S.gcd(abs(S.starting_points[j].second*run-rise*S.starting_points[i].first), run);
-                    const int min_run = run/g;
-                    const int min_rise = rise/g;
-                    const double slope_dbl = (min_rise)/(double)(min_run);
-                    const double b = ((S.starting_points[j].second*run - rise*S.starting_points[j].first)/g2)/(double)(run/g2);
-                    const line myline = std::make_pair(slope_dbl, b);
-                    std::map<line, uint>::iterator search = S.starting_lines.find(myline);
-                    if(search == S.starting_lines.end())
-                        S.starting_lines.insert(std::make_pair(myline, 1));
-                    else
-                    {   search->second++;
-                        if(search->second == (S.k-1)*(S.k-2)/2)
-                        {   uint last_x = S.starting_points[j].first+min_run, last_y = S.starting_points[j].second+min_rise;
-                            while(last_x+last_y < S.n)
-                            {
-                                dummy.push(~mkLit(S.varno(last_x, last_y)));
-                                #ifdef DEBUG
-                                printf("(%d %d) ", last_x, last_y);
-                                #endif
-                                last_x += min_run;
-                                last_y += min_rise;
+                FILE* tikzfile = NULL;
+                if(tikz)
+                {   
+                    tikzfile = fopen(tikz, "w");
+                    fprintf(tikzfile, "\\clip (-1,-1) rectangle (%d,%d);\n", last_x+1, last_y+1);
+                }
+
+                for(uint j=1; j<=S.m; j++)
+                {   for(uint i=0; i<j; i++)
+                    {   const int rise = S.starting_points[j].second - S.starting_points[i].second;
+                        const int run = S.starting_points[j].first - S.starting_points[i].first;
+                        if(run == 0)
+                        {   const line myline = std::make_pair(INFINITY, S.starting_points[j].first);
+                            std::map<line, uint>::iterator search = S.starting_lines.find(myline);
+                            if(search == S.starting_lines.end())
+                                S.starting_lines.insert(std::make_pair(myline, 1));
+                            else
+                            {   search->second++;
+                                if(search->second == (S.k-1)*(S.k-2)/2)
+                                {   
+                                    if(tikzfile != NULL)
+                                        fprintf(tikzfile, "\\draw[dashed] (%d,%d) -- (%d,%d);\n", S.starting_points[j].first, -2, S.starting_points[j].first, last_y+2);
+                                }
                             }
                         }
-                        if(search->second == (S.k-2)*(S.k-3)/2)
-                        {   uint last_x_1 = S.starting_points[j].first+min_run, last_y_1 = S.starting_points[j].second+min_rise;
-                            uint last_x_2 = last_x_1+min_run, last_y_2 = last_y_1+min_rise;
-                            while(last_x_1+last_y_1 < S.n)
-                            {   while(last_x_2+last_y_2 < S.n)
-                                {   
-                                    S.addClause(~mkLit(S.varno(last_x_1, last_y_1)), ~mkLit(S.varno(last_x_2, last_y_2)));
-                                    #ifdef DEBUG
-                                    printf("[(%d %d) (%d %d)] ", last_x_1, last_y_1, last_x_2, last_y_2);
-                                    #endif
-                                    last_x_2 += min_run;
-                                    last_y_2 += min_rise;
+                        else
+                        {   const int g = S.gcd(rise, run);
+                            const int g2 = S.gcd(abs(S.starting_points[j].second*run-rise*S.starting_points[i].first), run);
+                            const int min_run = run/g;
+                            const int min_rise = rise/g;
+                            const double slope_dbl = (min_rise)/(double)(min_run);
+                            const double b = ((S.starting_points[j].second*run - rise*S.starting_points[j].first)/g2)/(double)(run/g2);
+                            const line myline = std::make_pair(slope_dbl, b);
+                            std::map<line, uint>::iterator search = S.starting_lines.find(myline);
+                            if(search == S.starting_lines.end())
+                                S.starting_lines.insert(std::make_pair(myline, 1));
+                            else
+                            {   search->second++;
+                                if(search->second == S.k*(S.k-1)/2)
+                                {   printf("Error: %d collinear points found on line y = %.5f x + %.5f\n", S.k, slope_dbl, b);
                                 }
-                                last_x_1 += min_run;
-                                last_y_1 += min_rise;
-                                last_x_2 = last_x_1+min_run;
-                                last_y_2 = last_y_1+min_rise;
+                                if(search->second == (S.k-1)*(S.k-2)/2)
+                                {   
+                                    //printf("%d collinear points found on line y = %.5f x + %.5f\n", S.k-1, slope_dbl, b);
+                                    if(tikzfile != NULL)
+                                        fprintf(tikzfile, "\\draw[dashed] (%d,%.5f) -- (%d,%.5f);\n", -2, -2*slope_dbl+b, last_x+2, (last_x+2)*slope_dbl+b);
+                                }
+                                /*if(search->second == (S.k-1)*(S.k-2)/2)
+                                {   uint last_x = S.starting_points[j].first+min_run, last_y = S.starting_points[j].second+min_rise;
+                                    while(last_x+last_y < S.n)
+                                    {
+                                    dummy.push(~mkLit(S.varno(last_x, last_y)));
+                                    #ifdef DEBUG
+                                    printf("(%d %d) ", last_x, last_y);
+                                    #endif
+                                    last_x += min_run;
+                                    last_y += min_rise;
+                                    }
+                                }
+                                if(search->second == (S.k-2)*(S.k-3)/2)
+                                {   uint last_x_1 = S.starting_points[j].first+min_run, last_y_1 = S.starting_points[j].second+min_rise;
+                                    uint last_x_2 = last_x_1+min_run, last_y_2 = last_y_1+min_rise;
+                                    while(last_x_1+last_y_1 < S.n)
+                                    {   while(last_x_2+last_y_2 < S.n)
+                                    {   
+                                        S.addClause(~mkLit(S.varno(last_x_1, last_y_1)), ~mkLit(S.varno(last_x_2, last_y_2)));
+                                        #ifdef DEBUG
+                                        printf("[(%d %d) (%d %d)] ", last_x_1, last_y_1, last_x_2, last_y_2);
+                                        #endif
+                                        last_x_2 += min_run;
+                                        last_y_2 += min_rise;
+                                    }
+                                    last_x_1 += min_run;
+                                    last_y_1 += min_rise;
+                                    last_x_2 = last_x_1+min_run;
+                                    last_y_2 = last_y_1+min_rise;
+                                    }
+                                }*/
                             }
                         }
                     }
                 }
-            }
+
+                if(tikzfile != NULL)
+                    fclose(tikzfile);
+
+                #ifdef DEBUG
+                printf("\n");
+                #endif
+
         }
-        #ifdef DEBUG
-        printf("\n");
-        #endif
 
         lbool ret = S.solveLimited(dummy);
         if (S.verbosity > 0){
