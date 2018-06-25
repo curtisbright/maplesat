@@ -245,7 +245,11 @@ int main(int argc, char** argv)
                                 {   
                                     //printf("%d collinear points found on line y = %.5f x + %.5f\n", S.k-1, slope_dbl, b);
                                     if(tikzfile != NULL)
-                                        fprintf(tikzfile, "\\draw[dashed] (%d,%.5f) -- (%d,%.5f);\n", -2, -2*slope_dbl+b, last_x+2, (last_x+2)*slope_dbl+b);
+                                    {   if(b<0)
+                                            fprintf(tikzfile, "\\draw[dashed] (%.5f,%d) -- (%d,%.5f);\n", (-2-b)/slope_dbl, -2, last_x+2, (last_x+2)*slope_dbl+b);
+                                        else
+                                            fprintf(tikzfile, "\\draw[dashed] (%d,%.5f) -- (%d,%.5f);\n", -2, -2*slope_dbl+b, last_x+2, (last_x+2)*slope_dbl+b);
+                                    }
                                 }
                                 /*if(search->second == (S.k-1)*(S.k-2)/2)
                                 {   uint last_x = S.starting_points[j].first+min_run, last_y = S.starting_points[j].second+min_rise;
