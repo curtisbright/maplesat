@@ -56,6 +56,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static IntOption     opt_n                 (_cat, "n",           "Length of walk", -1, IntRange(1, INT32_MAX));
 static IntOption     opt_k                 (_cat, "k",           "Number of collinear points to avoid", -1, IntRange(1, INT32_MAX));
+static IntOption     opt_v                 (_cat, "v",           "Number of original variables", -1, IntRange(1, INT32_MAX));
 static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
 
 FILE* exhaustfile = NULL;
@@ -138,6 +139,8 @@ Solver::Solver() :
 		n = opt_n;
 	if(opt_k != -1)
 		k = opt_k;
+	if(opt_v != -1)
+		v = opt_v;
 }
 
 
@@ -360,6 +363,61 @@ int Solver::varno(const int x, const int y)
 {	return x + n*y - y*(y-1)/2;
 }
 
+void Solver::at_most_k(vec<Lit>& X, vec<vec<Lit> >& out_learnts)
+{    
+     const uint N = X.size();
+     const uint K = k-1;
+
+     Lit R[N-1][K];
+     for(uint i=0; i<N-1; i++)
+     {    for(uint j=0; j<K; j++)
+          {    R[i][j] = mkLit(v);
+               v++;
+          }
+     }
+
+     for(uint i=0; i<N-1; i++)
+     {    int size = out_learnts.size();
+          out_learnts.push();
+          out_learnts[size].push(~X[i]);
+          out_learnts[size].push(R[i][0]);
+     }
+
+     for(uint i=0; i<K-1; i++)
+     {    for(uint j=i+1; j<K; j++)
+          {    int size = out_learnts.size();
+               out_learnts.push();
+               out_learnts[size].push(~R[i][j]);
+          }
+     }
+
+     for(uint i=1; i<N-1; i++)
+     {    for(uint j=0; j<K; j++)
+          {    int size = out_learnts.size();
+               out_learnts.push();
+               out_learnts[size].push(~R[i-1][j]);
+               out_learnts[size].push(R[i][j]);
+          }
+     }
+
+     for(uint i=1; i<N-1; i++)
+     {    for(uint j=1; j<K; j++)
+          {    int size = out_learnts.size();
+               out_learnts.push();
+               out_learnts[size].push(~X[i]);
+               out_learnts[size].push(~R[i-1][j-1]);
+               out_learnts[size].push(R[i][j]);
+          }
+     }
+
+     for(uint i=1; i<N; i++)
+     {    int size = out_learnts.size();
+          out_learnts.push();
+          out_learnts[size].push(~X[i]);
+          out_learnts[size].push(~R[i-1][K-1]);
+     }
+}
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -373,8 +431,12 @@ int Solver::varno(const int x, const int y)
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
-	if(!complete && opt_n != -1 && opt_k != -1)
+	if(!complete || opt_n == -1 || opt_k == -1 || opt_v == -1)
 		return;
+
+     for(int i=0; i<assigns.size(); i++)
+          printf("%c", assigns[i] == l_True ? 'T' : assigns[i] == l_False ? 'F' : '?');
+     printf("\n");
 		
 	point path[n];
 	path[0] = std::make_pair(0, 0);
@@ -407,7 +469,52 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					myset.insert(std::make_pair(myline, 1));
 				else
 				{	search->second++;
-					if(search->second == k*(k-1)/2)
+                         if(search->second == k*(k-1)/2)
+                         {    int last_x = path[i].first, last_y = path[i].second;
+                              while(last_x >= min_run && last_y >= min_rise)
+                              {    last_x -= min_run;
+                                   last_y -= min_rise;
+                              }
+
+                              vec<Lit> X;
+                              while(last_x+last_y < (int)n)
+                              {    X.push(mkLit(varno(last_x, last_y)));
+                                   last_x += min_run;
+                                   last_y += min_rise;
+                              }
+
+                              at_most_k(X, out_learnts);
+
+                              printf("[");
+                              for(int i=0; i<X.size(); i++)
+                              {    printf("%d%s", var(X[i])+1, i == X.size()-1 ? "" : ", ");
+                              }
+                              printf("]\n");
+
+                              for(int i=0; i<out_learnts.size(); i++)
+                              {    //printf("clause %d: ", i);
+                                   for(int j=0; j<out_learnts[i].size(); j++)
+                                   {    //printf("%c%d ", sign(out_learnts[i][j]) ? '-' : '+', var(out_learnts[i][j])+1);
+                                        printf("%s%d ", sign(out_learnts[i][j]) ? "-" : "", var(out_learnts[i][j])+1);
+                                   }
+                                   printf("0\n");
+                              }
+
+                              printf("Conflict: %d collinear points found on line y = %.5f x + %.5f\n", k, slope_dbl, b);
+						for(int y=n-1; y>=0; y--)
+						{	for(uint x=0; x+y<n; x++)
+							{	if(assigns[varno(x,y)]==l_True)
+									printf("X");
+								else
+									printf(".");
+							}
+							printf("\n");
+						}
+
+                              return;
+
+                         }
+					/*if(search->second == k*(k-1)/2)
 					{	
 						printf("Error: %d collinear points found on line y = %.5f x + %.5f\n", k, slope_dbl, b);
 						for(int y=n-1; y>=0; y--)
@@ -430,7 +537,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							{	out_learnts[0].push(mkLit(varno(last_x, last_y), true));
 								count++;
 							}
-							/*if(last_x < 0 || last_y < 0)
+							if(last_x < 0 || last_y < 0)
 							{	printf("last_x: %d, last_y: %d\n", last_x, last_y);
 								for(int i=0; i < n; i++)
 								{	printf("(%d %d) ", path[i].first, path[i].second);
@@ -448,10 +555,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 									printf("\n");
 								}
 								exit(1);
-							}*/
+							}
 						}
 						return;
-					}
+					}*/
 				}
 			}
 		}
