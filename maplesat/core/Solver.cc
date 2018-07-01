@@ -453,7 +453,7 @@ void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_
 
 	if(min_lens < 999999)
 	{
-		const int size = out_learnts.size();
+		int size = out_learnts.size();
 		out_learnts.push();
 		for(uint i = start + min_start_point; i < start + min_end_point; i++)
 		{	if(assigns[i] == l_True)
@@ -461,6 +461,18 @@ void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_
 			else
 				out_learnts[size].push(mkLit(i, false));
 		}
+
+        if(start + min_start_point > 1)
+        {
+		    size = out_learnts.size();
+		    out_learnts.push();
+		    for(uint i = start + min_start_point; i < start + min_end_point; i++)
+		    {	if(assigns[i] == l_True)
+				    out_learnts[size].push(mkLit(i-1, true));
+			    else
+				    out_learnts[size].push(mkLit(i-1, false));
+		    }
+        }
 	}
 }
 
@@ -1168,22 +1180,20 @@ bool Solver::simplify()
 int Solver::backjumpLevel(CRef cr)
 {
     Clause& c = ca[cr];
+    for (int i = 0; i < c.size(); i++) {
+        if (assigns[var(c[i])] == l_Undef) return -1;
+    }
     int max_decision_level = level(var(c[0]));
     for (int i = 1; i < c.size(); i++) {
         int l = level(var(c[i]));
         if (l > max_decision_level) max_decision_level = l;
     }
-    int max_count = 0;
     int second_max_decision_level = 0;
     for (int i = 0; i < c.size(); i++) {
         int l = level(var(c[i]));
-        if (l == max_decision_level) max_count++;
-        else if (l > second_max_decision_level) second_max_decision_level = l;
+        if (l < max_decision_level && l > second_max_decision_level) second_max_decision_level = l;
     }
-    if (max_count == 1)
-        return second_max_decision_level;
-    else
-        return -1;
+    return second_max_decision_level;
 }
 
 /*_________________________________________________________________________________________________
@@ -1341,9 +1351,8 @@ lbool Solver::search(int nof_conflicts)
                             learnts.push(cr);
                             attachClause(cr);
                             int level = backjumpLevel(cr);
-                            if (level > -1) {
+                            if (level != -1)
                                 if (level < backtrack_level) backtrack_level = level;
-                            }
 #if LBD_BASED_CLAUSE_DELETION
                             Clause& clause = ca[cr];
                             clause.activity() = lbd(clause);
