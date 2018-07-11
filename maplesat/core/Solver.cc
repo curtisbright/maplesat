@@ -453,7 +453,7 @@ void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_
 
 	if(min_lens < 999999)
 	{
-		int size = out_learnts.size();
+		const int size = out_learnts.size();
 		out_learnts.push();
 		for(uint i = start + min_start_point; i < start + min_end_point; i++)
 		{	if(assigns[i] == l_True)
@@ -461,18 +461,6 @@ void Solver::learn_clause(const uint len, const uint start, vec<vec<Lit> >& out_
 			else
 				out_learnts[size].push(mkLit(i, false));
 		}
-
-        if(start + min_start_point > 1)
-        {
-		    size = out_learnts.size();
-		    out_learnts.push();
-		    for(uint i = start + min_start_point; i < start + min_end_point; i++)
-		    {	if(assigns[i] == l_True)
-				    out_learnts[size].push(mkLit(i-1, true));
-			    else
-				    out_learnts[size].push(mkLit(i-1, false));
-		    }
-        }
 	}
 }
 
