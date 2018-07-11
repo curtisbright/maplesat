@@ -503,9 +503,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
                               printf("Conflict: %d collinear points found on line y = %.5f x + %.5f\n", k, slope_dbl, b);
 						for(int y=n-1; y>=0; y--)
 						{	for(uint x=0; x+y<n; x++)
-							{	if(assigns[varno(x,y)]==l_True)
-									printf("X");
-								else
+							{	bool printed = false;
+								for(int i=0; i<X.size(); i++)
+									if(var(X[i])==varno(x,y))
+									{	if(assigns[varno(x,y)]==l_True)
+											printf("X");
+										else
+											printf("*");
+										printed = true;
+									}
+								if(printed == false && assigns[varno(x,y)]==l_True)
+									printf("o");
+								else if(printed == false)
 									printf(".");
 							}
 							printf("\n");
