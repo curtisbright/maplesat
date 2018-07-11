@@ -434,9 +434,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(!complete || opt_n == -1 || opt_k == -1 || opt_v == -1)
 		return;
 
+     #ifdef DEBUG
      for(int i=0; i<assigns.size(); i++)
           printf("%c", assigns[i] == l_True ? 'T' : assigns[i] == l_False ? 'F' : '?');
      printf("\n");
+     #endif
 		
 	point path[n];
 	path[0] = std::make_pair(0, 0);
