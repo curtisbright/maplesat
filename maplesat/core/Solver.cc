@@ -58,8 +58,10 @@ static IntOption     opt_n                 (_cat, "n",           "Length of walk
 static IntOption     opt_k                 (_cat, "k",           "Number of collinear points to avoid", -1, IntRange(1, INT32_MAX));
 static IntOption     opt_v                 (_cat, "v",           "Number of original variables", -1, IntRange(1, INT32_MAX));
 static StringOption  opt_exhaustive        (_cat, "exhaustive",  "Output for exhaustive search");
+static StringOption  opt_progclauses       (_cat, "progclauses", "Output clauses learned via callback function to this file");
 
 FILE* exhaustfile = NULL;
+FILE* progfile = NULL;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -135,6 +137,8 @@ Solver::Solver() :
 {
 	if(opt_exhaustive != NULL)
 		exhaustfile = fopen(opt_exhaustive, "a");
+	if(opt_progclauses != NULL)
+		progfile = fopen(opt_progclauses, "w");
 	if(opt_n != -1)
 		n = opt_n;
 	if(opt_k != -1)
@@ -148,6 +152,8 @@ Solver::~Solver()
 {
 	if(exhaustfile != NULL)
 		fclose(exhaustfile);
+	if(progfile != NULL)
+		fclose(progfile);
 }
 
 
@@ -493,16 +499,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
                               }
                               printf("]\n");
 
-                              for(int i=0; i<out_learnts.size(); i++)
-                              {    //printf("clause %d: ", i);
-                                   for(int j=0; j<out_learnts[i].size(); j++)
-                                   {    //printf("%c%d ", sign(out_learnts[i][j]) ? '-' : '+', var(out_learnts[i][j])+1);
-                                        printf("%s%d ", sign(out_learnts[i][j]) ? "-" : "", var(out_learnts[i][j])+1);
-                                   }
-                                   printf("0\n");
+                              if(progfile)
+                              {
+                                      for(int i=0; i<out_learnts.size(); i++)
+				      {
+					   for(int j=0; j<out_learnts[i].size(); j++)
+					   {
+						fprintf(progfile, "%s%d ", sign(out_learnts[i][j]) ? "-" : "", var(out_learnts[i][j])+1);
+					   }
+					   fprintf(progfile, "0\n");
+				      }
                               }
 
-                              printf("Conflict: %d collinear points found on line y = %.5f x + %.5f\n", k, slope_dbl, b);
+                              printf("Conflict: %d collinear points found on line y = %.5f x + %.5f, learned %d clauses\n", k, slope_dbl, b, out_learnts.size());
 						for(int y=n-1; y>=0; y--)
 						{	for(uint x=0; x+y<n; x++)
 							{	bool printed = false;
