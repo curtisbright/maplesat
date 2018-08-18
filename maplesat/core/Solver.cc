@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cstdio>
 #include "coprimelist.h"
 #include "decomps.h"
+#include "defineN.h"
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -66,9 +67,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
-static IntOption     opt_order      (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
 static StringOption  opt_compstring (_cat, "compstring", "A string which contains a comma-separated list of the compression sums to be used.");
-static BoolOption    opt_filtering  (_cat, "filtering",  "Use PSD filtering programmatic check", false);
 static StringOption  opt_exhaustive (_cat, "exhaustive", "Output for exhaustive search");
 
 int div1, div2;
@@ -226,15 +225,15 @@ void Solver::addCompClauses()
 			tmp++;
 		tmp++;
 
-		bool hadzero;
-		vec<Lit> cl;
-		const int n = order;
-		const int d = div1;
+		//bool hadzero;
+		//vec<Lit> cl;
+		//const int n = N;
+		//const int d = div1;
 		
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
+		//hadzero = false;
+		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compA[0][i]);
-			if(d == 2 && compA[0][i] == 0 && hadzero == false)
+			/*if(d == 2 && compA[0][i] == 0 && hadzero == false)
 			{	hadzero = true;
 				cl.clear();
 				cl.push(mkLit(i, false));
@@ -243,17 +242,17 @@ void Solver::addCompClauses()
 				cl.push(mkLit(0*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
 				addClause(cl);
 			}
-			else
-				generateCompClauses(order, div1, i, 0, compA[0][i]);
+			else*/
+				generateCompClauses(N, div1, i, 0, compA[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
+		//hadzero = false;
+		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compB[0][i]);
-			if(d == 2 && compB[0][i] == 0 && hadzero == false)
+			/*if(d == 2 && compB[0][i] == 0 && hadzero == false)
 			{	hadzero = true;
 				cl.clear();
 				cl.push(mkLit(1*(n/2+1) + i, false));
@@ -262,17 +261,17 @@ void Solver::addCompClauses()
 				cl.push(mkLit(1*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
 				addClause(cl);
 			}
-			else
-				generateCompClauses(order, div1, i, 1, compB[0][i]);
+			else*/
+				generateCompClauses(N, div1, i, 1, compB[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
+		//hadzero = false;
+		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compC[0][i]);
-			if(d == 2 && compC[0][i] == 0 && hadzero == false)
+			/*if(d == 2 && compC[0][i] == 0 && hadzero == false)
 			{	hadzero = true;
 				cl.clear();
 				cl.push(mkLit(2*(n/2+1) + i, false));
@@ -281,17 +280,17 @@ void Solver::addCompClauses()
 				cl.push(mkLit(2*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
 				addClause(cl);
 			}
-			else
-				generateCompClauses(order, div1, i, 2, compC[0][i]);
+			else*/
+				generateCompClauses(N, div1, i, 2, compC[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
+		//hadzero = false;
+		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compD[0][i]);
-			if(d == 2 && compD[0][i] == 0 && hadzero == false)
+			/*if(d == 2 && compD[0][i] == 0 && hadzero == false)
 			{	hadzero = true;
 				cl.clear();
 				cl.push(mkLit(3*(n/2+1) + i, false));
@@ -300,52 +299,52 @@ void Solver::addCompClauses()
 				cl.push(mkLit(3*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
 				addClause(cl);
 			}
-			else
-				generateCompClauses(order, div1, i, 3, compD[0][i]);
+			else*/
+				generateCompClauses(N, div1, i, 3, compD[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
-		if(sscanf(tmp, "%d", &div2) == 1)
+		/*if(sscanf(tmp, "%d", &div2) == 1)
 		{
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 
-			for(int i=0; i<order/div2; i++)
+			for(int i=0; i<N/div2; i++)
 			{	sscanf(tmp, "%d", &compA[0][i]);
-				generateCompClauses(order, div2, i, 0, compA[0][i]);
+				generateCompClauses(N, div2, i, 0, compA[0][i]);
 				while(*tmp != ',' && *tmp != '\0')
 					tmp++;
 				tmp++;
 			}
 
-			for(int i=0; i<order/div2; i++)
+			for(int i=0; i<N/div2; i++)
 			{	sscanf(tmp, "%d", &compB[0][i]);
-				generateCompClauses(order, div2, i, 1, compB[0][i]);
+				generateCompClauses(N, div2, i, 1, compB[0][i]);
 				while(*tmp != ',' && *tmp != '\0')
 					tmp++;
 				tmp++;
 			}
 
-			for(int i=0; i<order/div2; i++)
+			for(int i=0; i<N/div2; i++)
 			{	sscanf(tmp, "%d", &compC[0][i]);
-				generateCompClauses(order, div2, i, 2, compC[0][i]);
+				generateCompClauses(N, div2, i, 2, compC[0][i]);
 				while(*tmp != ',' && *tmp != '\0')
 					tmp++;
 				tmp++;
 			}
 
-			for(int i=0; i<order/div2; i++)
+			for(int i=0; i<N/div2; i++)
 			{	sscanf(tmp, "%d", &compD[0][i]);
-				generateCompClauses(order, div2, i, 3, compD[0][i]);
+				generateCompClauses(N, div2, i, 3, compD[0][i]);
 				while(*tmp != ',' && *tmp != '\0')
 					tmp++;
 				tmp++;
 			}
 
-		}
+		}*/
 
 	}
  
@@ -402,7 +401,6 @@ Solver::Solver() :
   , reward_multiplier(opt_reward_multiplier)
 #endif
 
-  , order (opt_order) 
   , compstring (opt_compstring)
   , exhauststring (opt_exhaustive)
   , ok                 (true)
@@ -429,27 +427,18 @@ Solver::Solver() :
   if(exhauststring != NULL)
     exhaustfile = fopen(exhauststring, "a");
 
-  if(opt_filtering)
-  {
-    if(order == -1)
-      printf("need to set order\n"), exit(1);
-
-    fft_signal = (double*)malloc(sizeof(double)*order);
-    fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
-    plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
-  }
+  fft_signal = (double*)malloc(sizeof(double)*N);
+  fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*N);
+  plan = fftw_plan_dft_r2c_1d(N, fft_signal, fft_result, FFTW_ESTIMATE);
 
 }
 
 
 Solver::~Solver()
 {
-  if(opt_filtering)
-  {
-    fftw_destroy_plan(plan);
-    free(fft_signal);
-    free(fft_result);
-  }
+  fftw_destroy_plan(plan);
+  free(fft_signal);
+  free(fft_result);
 
   if(exhauststring != NULL)
     fclose(exhaustfile);
@@ -661,11 +650,7 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts)
 {
-  if(order==-1)
-    return;
-
-  if(opt_filtering || exhauststring != NULL)
-    filtering_check(out_learnts);
+  filtering_check(out_learnts);
 }
 
 struct psd_holder
@@ -681,15 +666,15 @@ void swap_psd_holders(struct psd_holder* x, struct psd_holder* y)
   *y = tmp;
 }
 
-inline int minindex(int n, int i)
+inline int minindex(int i)
 {
-  return (i <= n/2) ? i : n-i;
+  return (i <= N/2) ? i : N-i;
 }
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
-  const int n = order;
-  const int dim = n/2+1;
+  const int n = N;
+  const int dim = N/2+1;
   bool allseqcomplete = true;
   
   struct psd_holder psds[dim][4];
@@ -708,9 +693,6 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       }
     }
 
-    if(!opt_filtering)
-      continue;
-
     if(seqcomplete)
     { 
       fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
@@ -719,8 +701,8 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
 
       if(seq==0)
-      {    for(int i=dim; i<n; i++)
-                fft_signal[i] *= -1;
+      { for(int i=dim; i<n; i++)
+          fft_signal[i] *= -1;
       }
 
       fftw_execute(plan);
@@ -807,16 +789,16 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   if(allseqcomplete && exhauststring != NULL)
   { 
     for(int i=0; i<dim; i++)
-    { int index = minindex(n, i);
+    { int index = minindex(i);
   	  fprintf(exhaustfile, "%s ", (assigns[index] == l_True) ? "1" : "-1");
     }
     for(int i=dim; i<n; i++)
-    { int index = minindex(n, i);
+    { int index = minindex(i);
   	  fprintf(exhaustfile, "%s ", (assigns[index] == l_True) ? "-1" : "1");
     }
     for(int k=1; k<4; k++)
     { for(int i=0; i<n; i++)
-      { int index = minindex(n, i);
+      { int index = minindex(i);
         fprintf(exhaustfile, "%s ", (assigns[k*dim+index] == l_True) ? "1" : "-1");
       }
     }
