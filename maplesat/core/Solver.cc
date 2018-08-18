@@ -27,8 +27,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Solver.h"
 
 #include <fftw3.h>
-#include <set>
-#include <string>
 
 FILE* exhaustfile;
 
