@@ -37,10 +37,6 @@ int calls = 0;
 int success = 0;
 double time1 = 0;
 
-#define NC 64
-
-const int nchecks = NC;
-
 #ifndef NDEBUG
 #define PRINTCONF
 #endif
@@ -342,12 +338,11 @@ Solver::Solver() :
 	if(opt_filtering)
 	{	if(order == -1)
 			printf("need to set order\n"), exit(1);
-		fft_signal = (double*)malloc(sizeof(double)*nchecks);
-		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*nchecks);
+		fft_signal = (double*)malloc(sizeof(double)*order);
+		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 		plan1 = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
-		plan1 = fftw_plan_dft_r2c_1d(nchecks, fft_signal, fft_result, FFTW_ESTIMATE);
 		
-		for(int i=0; i<nchecks; i++)
+		for(int i=0; i<order; i++)
 		{	fft_signal[i] = 0;
 		}
 	}
@@ -644,10 +639,10 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   const int dim = n;
   bool allseqcomplete = true;
   
-  struct psd_holder psds[nchecks/2+1][4];
+  struct psd_holder psds[order/2+1][4];
 
-  double psdsum[nchecks/2+1];
-  for(int i=0; i<=nchecks/2; i++)
+  double psdsum[order/2+1];
+  for(int i=0; i<=order/2; i++)
     psdsum[i] = 0;
 
   /*for(int seq=0; seq<4; seq++)
@@ -683,7 +678,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
       fftw_execute(plan1);
 
-      for(int i=0; i<=nchecks/2; i++)
+      for(int i=0; i<=order/2; i++)
       { 
         double psd_i = fft_result[i][0]*fft_result[i][0] + fft_result[i][1]*fft_result[i][1];
 
