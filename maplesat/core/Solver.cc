@@ -276,7 +276,7 @@ void Solver::addCompClauses()
 			tmp++;
 		}
 
-		for(int i=0; i<order/div1; i++)
+		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compB[i]);
 			generateCompClauses(N, div1, i, 1, compB[i]);
 			while(*tmp != ',' && *tmp != '\0')
@@ -284,7 +284,7 @@ void Solver::addCompClauses()
 			tmp++;
 		}
 
-		for(int i=0; i<order/div1; i++)
+		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compC[i]);
 			generateCompClauses(N, div1, i, 2, compC[i]);
 			while(*tmp != ',' && *tmp != '\0')
@@ -292,7 +292,7 @@ void Solver::addCompClauses()
 			tmp++;
 		}
 
-		for(int i=0; i<order/div1; i++)
+		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compD[i]);
 			generateCompClauses(N, div1, i, 3, compD[i]);
 			while(*tmp != ',' && *tmp != '\0')
@@ -382,6 +382,10 @@ Solver::Solver() :
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
     }
+
+    fft_signal = (double*)malloc(sizeof(double)*N);
+    fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*N);
+    plan = fftw_plan_dft_r2c_1d(N, fft_signal, fft_result, FFTW_ESTIMATE);
 
 #ifdef PRINTLEARNT
     out_learnt_file = fopen("out_learnt_file", "w");
