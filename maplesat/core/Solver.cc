@@ -72,6 +72,11 @@ static StringOption  opt_compstring(_cat, "compstring", "A string which contains
 static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 
+#ifdef PREASSIGN
+bool seq_assigned[4] = {false, false, false, false};
+double assigned_psds[4][99];
+#endif
+
 int div1, div2;
 int compA[2][99];
 int compB[2][99];
@@ -261,8 +266,11 @@ void Solver::addCompClauses()
 		if(sscanf(tmp, "%d", &div1) != 1)
 			printf("ERROR! syntax error in compstring: %s\n", tmp), exit(1);
 
-		while(*tmp != ',' && *tmp != '\0')
+		while(*tmp != ',')
+		{	if(*tmp == '\0')
+				return;
 			tmp++;
+		}
 		tmp++;
 
 		bool hadzero;
@@ -284,10 +292,24 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 0, compA[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
+			while(*tmp != ',')
+			{	if(*tmp == '\0')
+					return;
 				tmp++;
+			}
 			tmp++;
 		}
+
+#ifdef PREASSIGN
+		if(d == 1)
+		{   seq_assigned[0] = true;
+			for(int i=0; i<order; i++)
+				fft_signal[i] = compA[0][i];
+			fftw_execute(plan);
+			for(int i=0; i<n/2+1; i++)
+				assigned_psds[0][i] = fft_result[i][0]*fft_result[i][0];
+		}
+#endif
 
 		hadzero = false;
 		for(int i=0; i<order/div1; i++)
@@ -303,10 +325,24 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 1, compB[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
+			while(*tmp != ',')
+			{	if(*tmp == '\0')
+					return;
 				tmp++;
+			}
 			tmp++;
 		}
+
+#ifdef PREASSIGN
+		if(d == 1)
+		{   seq_assigned[1] = true;
+			for(int i=0; i<order; i++)
+				fft_signal[i] = compB[0][i];
+			fftw_execute(plan);
+			for(int i=0; i<n/2+1; i++)
+				assigned_psds[1][i] = fft_result[i][0]*fft_result[i][0];
+		}
+#endif
 
 		hadzero = false;
 		for(int i=0; i<order/div1; i++)
@@ -322,10 +358,24 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 2, compC[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
+			while(*tmp != ',')
+			{	if(*tmp == '\0')
+					return;
 				tmp++;
+			}
 			tmp++;
 		}
+
+#ifdef PREASSIGN
+		if(d == 1)
+		{	seq_assigned[2] = true;
+			for(int i=0; i<order; i++)
+				fft_signal[i] = compC[0][i];
+			fftw_execute(plan);
+			for(int i=0; i<n/2+1; i++)
+				assigned_psds[2][i] = fft_result[i][0]*fft_result[i][0];
+		}
+#endif
 
 		hadzero = false;
 		for(int i=0; i<order/div1; i++)
@@ -341,10 +391,24 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 3, compD[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
+			while(*tmp != ',')
+			{	if(*tmp == '\0')
+					return;
 				tmp++;
+			}
 			tmp++;
 		}
+
+#ifdef PREASSIGN
+		if(d == 1)
+		{   seq_assigned[3] = true;
+			for(int i=0; i<order; i++)
+				fft_signal[i] = compD[0][i];
+			fftw_execute(plan);
+			for(int i=0; i<n/2+1; i++)
+				assigned_psds[3][i] = fft_result[i][0]*fft_result[i][0];
+		}
+#endif
 
 		if(sscanf(tmp, "%d", &div2) == 1)
 		{
@@ -800,15 +864,27 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     if(seqcomplete)
     { 
 
-      fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
-      for(int i=1; i<dim; i++)
-        fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+#ifdef PREASSIGN
+      if(!seq_assigned[seq])
+#endif
+      {
+        fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
+        for(int i=1; i<dim; i++)
+            fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
 
-      fftw_execute(plan);
+        fftw_execute(plan);
+      }
 
       for(int i=0; i<dim; i++)
       { 
-        const double psd_i = fft_result[i][0]*fft_result[i][0];
+        double psd_i;
+
+#ifdef PREASSIGN
+        if(seq_assigned[seq])
+            psd_i = assigned_psds[seq][i];
+        else
+#endif
+            psd_i = fft_result[i][0]*fft_result[i][0];
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
