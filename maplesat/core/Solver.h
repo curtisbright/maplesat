@@ -42,6 +42,7 @@ public:
     virtual ~Solver();
 
     void generateCompClauses(int n, int d, int i, int c, int v);
+    void generateXorClauses(vec<Var>& vars, int c);
     void addCompClauses();
 
     // Problem specification:

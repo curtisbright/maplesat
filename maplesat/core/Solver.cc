@@ -18,6 +18,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include <NTL/mat_GF2.h>
+
+//using namespace std;
+using namespace NTL;
+
+#define PREASSIGN
+
 #include <math.h>
 
 #ifndef NDEBUG
@@ -75,6 +82,7 @@ static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive s
 #ifdef PREASSIGN
 bool seq_assigned[4] = {false, false, false, false};
 double assigned_psds[4][99];
+int assigned_pafs[4][99];
 #endif
 
 int div1, div2;
@@ -89,6 +97,67 @@ void printclause(vec<Lit>& cl);
 void fprintclause(FILE* f, vec<Lit>& cl);
 FILE* out_learnt_file;
 #endif
+
+int paf(int n, int* A, int s)
+{   int ret = A[0]*A[s];
+    for(int i=1; i<(n+1)/2; i++)
+        ret += A[i]*(A[(i+s)%n]+A[(n+i-s)%n]);
+    //for(int i=1; i<(n+1)/2; i++)
+    //    ret += A[i]*A[(i+s)%n];
+    //for(int i=1; i<(n+1)/2; i++)
+    //    ret += A[i]*A[(n-i+s)%n];
+    return ret;
+}
+
+inline int minindex(int n, int i)
+{
+  return (i <= n/2) ? i : n-i;
+}
+
+void Solver::generateXorClauses(vec<Var>& vars, int c)
+{   const int n = vars.size();
+    if(n==1)
+        addClause(mkLit(vars[0], c==0));
+    else if(n==2)
+    {   if(c==0)
+        {   addClause(mkLit(vars[0], true), mkLit(vars[1], false));
+            addClause(mkLit(vars[0], false), mkLit(vars[1], true));
+        }
+        else if(c==1)
+        {   addClause(mkLit(vars[0], true), mkLit(vars[1], true));
+            addClause(mkLit(vars[0], false), mkLit(vars[1], false));
+        }
+    }
+    else if(n==3)
+    {   if(c==0)
+        {   addClause(mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], true));
+            addClause(mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], false));
+            addClause(mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], false));
+            addClause(mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], true));
+        }
+        else if(c==1)
+        {   addClause(mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], false));
+            addClause(mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], true));
+            addClause(mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], true));
+            addClause(mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], false));
+        }
+    }
+    else if(n>3)
+    {   Var tmp = newVar();
+        addClause(mkLit(vars[0], true), mkLit(vars[1], false), mkLit(tmp, false));
+        addClause(mkLit(vars[0], false), mkLit(vars[1], true), mkLit(tmp, false));
+        addClause(mkLit(vars[0], false), mkLit(vars[1], false), mkLit(tmp, true));
+        addClause(mkLit(vars[0], true), mkLit(vars[1], true), mkLit(tmp, true));
+        for(int i=2; i<n; i++)
+        {   tmp = newVar();
+            addClause(mkLit(vars[i], true), mkLit(tmp-1, false), mkLit(tmp, false));
+            addClause(mkLit(vars[i], false), mkLit(tmp-1, true), mkLit(tmp, false));
+            addClause(mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
+            addClause(mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
+        }
+        addClause(mkLit(tmp, c==0));
+    }
+}
 
 void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 {
@@ -292,24 +361,43 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 0, compA[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
+			while(*tmp != ',' && *tmp != '\0')
+			{	tmp++;
 			}
-			tmp++;
+            if(*tmp != '\0')
+			    tmp++;
 		}
 
 #ifdef PREASSIGN
-		if(d == 1)
+		if(d == 1 && opt_filtering)
 		{   seq_assigned[0] = true;
 			for(int i=0; i<order; i++)
-				fft_signal[i] = compA[0][i];
+			{	fft_signal[i] = compA[0][i];
+                //printf("%d ", compA[0][i]);
+            }
+            //printf("\n");
 			fftw_execute(plan);
 			for(int i=0; i<n/2+1; i++)
-				assigned_psds[0][i] = fft_result[i][0]*fft_result[i][0];
+				fft_signal[(n-i)%n] = fft_signal[i] = assigned_psds[0][i] = fft_result[i][0]*fft_result[i][0];
+            fftw_execute(plan);
+            for(int i=0; i<n/2+1; i++)
+                assigned_pafs[0][i] = (int)round(fft_result[i][0]/order);
+
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", assigned_pafs[0][i]);
+            }
+            //printf("\n");
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", paf(order, compA[0], i));
+            }
+            //printf("\n");
 		}
 #endif
+
+        if(*tmp == '\0')
+            return;
 
 		hadzero = false;
 		for(int i=0; i<order/div1; i++)
@@ -325,24 +413,93 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 1, compB[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
+			while(*tmp != ',' && *tmp != '\0')
+			{	tmp++;
 			}
-			tmp++;
+            if(*tmp != '\0')
+			    tmp++;
 		}
 
 #ifdef PREASSIGN
-		if(d == 1)
+		if(d == 1 && opt_filtering)
 		{   seq_assigned[1] = true;
 			for(int i=0; i<order; i++)
-				fft_signal[i] = compB[0][i];
+			{	fft_signal[i] = compB[0][i];
+                //printf("%d ", compB[0][i]);
+            }
+            //printf("\n");
 			fftw_execute(plan);
 			for(int i=0; i<n/2+1; i++)
-				assigned_psds[1][i] = fft_result[i][0]*fft_result[i][0];
+				fft_signal[(n-i)%n] = fft_signal[i] = assigned_psds[1][i] = fft_result[i][0]*fft_result[i][0];
+            fftw_execute(plan);
+            for(int i=0; i<n/2+1; i++)
+                assigned_pafs[1][i] = (int)round(fft_result[i][0]/order);
+
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", assigned_pafs[1][i]);
+            }
+            //printf("\n");
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", paf(order, compB[0], i));
+            }
+            //printf("\n");
+
+            Mat<GF2> M;
+            M.SetDims(n/2, n/2+1);
+
+            for(int k=1; k<n/2+1; k++)
+            {   int terms[n] = {};
+
+                for(int j=0; j<n; j++)
+                {   if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]==((j+k)%n==0 ? 1 : -1)*(j==0 ? 1 : -1))
+                    {   if(minindex(n,j) < minindex(n,(j+k)%n))
+                        {   //printf(" + c[%d]*c[%d]", minindex(n, j), minindex(n, (j+k)%n));
+                            terms[minindex(n, j)]++;
+                            terms[minindex(n, (j+k)%n)]++;
+                            terms[0]--;
+                        }
+                    }
+                }
+
+                int rhs = 0;
+                for(int j=1; j<n; j++)
+                    rhs += terms[j]%4;
+
+                for(int j=1; j<n; j++)
+                {   if(terms[j]%2>0)
+                        M(k,j) = 1;
+                }
+                M(k,n/2+1) = ((rhs-terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)/2)%2;  
+            }
+
+            gauss(M);
+
+            long c=2;
+            for(long j=2; j<n/2+1; j++)
+            {   if(M(c, j)==1)
+                {   for(long k=1; k<c; k++)
+                    {   if(M(k, j)==1)
+                            M[k-1] += M[c-1];
+                    }
+                    c++;
+                }
+            }
+
+            for(long k=0; k<n/2; k++)
+            {   vec<Var> vars;
+                for(long j=0; j<n/2; j++)
+                {   if(IsOne(M[k][j]))
+                        vars.push(2*(n/2+1)+j+1);
+                }
+                generateXorClauses(vars, IsZero(M[k][n/2]) ? 0 : 1);
+            }
 		}
 #endif
+
+        if(*tmp == '\0')
+            return;
 
 		hadzero = false;
 		for(int i=0; i<order/div1; i++)
@@ -358,24 +515,43 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 2, compC[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
+			while(*tmp != ',' && *tmp != '\0')
+			{	tmp++;
 			}
-			tmp++;
+            if(*tmp != '\0')
+			    tmp++;
 		}
 
 #ifdef PREASSIGN
-		if(d == 1)
+		if(d == 1 && opt_filtering)
 		{	seq_assigned[2] = true;
 			for(int i=0; i<order; i++)
-				fft_signal[i] = compC[0][i];
+			{	fft_signal[i] = compC[0][i];
+                //printf("%d ", compC[0][i]);
+            }
+            //printf("\n");
 			fftw_execute(plan);
 			for(int i=0; i<n/2+1; i++)
-				assigned_psds[2][i] = fft_result[i][0]*fft_result[i][0];
+				fft_signal[(n-i)%n] = fft_signal[i] = assigned_psds[2][i] = fft_result[i][0]*fft_result[i][0];
+            fftw_execute(plan);
+            for(int i=0; i<n/2+1; i++)
+                assigned_pafs[2][i] = (int)round(fft_result[i][0]/order);
+
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", assigned_pafs[2][i]);
+            }
+            //printf("\n");
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", paf(order, compC[0], i));
+            }
+            //printf("\n");
 		}
 #endif
+
+        if(*tmp == '\0')
+            return;
 
 		hadzero = false;
 		for(int i=0; i<order/div1; i++)
@@ -391,24 +567,257 @@ void Solver::addCompClauses()
 			}
 			else
 				generateCompClauses(order, div1, i, 3, compD[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
+			while(*tmp != ',' && *tmp != '\0')
+			{	tmp++;
 			}
-			tmp++;
+            if(*tmp != '\0')
+			    tmp++;
 		}
 
 #ifdef PREASSIGN
-		if(d == 1)
+		if(d == 1 && opt_filtering)
 		{   seq_assigned[3] = true;
 			for(int i=0; i<order; i++)
-				fft_signal[i] = compD[0][i];
+			{	fft_signal[i] = compD[0][i];
+                //printf("%d ", compD[0][i]);
+            }
+            //printf("\n");
 			fftw_execute(plan);
 			for(int i=0; i<n/2+1; i++)
-				assigned_psds[3][i] = fft_result[i][0]*fft_result[i][0];
+				fft_signal[(n-i)%n] = fft_signal[i] = assigned_psds[3][i] = fft_result[i][0]*fft_result[i][0];
+            fftw_execute(plan);
+            for(int i=0; i<n/2+1; i++)
+                assigned_pafs[3][i] = (int)round(fft_result[i][0]/order);
+
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", assigned_pafs[3][i]);
+            }
+            //printf("\n");
+            //printf("PAFs: ");
+            for(int i=0; i<=order/2; i++)
+            {   //printf("%d ", paf(order, compD[0], i));
+            }
+            //printf("\n");
+
+#if 0
+            for(int k=1; k<n/2+1; k++)
+            {   printf("k=%d: ", k);
+
+                /*if(compA[0][0]*compB[0][0]*compA[0][k]*compB[0][k] == -1)
+                    printf(" 2*c[0]*c[%d]", k);
+
+                for(int j=1; j<n/2+1; j++)
+                {
+                    if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n] == -1)
+                        printf(" + 4*c[%d]*c[%d]", j, (j+k)%n);
+                }*/
+
+                int ret = 0;
+
+                //if(compA[0][k%n]*compB[0][k%n] == -1)
+                //    ret += 2*compC[0][k%n];
+
+                /*for(int j=1; j<n; j++)
+                {   //ret += 2*compC[0][j]*compC[0][(j+k)%n] + 2*compD[0][j]*compD[0][(j+k)%n];
+                    //ret += compC[0][(2*n-j-k)%n]*compC[0][(2*n-j)%n] + compD[0][(2*n-j-k)%n]*compD[0][(2*n-j)%n];
+                    //ret += 2*compC[0][j]*compC[0][(j+k)%n] + 2*compA[0][j]*compA[0][(j+k)%n]*compB[0][j]*compB[0][(j+k)%n]*compC[0][j]*compC[0][(j+k)%n];
+                    //if(compA[0][j]*compB[0][j]*compA[0][j+k]*compB[0][j+k] == -1)
+                    //    ret += 4*compC[0][j]*compC[0][(j+k)%n];
+                    //ret += 2*compC[0][j]*compC[0][(j+k)%n] + 2*compA[0][j]*compB[0][j]*compC[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]*compC[0][(j+k)%n]*((j+k)%n == 0 ? -1 : 1);
+                    if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]*((j+k)%n == 0 ? -1 : 1) == 1)
+                        ret += 4*compC[0][j]*compC[0][(j+k)%n];
+                }*/
+
+                /*for(int j=1; j<n/2+1; j++)
+                {   if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]==((j+k)%n==0 ? 1 : -1)*(j==0 ? 1 : -1))
+                        ret += 4*compC[0][minindex(n,j)]*compC[0][minindex(n,(j+k)%n)];
+                }*/
+
+                //ret += 2;
+
+                for(int j=0; j<n; j++)
+                {   if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]==((j+k)%n==0 ? 1 : -1)*(j==0 ? 1 : -1))
+                    {   if(minindex(n,j) < minindex(n,(j+k)%n))
+                            ret += compC[0][j]*compC[0][(j+k)%n];
+                    }
+                    //ret += compD[0][j]*compD[0][(j+k)%n];
+                }
+
+                /*for(int j=0; j<n; j++)
+                {   ret += compC[0][(n-j)%n]*compC[0][(2*n-j-k)%n];
+                    ret += compD[0][(n-j)%n]*compD[0][(2*n-j-k)%n];
+                }*/
+
+                printf("%d = %d\n", ret, (-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2);
+                if(ret!=(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)
+                    exit(0);
+            }
+
+            Mat<GF2> M;
+            M.SetDims(n/2, n/2+1);
+
+            for(int k=1; k<n/2+1; k++)
+            {   printf("k=%d:", k);
+
+                int ret2 = 0;
+
+                int terms[n] = {};
+
+                for(int j=0; j<n; j++)
+                {   if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]==((j+k)%n==0 ? 1 : -1)*(j==0 ? 1 : -1))
+                    {   if(minindex(n,j) < minindex(n,(j+k)%n))
+                        {   //printf(" + c[%d]*c[%d]", minindex(n, j), minindex(n, (j+k)%n));
+                            terms[minindex(n, j)]++;
+                            terms[minindex(n, (j+k)%n)]++;
+                            terms[0]--;
+                        }
+                    }
+                }
+
+                //printf(" = %d\n", (-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2);
+
+                for(int j=1; j<n; j++)
+                {   //if(terms[j]%4>0)
+                    //    printf("+%d*c[%d]", terms[j]%4, j);
+                    ret2 += (terms[j]%4)*compC[0][j];
+                }
+                //printf("=%d=%d\n", ret2, -terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2);
+
+                if((ret2+terms[0]-(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)%4 != 0)
+                    exit(0);
+
+                int ret3 = 0;
+                int rhs = 0;
+
+                for(int j=1; j<n; j++)
+                {   if(terms[j]%2>0)
+                        printf("+c[%d]", j);
+                    ret3 += (terms[j]%2)*(compC[0][j]+1)/2;
+                    rhs += terms[j]%4;
+                }
+                printf("=%d=%d\n", ret3, (rhs-terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)/2);
+
+                if((ret3-(rhs-terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)/2)%2 != 0)
+                    exit(0);
+
+                for(int j=1; j<n; j++)
+                {   if(terms[j]%2>0)
+                        M(k,j) = 1;
+                }
+                M(k,n/2+1) = ((rhs-terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)/2)%2;
+
+                /*for(int j=1; j<n; j++)
+                {   if(terms[j]%4>0)
+                        printf("+c[%d]", j);
+                }
+                printf("=%d\n", ((-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-terms[0])%4)/2);*/
+                
+            }
+
+            std::cout << M << "\n";
+
+            gauss(M);
+
+            std::cout << M << "\n";
+
+            long c=2;
+            for(long j=2; j<n/2+1; j++)
+            {   if(M(c, j)==1)
+                {   for(long k=1; k<c; k++)
+                    {   if(M(k, j)==1)
+                            M[k-1] += M[c-1];
+                    }
+                    c++;
+                }
+            }
+
+            std::cout << M << "\n";
+
+            for(int j=0; j<n/2; j++)
+            {   GF2 sum;
+                //std::cout << sum << ' ';
+                for(int k=0; k<n/2; k++)
+                {   if(M[j][k]==1)
+                    {   sum += (compC[0][k+1]+1)/2;
+                        //std::cout << sum << ' ';
+                    }
+                    //std::cout << M[j][k];
+                }
+                sum -= M[j][n/2];
+                //std::cout << sum << "\n";
+                //std::cout << "\n";
+                if(!IsZero(sum))
+                    printf("error in row %d\n", j), exit(0);
+            }
+
+            for(long k=0; k<n/2; k++)
+            {   vec<Var> vars;
+                //vars.clear();
+                for(long j=0; j<n/2; j++)
+                {   if(M[k][j]==1)
+                        vars.push(2*(n/2+1)+j+1);
+                }
+                if(vars.size()==0)
+                    continue;
+                //for(int j=0; j<vars.size(); j++)
+                //    printf("%d ", vars[j]+1);
+                //printf("= %d\n", IsZero(M[k][n/2]) ? 0 : 1);
+                generateXorClauses(vars, IsZero(M[k][n/2]) ? 0 : 1);
+            }
+
+            /*for(int k=1; k<n/2+1; k++)
+            {   printf("k=%d:", k);
+
+                int ret = 0;
+                int ret2 = 0;
+
+                int terms[n] = {};
+
+                for(int j=0; j<n; j++)
+                {   if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]==((j+k)%n==0 ? 1 : -1)*(j==0 ? 1 : -1))
+                    {   printf(" + c[%d]*c[%d]", minindex(n, j), minindex(n, (j+k)%n));
+                        if(minindex(n, j) != minindex(n, (j+k)%n))
+                        {   terms[minindex(n, j)]++;
+                            terms[minindex(n, (j+k)%n)]++;
+                            terms[0]--;
+                        }
+                        else
+                        {   terms[0]++;
+                        }
+                        ret += compC[0][minindex(n, j)]*compC[0][minindex(n, (j+k)%n)];
+                    }
+                }
+
+                printf(" = %d\n", -(assigned_pafs[0][k]+assigned_pafs[1][k])/2);
+
+                if(ret != -(assigned_pafs[0][k]+assigned_pafs[1][k])/2)
+                    printf("!!!\n"), exit(0);
+
+                for(int j=1; j<n; j++)
+                {   if(terms[j]%4>0)
+                    {   printf("+%d*c[%d]", terms[j]%4, j);
+                        ret2 += (terms[j]%4)*compC[0][j];
+                    }
+                }
+                printf("=%d\n", (-(terms[0]%4)-(assigned_pafs[0][k]+assigned_pafs[1][k])/2)%4);
+
+                if((ret2 - (-(terms[0]%4)-(assigned_pafs[0][k]+assigned_pafs[1][k])/2)%4)%4 != 0)
+                    printf("!!!\n"), exit(0);
+
+                for(int j=1; j<n; j++)
+                {   if(terms[j]%4>0)
+                        printf("+c[%d]", j);
+                }
+                printf("=%d\n", ((-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-terms[0])%4)/2);
+                
+            }*/
+#endif
 		}
 #endif
+
+        if(*tmp == '\0')
+            return;
 
 		if(sscanf(tmp, "%d", &div2) == 1)
 		{
@@ -545,6 +954,7 @@ Solver::Solver() :
 		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
 		plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
 	}
+
 }
 
 
@@ -816,11 +1226,6 @@ void swap_psd_holders(struct psd_holder* x, struct psd_holder* y)
 { struct psd_holder tmp = *x;
   *x = *y;
   *y = tmp;
-}
-
-inline int minindex(int n, int i)
-{
-  return (i <= n/2) ? i : n-i;
 }
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
