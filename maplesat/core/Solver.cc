@@ -23,7 +23,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //using namespace std;
 using namespace NTL;
 
-#define PREASSIGN
+//#define PREASSIGN
+//#define CHECK_LEARNED_CLAUSES_FOR_CONFLICT
 
 #include <math.h>
 
@@ -114,46 +115,47 @@ inline int minindex(int n, int i)
   return (i <= n/2) ? i : n-i;
 }
 
-void Solver::generateXorClauses(vec<Var>& vars, int c)
+void Solver::generateXorClauses(const vec<Lit>& antecedent, const vec<Var>& vars, const int c)
 {   const int n = vars.size();
+    vec<Lit> clause;
     if(n==1)
-        addClause(mkLit(vars[0], c==0));
+        addAntClause(antecedent, mkLit(vars[0], c==0));
     else if(n==2)
     {   if(c==0)
-        {   addClause(mkLit(vars[0], true), mkLit(vars[1], false));
-            addClause(mkLit(vars[0], false), mkLit(vars[1], true));
+        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false));
+            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true));
         }
         else if(c==1)
-        {   addClause(mkLit(vars[0], true), mkLit(vars[1], true));
-            addClause(mkLit(vars[0], false), mkLit(vars[1], false));
+        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true));
+            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false));
         }
     }
     else if(n==3)
     {   if(c==0)
-        {   addClause(mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], true));
-            addClause(mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], false));
-            addClause(mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], false));
-            addClause(mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], true));
+        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], true));
+            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], false));
+            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], false));
+            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], true));
         }
         else if(c==1)
-        {   addClause(mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], false));
-            addClause(mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], true));
-            addClause(mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], true));
-            addClause(mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], false));
+        {   addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], false));
+            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], true));
+            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], true));
+            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], false));
         }
     }
     else if(n>3)
     {   Var tmp = newVar();
-        addClause(mkLit(vars[0], true), mkLit(vars[1], false), mkLit(tmp, false));
-        addClause(mkLit(vars[0], false), mkLit(vars[1], true), mkLit(tmp, false));
-        addClause(mkLit(vars[0], false), mkLit(vars[1], false), mkLit(tmp, true));
-        addClause(mkLit(vars[0], true), mkLit(vars[1], true), mkLit(tmp, true));
+        addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(tmp, false));
+        addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(tmp, false));
+        addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(tmp, true));
+        addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(tmp, true));
         for(int i=2; i<n; i++)
         {   tmp = newVar();
-            addClause(mkLit(vars[i], true), mkLit(tmp-1, false), mkLit(tmp, false));
-            addClause(mkLit(vars[i], false), mkLit(tmp-1, true), mkLit(tmp, false));
-            addClause(mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
-            addClause(mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
+            addAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, false), mkLit(tmp, false));
+            addAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, true), mkLit(tmp, false));
+            addAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
+            addAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
         }
         addClause(mkLit(tmp, c==0));
     }
@@ -1080,6 +1082,13 @@ void Solver::removeClause(CRef cr) {
     ca.free(cr);
 }
 
+#ifdef CHECK_LEARNED_CLAUSES_FOR_CONFLICT
+bool Solver::notInConflict(const vec<Lit>& c) const {
+    for (int i = 0; i < c.size(); i++)
+        if (value(c[i]) != l_False)
+            return true;
+    return false; }
+#endif
 
 bool Solver::satisfied(const Clause& c) const {
     for (int i = 0; i < c.size(); i++)
@@ -1228,13 +1237,17 @@ void swap_psd_holders(struct psd_holder* x, struct psd_holder* y)
   *y = tmp;
 }
 
-bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
+void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
   const int n = order;
   const int dim = n/2+1;
   bool allseqcomplete = true;
   
   struct psd_holder psds[dim][4];
+  double C_psds[dim];
+  double D_psds[dim];
+  int C_entries[n];
+  int D_entries[n];
 
   double psdsum[dim];
   for(int i=0; i<dim; i++)
@@ -1278,6 +1291,15 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
             fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
 
         fftw_execute(plan);
+
+        if(seq==2)
+        {   for(int i=0; i<n; i++)
+                C_entries[i] = fft_signal[i];
+        }
+        else if(seq==3)
+        {   for(int i=0; i<n; i++)
+                D_entries[i] = fft_signal[i];
+        }
       }
 
       for(int i=0; i<dim; i++)
@@ -1290,6 +1312,11 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         else
 #endif
             psd_i = fft_result[i][0]*fft_result[i][0];
+
+        if(seq==2)
+            C_psds[i] = psd_i;
+        else if(seq==3)
+            D_psds[i] = psd_i;
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
@@ -1406,7 +1433,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                 printf("out_learnt "), printclause(out_learnts[size]);
 #endif
 
-                return true;
+                return;
 
              }
           }
@@ -1459,15 +1486,95 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       }
     }
 
+    vec<Lit> antecedent;
+
+    for(int s=2; s<4; s++)
+    {
+      for(int j=s*dim; j<(s+1)*dim; j++)
+      { if(assigns[j] == l_True)
+          antecedent.push(mkLit(j, true));
+        else if(assigns[j] == l_False)
+          antecedent.push(mkLit(j, false));
+      }
+    }
+
 #ifdef PRINTCONF
     printf("out_learnt "), printclause(out_learnts[size]);
 #endif
 
-    return true;
+    int C_pafs[dim];
+    int D_pafs[dim];
 
+    fft_signal[0] = C_psds[0];
+    for(int i=1; i<dim; i++)
+        fft_signal[n-i] = fft_signal[i] = C_psds[i];
+    fftw_execute(plan);
+    for(int i=0; i<n/2+1; i++)
+        C_pafs[i] = (int)round(fft_result[i][0]/n);
+
+    fft_signal[0] = D_psds[0];
+    for(int i=1; i<dim; i++)
+        fft_signal[n-i] = fft_signal[i] = D_psds[i];
+    fftw_execute(plan);
+    for(int i=0; i<n/2+1; i++)
+        D_pafs[i] = (int)round(fft_result[i][0]/n);
+
+    /*printf("PAFs: ");
+    for(int i=0; i<=n/2; i++)
+    {   printf("%d ", C_pafs[i]);
+    }
+    printf("\n");*/
+
+    Mat<GF2> M;
+    M.SetDims(n/2, n/2+1);
+
+    for(int k=1; k<n/2+1; k++)
+    {   int terms[n] = {};
+
+        for(int j=0; j<n; j++)
+        {   if(C_entries[j]*D_entries[j]*C_entries[(j+k)%n]*D_entries[(j+k)%n]==((j+k)%n==0 ? 1 : -1)*(j==0 ? 1 : -1))
+            {   if(minindex(n,j) < minindex(n,(j+k)%n))
+                {   //printf(" + c[%d]*c[%d]", minindex(n, j), minindex(n, (j+k)%n));
+                    terms[minindex(n, j)]++;
+                    terms[minindex(n, (j+k)%n)]++;
+                    terms[0]--;
+                }
+            }
+        }
+
+        int rhs = 0;
+        for(int j=1; j<n; j++)
+            rhs += terms[j]%4;
+
+        for(int j=1; j<n; j++)
+        {   if(terms[j]%2>0)
+                M(k,j) = 1;
+        }
+        M(k,n/2+1) = ((rhs-terms[0]+(-(C_pafs[k]+D_pafs[k])/2-1)/2)/2)%2;
+    }
+
+    gauss(M);
+
+    long c=2;
+    for(long j=2; j<n/2+1; j++)
+    {   if(M(c, j)==1)
+        {   for(long k=1; k<c; k++)
+            {   if(M(k, j)==1)
+                    M[k-1] += M[c-1];
+            }
+            c++;
+        }
+    }
+
+    for(long k=0; k<n/2; k++)
+    {   vec<Var> vars;
+        for(long j=0; j<n/2; j++)
+        {   if(IsOne(M[k][j]))
+                vars.push(j+1);
+        }
+        generateXorClauses(antecedent, vars, IsZero(M[k][n/2]) ? 0 : 1);
+    }
   }
-
-  return false;
 
 }
 
@@ -2210,9 +2317,19 @@ lbool Solver::search(int nof_conflicts)
                     units.clear();
                     backtrack_level = decisionLevel();
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
+                        #ifdef CHECK_LEARNED_CLAUSES_FOR_CONFLICT
+                        int level = backtrack_level;
+            			if(notInConflict(callbackLearntClauses[i]))
+			            	callbackLearntClauses[i].copyTo(learnt_clause);
+			            else
+                        {	learnt_clause.clear();
+                        	analyze(callbackLearntClauses[i], learnt_clause, level);
+			            }
+                        #else
                         int level;
                         learnt_clause.clear();
                         analyze(callbackLearntClauses[i], learnt_clause, level);
+                        #endif
                         if (level == -1) {
                             return l_False;
                         } else if (level < backtrack_level) {

@@ -42,7 +42,7 @@ public:
     virtual ~Solver();
 
     void generateCompClauses(int n, int d, int i, int c, int v);
-    void generateXorClauses(vec<Var>& vars, int c);
+    void generateXorClauses(const vec<Lit>& antecedent, const vec<Var>& vars, const int c);
     void addCompClauses();
 
     // Problem specification:
@@ -54,6 +54,9 @@ public:
     bool    addClause (Lit p);                                  // Add a unit clause to the solver. 
     bool    addClause (Lit p, Lit q);                           // Add a binary clause to the solver. 
     bool    addClause (Lit p, Lit q, Lit r);                    // Add a ternary clause to the solver. 
+    bool    addAntClause (const vec<Lit>& ant, Lit p);
+    bool    addAntClause (const vec<Lit>& ant, Lit p, Lit q);
+    bool    addAntClause (const vec<Lit>& ant, Lit p, Lit q, Lit r);
     bool    addClause_(      vec<Lit>& ps);                     // Add a clause to the solver without making superflous internal copy. Will
                                                                 // change the passed vector 'ps'.
 
@@ -278,7 +281,7 @@ protected:
         return lbd;
     }
     
-    bool     filtering_check(vec<vec<Lit> >& out_learnts);
+    void     filtering_check(vec<vec<Lit> >& out_learnts);
     
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
@@ -304,6 +307,7 @@ protected:
     void     detachClause     (CRef cr, bool strict = false); // Detach a clause to watcher lists.
     void     removeClause     (CRef cr);               // Detach and free a clause.
     bool     locked           (const Clause& c) const; // Returns TRUE if a clause is a reason for some implication in the current state.
+    bool     notInConflict    (const vec<Lit>& c) const; // Returns TRUE if a clause is not in conflict in the current state.
     bool     satisfied        (const Clause& c) const; // Returns TRUE if a clause is satisfied in the current state.
 
     void     relocAll         (ClauseAllocator& to);
@@ -378,6 +382,9 @@ inline bool     Solver::addEmptyClause  ()                      { add_tmp.clear(
 inline bool     Solver::addClause       (Lit p)                 { add_tmp.clear(); add_tmp.push(p); return addClause_(add_tmp); }
 inline bool     Solver::addClause       (Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
 inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
+inline bool     Solver::addAntClause       (const vec<Lit>& ant, Lit p)   { ant.copyTo(add_tmp); add_tmp.push(p); return addClause_(add_tmp); }
+inline bool     Solver::addAntClause       (const vec<Lit>& ant, Lit p, Lit q)   { ant.copyTo(add_tmp); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
+inline bool     Solver::addAntClause       (const vec<Lit>& ant, Lit p, Lit q, Lit r)   { ant.copyTo(add_tmp); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked          (const Clause& c) const { return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c; }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
 
