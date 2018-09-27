@@ -119,45 +119,46 @@ void Solver::generateXorClauses(const vec<Lit>& antecedent, const vec<Var>& vars
 {   const int n = vars.size();
     vec<Lit> clause;
     if(n==1)
-        addAntClause(antecedent, mkLit(vars[0], c==0));
+        learnAntClause(antecedent, mkLit(vars[0], c==0));
     else if(n==2)
     {   if(c==0)
-        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true));
+        {   learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true));
         }
         else if(c==1)
-        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false));
+        {   learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false));
         }
     }
     else if(n==3)
     {   if(c==0)
-        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], true));
-            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], true));
+        {   learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], true));
+            learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], true));
         }
         else if(c==1)
-        {   addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], true));
-            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], true));
-            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], false));
+        {   learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], true));
+            learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], true));
+            learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], false));
         }
     }
     else if(n>3)
     {   Var tmp = newVar();
-        addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(tmp, false));
-        addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(tmp, false));
-        addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(tmp, true));
-        addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(tmp, true));
+        learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(tmp, false));
+        learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(tmp, false));
+        learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(tmp, true));
+        learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(tmp, true));
         for(int i=2; i<n; i++)
         {   tmp = newVar();
-            addAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, false), mkLit(tmp, false));
-            addAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, true), mkLit(tmp, false));
-            addAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
-            addAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
+            learnAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, false), mkLit(tmp, false));
+            learnAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, true), mkLit(tmp, false));
+            learnAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
+            learnAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
         }
-        addClause(mkLit(tmp, c==0));
+        //addClause(mkLit(tmp, c==0));
+        learnAntClause(antecedent, mkLit(tmp, c==0));
     }
 }
 
@@ -326,6 +327,60 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 		}
 	}
 	
+}
+
+void Solver::learnAntClause(const vec<Lit>& ant, Lit p)
+{
+    vec<Lit> learnt_clause;
+    ant.copyTo(learnt_clause);
+    learnt_clause.push(p);
+
+    CRef cr = ca.alloc(learnt_clause, true);
+    learnts.push(cr);
+    attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+    Clause& clause = ca[cr];
+    clause.activity() = lbd(clause);
+#else
+    claBumpActivity(ca[cr]);
+#endif
+}
+
+void Solver::learnAntClause(const vec<Lit>& ant, Lit p, Lit q)
+{
+    vec<Lit> learnt_clause;
+    ant.copyTo(learnt_clause);
+    learnt_clause.push(p);
+    learnt_clause.push(q);
+
+    CRef cr = ca.alloc(learnt_clause, true);
+    learnts.push(cr);
+    attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+    Clause& clause = ca[cr];
+    clause.activity() = lbd(clause);
+#else
+    claBumpActivity(ca[cr]);
+#endif
+}
+
+void Solver::learnAntClause(const vec<Lit>& ant, Lit p, Lit q, Lit r)
+{
+    vec<Lit> learnt_clause;
+    ant.copyTo(learnt_clause);
+    learnt_clause.push(p);
+    learnt_clause.push(q);
+    learnt_clause.push(r);
+
+    CRef cr = ca.alloc(learnt_clause, true);
+    learnts.push(cr);
+    attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+    Clause& clause = ca[cr];
+    clause.activity() = lbd(clause);
+#else
+    claBumpActivity(ca[cr]);
+#endif
 }
 
 void Solver::addCompClauses()

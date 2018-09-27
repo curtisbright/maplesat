@@ -57,6 +57,10 @@ public:
     bool    addAntClause (const vec<Lit>& ant, Lit p);
     bool    addAntClause (const vec<Lit>& ant, Lit p, Lit q);
     bool    addAntClause (const vec<Lit>& ant, Lit p, Lit q, Lit r);
+    //void    learnClause    (const vec<Lit>& ant);
+    void    learnAntClause (const vec<Lit>& ant, Lit p);
+    void    learnAntClause (const vec<Lit>& ant, Lit p, Lit q);
+    void    learnAntClause (const vec<Lit>& ant, Lit p, Lit q, Lit r);
     bool    addClause_(      vec<Lit>& ps);                     // Add a clause to the solver without making superflous internal copy. Will
                                                                 // change the passed vector 'ps'.
 
