@@ -18,6 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define USEPERMS
+
 #include <math.h>
 #include <cstdio>
 #include "coprimelist.h"
@@ -56,8 +58,8 @@ double time4 = 0;
 #include "core/Solver.h"
 
 #include <fftw3.h>
-#include <set>
-#include <string>
+//#include <set>
+//#include <string>
 
 FILE* exhaustfile;
 
@@ -680,6 +682,11 @@ void Solver::removeClause(CRef cr) {
     ca.free(cr);
 }
 
+bool Solver::satisfied(const vec<Lit>& c) const {
+    for (int i = 0; i < c.size(); i++)
+        if (value(c[i]) == l_True)
+            return true;
+    return false; }
 
 bool Solver::satisfied(const Clause& c) const {
     for (int i = 0; i < c.size(); i++)
@@ -860,7 +867,7 @@ inline int minindex(int n, int i)
 }
 
 #ifdef USEPERMS
-std::set<std::string> myset;
+//std::set<std::string> myset;
 //#include <iostream>
 #endif
 
@@ -1116,7 +1123,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
              assert(abs(psds[i][seq].psd-psd_i_alt) < 0.0001);
 
 #ifdef USEPERMS
-             char charstring[10] = {};
+             //char charstring[10] = {};
 #endif
 
              if(this_psdsum > 4*n + 0.01)
@@ -1128,7 +1135,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                 //cl.clear();
 
 #ifdef USEPERMS
-                std::string mystring = std::string();
+                //std::string mystring = std::string();
 #endif
 
                 for(int s=0; s<4; s++)
@@ -1139,16 +1146,16 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                       { out_learnts[size].push(mkLit(j, true)) /*, printf("+")*/;
                         //cl.push(mkLit(j, true));
 #ifdef USEPERMS
-                        sprintf(charstring, "%d ", j+1);
-                        mystring += charstring;
+                        //sprintf(charstring, "%d ", j+1);
+                        //mystring += charstring;
 #endif
                       }
                       else if(assigns[j] == l_False)
                       { out_learnts[size].push(mkLit(j, false))/*, printf("-")*/;
                         //cl.push(mkLit(j, false));
 #ifdef USEPERMS
-                        sprintf(charstring, "-%d ", j+1);
-                        mystring += charstring;
+                        //sprintf(charstring, "-%d ", j+1);
+                        //mystring += charstring;
 #endif
                       }
                     }
@@ -1158,7 +1165,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                 //printf("\n");
 
 #ifdef USEPERMS
-                myset.insert(mystring);
+                //myset.insert(mystring);
 #endif
                 //out_learnts.push();
                 //cl.copyTo(out_learnts.last());
@@ -1174,8 +1181,10 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                   for(int coprimeindex=0; coprimeindex < coprimelength[n]; coprimeindex++)
                   { 
                     const int k = coprimelist[n][coprimeindex];
-                    //size++;
-                    //out_learnts.push();
+
+                    size++;
+                    out_learnts.push();
+
                     //int myarray[100] = {};
 
                     //int sol[32] = {-1, -2, -3, 4, 5, -6, 7, 8, -9, 10, 11, -12, -13, 14, -15, -16, -17, 18, -19, 20, 21, 22, 23, -24, -25, 26, -27, 28, 29, 30, 31, -32};
@@ -1183,7 +1192,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
                     bool newassigns[4*dim];
 
-                    std::string mystring = std::string();
+                    //std::string mystring = std::string();
 
                     for(int s=0; s<4; s++)
                     {
@@ -1209,14 +1218,14 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                         for(int ii=0; ii<dim; ii++)
 						{ 
                           if(newassigns[ii+s*dim])
-						  {  //out_learnts[size].push(mkLit(i+s*dim, true));
-                             sprintf(charstring, "%d ", ii+s*dim+1);
-                             mystring += charstring;
+						  {  out_learnts[size].push(mkLit(ii+s*dim, true));
+                             //sprintf(charstring, "%d ", ii+s*dim+1);
+                             //mystring += charstring;
                           }
 						  else
-		                  {  //out_learnts[size].push(mkLit(i+s*dim, false));
-                             sprintf(charstring, "-%d ", ii+s*dim+1);
-                             mystring += charstring;
+		                  {  out_learnts[size].push(mkLit(ii+s*dim, false));
+                             //sprintf(charstring, "-%d ", ii+s*dim+1);
+                             //mystring += charstring;
                           }
                           //if(newassigns[i+s*dim] && sol[i] < 0)
                           //  at_least_one_ok = true;
@@ -1256,38 +1265,6 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
                     }
 
-                    if(myset.find(mystring) == myset.end())
-                    {   
-                        myset.insert(mystring);
-                        size++;
-                        out_learnts.push();
-                        //out_learnts[size].clear();
-                        //vec<Lit> cl;
-                        //cl.clear();
-
-		                for(int s=0; s<4; s++)
-		                {
-		                  if(seqused[s])
-		                  { 
-		                    for(int ii=0; ii<dim; ii++)
-							{ 
-		                      if(newassigns[ii+s*dim])
-                                //cl.push(mkLit(ii+s*dim, true));
-								out_learnts[size].push(mkLit(ii+s*dim, true));
-							  else
-                                //cl.push(mkLit(ii+s*dim, false));
-				                out_learnts[size].push(mkLit(ii+s*dim, false));
-							}
-		                  }
-		                }
-
-                        //out_learnts.push();
-                        //cl.copyTo(out_learnts.last());
-                        //addClause(cl);
-#ifdef PRINTLEARNT
-                        fprintclause(out_learnt_file, out_learnts[size]);
-#endif
-                    }
                     /*else
                     {  std::cout << "DUPE: " << mystring2 << "\n";
                     }*/
@@ -2107,9 +2084,12 @@ lbool Solver::search(int nof_conflicts)
                     units.clear();
                     backtrack_level = decisionLevel();
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
-                        int level;
+                        int level = backtrack_level;
                         learnt_clause.clear();
-                        analyze(callbackLearntClauses[i], learnt_clause, level);
+                        if(satisfied(callbackLearntClauses[i]))
+                            callbackLearntClauses[i].copyTo(learnt_clause);
+                        else
+                            analyze(callbackLearntClauses[i], learnt_clause, level);
                         if (level == -1) {
                             return l_False;
                         } else if (level < backtrack_level) {
