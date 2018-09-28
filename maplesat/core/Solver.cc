@@ -18,14 +18,14 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define PREASSIGN
+//#define CHECK_LEARNED_CLAUSES_FOR_CONFLICT
+//#define LEARN_ANTECEDENT_CLAUSES
+
 #if defined(PREASSIGN) || defined(LEARN_ANTECEDENT_CLAUSES)
 #include <NTL/mat_GF2.h>
 using namespace NTL;
 #endif
-
-#define PREASSIGN
-//#define CHECK_LEARNED_CLAUSES_FOR_CONFLICT
-//#define LEARN_ANTECEDENT_CLAUSES
 
 #include <math.h>
 
