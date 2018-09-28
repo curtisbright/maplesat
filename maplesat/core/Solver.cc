@@ -449,7 +449,7 @@ void Solver::addCompClauses()
 				    printf("+c[%d]", j);
 				rhs += terms[j]%4;
 			    }
-			    printf("=%d\n", (rhs-terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2));
+			    printf("=%d\n", (rhs-terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)/2);
 
 			    for(int j=1; j<n; j++)
 			    {   if(terms[j]%2>0)
