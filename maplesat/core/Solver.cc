@@ -25,6 +25,7 @@ using namespace NTL;
 
 //#define PREASSIGN
 //#define CHECK_LEARNED_CLAUSES_FOR_CONFLICT
+#define LEARN_ANTECEDENT_CLAUSES
 
 #include <math.h>
 
@@ -119,45 +120,45 @@ void Solver::generateXorClauses(const vec<Lit>& antecedent, const vec<Var>& vars
 {   const int n = vars.size();
     vec<Lit> clause;
     if(n==1)
-        addAntClause(antecedent, mkLit(vars[0], c==0));
+        learnAntClause(antecedent, mkLit(vars[0], c==0));
     else if(n==2)
     {   if(c==0)
-        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true));
+        {   learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true));
         }
         else if(c==1)
-        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false));
+        {   learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false));
         }
     }
     else if(n==3)
     {   if(c==0)
-        {   addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], true));
-            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], true));
+        {   learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], true));
+            learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], true));
         }
         else if(c==1)
-        {   addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], false));
-            addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], true));
-            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], true));
-            addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], false));
+        {   learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(vars[2], false));
+            learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(vars[2], true));
+            learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(vars[2], true));
+            learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(vars[2], false));
         }
     }
     else if(n>3)
     {   Var tmp = newVar();
-        addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(tmp, false));
-        addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(tmp, false));
-        addAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(tmp, true));
-        addAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(tmp, true));
+        learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], false), mkLit(tmp, false));
+        learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], true), mkLit(tmp, false));
+        learnAntClause(antecedent, mkLit(vars[0], false), mkLit(vars[1], false), mkLit(tmp, true));
+        learnAntClause(antecedent, mkLit(vars[0], true), mkLit(vars[1], true), mkLit(tmp, true));
         for(int i=2; i<n; i++)
         {   tmp = newVar();
-            addAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, false), mkLit(tmp, false));
-            addAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, true), mkLit(tmp, false));
-            addAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
-            addAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
+            learnAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, false), mkLit(tmp, false));
+            learnAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, true), mkLit(tmp, false));
+            learnAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
+            learnAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
         }
-        addAntClause(antecedent, mkLit(tmp, c==0));
+        learnAntClause(antecedent, mkLit(tmp, c==0));
     }
 }
 
@@ -1166,6 +1167,60 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 }
 
+void Solver::learnAntClause(const vec<Lit>& ant, Lit p)
+{
+    vec<Lit> learnt_clause;
+    ant.copyTo(learnt_clause);
+    learnt_clause.push(p);
+
+    CRef cr = ca.alloc(learnt_clause, true);
+    learnts.push(cr);
+    attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+    Clause& clause = ca[cr];
+    clause.activity() = lbd(clause);
+#else
+    claBumpActivity(ca[cr]);
+#endif
+}
+
+void Solver::learnAntClause(const vec<Lit>& ant, Lit p, Lit q)
+{
+    vec<Lit> learnt_clause;
+    ant.copyTo(learnt_clause);
+    learnt_clause.push(p);
+    learnt_clause.push(q);
+
+    CRef cr = ca.alloc(learnt_clause, true);
+    learnts.push(cr);
+    attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+    Clause& clause = ca[cr];
+    clause.activity() = lbd(clause);
+#else
+    claBumpActivity(ca[cr]);
+#endif
+}
+
+void Solver::learnAntClause(const vec<Lit>& ant, Lit p, Lit q, Lit r)
+{
+    vec<Lit> learnt_clause;
+    ant.copyTo(learnt_clause);
+    learnt_clause.push(p);
+    learnt_clause.push(q);
+    learnt_clause.push(r);
+
+    CRef cr = ca.alloc(learnt_clause, true);
+    learnts.push(cr);
+    attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+    Clause& clause = ca[cr];
+    clause.activity() = lbd(clause);
+#else
+    claBumpActivity(ca[cr]);
+#endif
+}
+
 struct psd_holder {
 	int seqindex;
 	double psd;
@@ -1184,10 +1239,12 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   bool allseqcomplete = true;
   
   struct psd_holder psds[dim][4];
+#ifdef LEARN_ANTECEDENT_CLAUSES
   double C_psds[dim];
   double D_psds[dim];
   int C_entries[n] = {};
   int D_entries[n] = {};
+#endif
 
   double psdsum[dim];
   for(int i=0; i<dim; i++)
@@ -1232,6 +1289,7 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
         fftw_execute(plan);
 
+#ifdef LEARN_ANTECEDENT_CLAUSES
         if(seq==2)
         {   for(int i=0; i<n; i++)
                 C_entries[i] = fft_signal[i];
@@ -1240,6 +1298,7 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         {   for(int i=0; i<n; i++)
                 D_entries[i] = fft_signal[i];
         }
+#endif
       }
 
       for(int i=0; i<dim; i++)
@@ -1253,10 +1312,12 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 #endif
             psd_i = fft_result[i][0]*fft_result[i][0];
 
+#ifdef LEARN_ANTECEDENT_CLAUSES
         if(seq==2)
             C_psds[i] = psd_i;
         else if(seq==3)
             D_psds[i] = psd_i;
+#endif
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
@@ -1391,7 +1452,9 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     }
   }
 
+#ifdef LEARN_ANTECEDENT_CLAUSES
   if(C_entries[0] != 0 && D_entries[0] != 0)
+#endif
   { /*printf("PSDs: ");
     for(int i=0; i<dim; i++)
        {  printf("%.2f ", psdsum[i]);
@@ -1433,6 +1496,7 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 #endif
     }
 
+#ifdef LEARN_ANTECEDENT_CLAUSES
     vec<Lit> antecedent;
 
     for(int s=2; s<4; s++)
@@ -1444,6 +1508,11 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           antecedent.push(mkLit(j, false));
       }
     }
+
+#ifdef PRINTCONF
+    printf("antecedent ");
+    printclause(antecedent);
+#endif
 
     int C_pafs[dim];
     int D_pafs[dim];
@@ -1517,6 +1586,7 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         }
         generateXorClauses(antecedent, vars, IsZero(M[k][n/2]) ? 0 : 1);
     }
+#endif
   }
 
 }
