@@ -157,7 +157,7 @@ void Solver::generateXorClauses(const vec<Lit>& antecedent, const vec<Var>& vars
             addAntClause(antecedent, mkLit(vars[i], false), mkLit(tmp-1, false), mkLit(tmp, true));
             addAntClause(antecedent, mkLit(vars[i], true), mkLit(tmp-1, true), mkLit(tmp, true));
         }
-        addClause(mkLit(tmp, c==0));
+        addAntClause(antecedent, mkLit(tmp, c==0));
     }
 }
 
@@ -437,66 +437,6 @@ void Solver::addCompClauses()
             for(int i=0; i<n/2+1; i++)
                 assigned_pafs[1][i] = (int)round(fft_result[i][0]/order);
 
-            //printf("PAFs: ");
-            for(int i=0; i<=order/2; i++)
-            {   //printf("%d ", assigned_pafs[1][i]);
-            }
-            //printf("\n");
-            //printf("PAFs: ");
-            for(int i=0; i<=order/2; i++)
-            {   //printf("%d ", paf(order, compB[0], i));
-            }
-            //printf("\n");
-
-            Mat<GF2> M;
-            M.SetDims(n/2, n/2+1);
-
-            for(int k=1; k<n/2+1; k++)
-            {   int terms[n] = {};
-
-                for(int j=0; j<n; j++)
-                {   if(compA[0][j]*compB[0][j]*compA[0][(j+k)%n]*compB[0][(j+k)%n]==((j+k)%n==0 ? 1 : -1)*(j==0 ? 1 : -1))
-                    {   if(minindex(n,j) < minindex(n,(j+k)%n))
-                        {   //printf(" + c[%d]*c[%d]", minindex(n, j), minindex(n, (j+k)%n));
-                            terms[minindex(n, j)]++;
-                            terms[minindex(n, (j+k)%n)]++;
-                            terms[0]--;
-                        }
-                    }
-                }
-
-                int rhs = 0;
-                for(int j=1; j<n; j++)
-                    rhs += terms[j]%4;
-
-                for(int j=1; j<n; j++)
-                {   if(terms[j]%2>0)
-                        M(k,j) = 1;
-                }
-                M(k,n/2+1) = ((rhs-terms[0]+(-(assigned_pafs[0][k]+assigned_pafs[1][k])/2-1)/2)/2)%2;  
-            }
-
-            gauss(M);
-
-            long c=2;
-            for(long j=2; j<n/2+1; j++)
-            {   if(M(c, j)==1)
-                {   for(long k=1; k<c; k++)
-                    {   if(M(k, j)==1)
-                            M[k-1] += M[c-1];
-                    }
-                    c++;
-                }
-            }
-
-            for(long k=0; k<n/2; k++)
-            {   vec<Var> vars;
-                for(long j=0; j<n/2; j++)
-                {   if(IsOne(M[k][j]))
-                        vars.push(2*(n/2+1)+j+1);
-                }
-                generateXorClauses(vars, IsZero(M[k][n/2]) ? 0 : 1);
-            }
 		}
 #endif
 
@@ -1246,8 +1186,8 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   struct psd_holder psds[dim][4];
   double C_psds[dim];
   double D_psds[dim];
-  int C_entries[n];
-  int D_entries[n];
+  int C_entries[n] = {};
+  int D_entries[n] = {};
 
   double psdsum[dim];
   for(int i=0; i<dim; i++)
@@ -1451,7 +1391,7 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     }
   }
 
-  if(allseqcomplete && exhauststring != NULL)
+  if(C_entries[0] != 0 && D_entries[0] != 0)
   { /*printf("PSDs: ");
     for(int i=0; i<dim; i++)
        {  printf("%.2f ", psdsum[i]);
@@ -1465,25 +1405,32 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     }
     printf("\n");*/
 
-    for(int k=0; k<4; k++)
-    { for(int i=0; i<n; i++)
-      { int index = minindex(n, i);
-        fprintf(exhaustfile, "%s ", (assigns[k*dim+index] == l_True) ? "1" : "-1");
-      }
-    }
-    fprintf(exhaustfile, "\n");
 
-    int size = out_learnts.size();
-    out_learnts.push();
-
-    for(int s=0; s<4; s++)
+    if(allseqcomplete && exhauststring != NULL)
     {
-      for(int j=s*dim; j<(s+1)*dim; j++)
-      { if(assigns[j] == l_True)
-          out_learnts[size].push(mkLit(j, true));
-        else if(assigns[j] == l_False)
-          out_learnts[size].push(mkLit(j, false));
+      for(int k=0; k<4; k++)
+      { for(int i=0; i<n; i++)
+        { int index = minindex(n, i);
+          fprintf(exhaustfile, "%s ", (assigns[k*dim+index] == l_True) ? "1" : "-1");
+        }
       }
+      fprintf(exhaustfile, "\n");
+
+      int size = out_learnts.size();
+      out_learnts.push();
+
+      for(int s=0; s<4; s++)
+      {
+        for(int j=s*dim; j<(s+1)*dim; j++)
+        { if(assigns[j] == l_True)
+            out_learnts[size].push(mkLit(j, true));
+          else if(assigns[j] == l_False)
+            out_learnts[size].push(mkLit(j, false));
+        }
+      }
+#ifdef PRINTCONF
+      printf("out_learnt "), printclause(out_learnts[size]);
+#endif
     }
 
     vec<Lit> antecedent;
@@ -1497,10 +1444,6 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           antecedent.push(mkLit(j, false));
       }
     }
-
-#ifdef PRINTCONF
-    printf("out_learnt "), printclause(out_learnts[size]);
-#endif
 
     int C_pafs[dim];
     int D_pafs[dim];
