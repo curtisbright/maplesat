@@ -18,9 +18,25 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#define PREASSIGN
+//#define PREASSIGN
 //#define CHECK_LEARNED_CLAUSES_FOR_CONFLICT
 //#define LEARN_ANTECEDENT_CLAUSES
+//#define FILTERING_STATS
+
+#ifdef FILTERING_STATS
+int nconfs[4] = {};
+int ABconfs = 0;
+int ACconfs = 0;
+int ADconfs = 0;
+int BCconfs = 0;
+int BDconfs = 0;
+int CDconfs = 0;
+int ABCconfs = 0;
+int ABDconfs = 0;
+int ACDconfs = 0;
+int BCDconfs = 0;
+int ABCDconfs = 0;
+#endif
 
 #if defined(PREASSIGN) || defined(LEARN_ANTECEDENT_CLAUSES)
 #include <NTL/mat_GF2.h>
@@ -1240,6 +1256,38 @@ void Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                   //printf(" ");
                 }
                 //printf("\n");
+#ifdef FILTERING_STATS
+		if(seqused[0] && seqused[1] && seqused[2] && seqused[3])
+			ABCDconfs++;
+		else if(seqused[0] && seqused[1] && seqused[2])
+			ABCconfs++;
+		else if(seqused[0] && seqused[1] && seqused[3])
+			ABDconfs++;
+		else if(seqused[0] && seqused[2] && seqused[3])
+			ACDconfs++;
+		else if(seqused[1] && seqused[2] && seqused[3])
+			BCDconfs++;
+		else if(seqused[0] && seqused[1])
+			ABconfs++;
+		else if(seqused[0] && seqused[2])
+			ACconfs++;
+		else if(seqused[0] && seqused[3])
+			ADconfs++;
+		else if(seqused[1] && seqused[2])
+			BCconfs++;
+		else if(seqused[1] && seqused[3])
+			BDconfs++;
+		else if(seqused[2] && seqused[3])
+			CDconfs++;
+		else if(seqused[0])
+			nconfs[0]++;
+		else if(seqused[1])
+			nconfs[1]++;
+		else if(seqused[2])
+			nconfs[2]++;
+		else if(seqused[3])
+			nconfs[3]++;
+#endif
 
 #ifdef PRINTLEARNT
                 fprintclause(out_learnt_file, out_learnts[size]);
@@ -2300,6 +2348,24 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
+
+#ifdef FILTERING_STATS
+    printf("A: %d\n", nconfs[0]);
+    printf("B: %d\n", nconfs[1]);
+    printf("C: %d\n", nconfs[2]);
+    printf("D: %d\n", nconfs[3]);
+    printf("AB: %d\n", ABconfs);
+    printf("AC: %d\n", ACconfs);
+    printf("AD: %d\n", ADconfs);
+    printf("BC: %d\n", BCconfs);
+    printf("BD: %d\n", BDconfs);
+    printf("CD: %d\n", CDconfs);
+    printf("ABC: %d\n", ABCconfs);
+    printf("ABD: %d\n", ABDconfs);
+    printf("ACD: %d\n", ACDconfs);
+    printf("BCD: %d\n", BCDconfs);
+    printf("ABCD: %d\n", ABCDconfs);
+#endif
 
     if (status == l_True){
         // Extend & copy model:
