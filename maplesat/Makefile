@@ -2,7 +2,7 @@ MROOT := $(shell pwd)
 export MROOT
 
 maplesat:
-	make -C simp r
+	make -C simp rs
 
 debug:
 	make -C simp d
