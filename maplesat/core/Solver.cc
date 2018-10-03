@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //#define CHECK_LEARNED_CLAUSES_FOR_CONFLICT
 //#define LEARN_ANTECEDENT_CLAUSES
 //#define FILTERING_STATS
+//#define MIXED
 
 #ifdef FILTERING_STATS
 int nconfs[4] = {};
@@ -555,7 +556,11 @@ void Solver::addCompClauses()
 			return;
 
 		hadzero = false;
+#ifdef MIXED
+		for(int i=0; i<order; i++)
+#else
 		for(int i=0; i<order/div1; i++)
+#endif
 		{	sscanf(tmp, "%d", &compD[0][i]);
 			if(d == 2 && compD[0][i] == 0 && hadzero == false)
 			{	hadzero = true;
@@ -567,7 +572,11 @@ void Solver::addCompClauses()
 				addClause(cl);
 			}
 			else
+#ifdef MIXED
+				generateCompClauses(order, 1, i, 3, compD[0][i]);
+#else
 				generateCompClauses(order, div1, i, 3, compD[0][i]);
+#endif
 			while(*tmp != ',' && *tmp != '\0')
 			{	tmp++;
 			}
