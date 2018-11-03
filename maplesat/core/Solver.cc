@@ -37,9 +37,7 @@ int calls = 0;
 int success = 0;
 double time1 = 0;
 
-#define NC 64
-
-const int nchecks = NC;
+int nchecks;
 
 #ifndef NDEBUG
 #define PRINTCONF
@@ -55,7 +53,7 @@ FILE* exhaustfile;
 
 double* fft_signal;
 fftw_complex* fft_result;
-fftw_plan plan1, plan2;
+fftw_plan plan1;
 
 using namespace Minisat;
 
@@ -99,8 +97,6 @@ static StringOption  opt_exhaustive (_cat, "exhaustive",  "Output for exhaustive
 int divisor;
 int compA[99];
 int compB[99];
-int compC[99];
-int compD[99];
 #ifdef PRINTCONF
 void printclause(vec<Lit>& cl);
 #endif
@@ -235,22 +231,6 @@ void Solver::addCompClauses()
 			tmp++;
 		}
 
-		for(int i=0; i<n/d; i++)
-		{	sscanf(tmp, "%d", &compC[i]);
-			generateCompClauses(n, d, i, 2, compC[i]);
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-		}
-
-		for(int i=0; i<n/d; i++)
-		{	sscanf(tmp, "%d", &compD[i]);
-			generateCompClauses(n, d, i, 3, compD[i]);
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-		}
-
 	}
  
 }
@@ -342,6 +322,7 @@ Solver::Solver() :
 	if(opt_filtering)
 	{	if(order == -1)
 			printf("need to set order\n"), exit(1);
+		nchecks = order;
 		fft_signal = (double*)malloc(sizeof(double)*nchecks);
 		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*nchecks);
 		plan1 = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
@@ -361,7 +342,6 @@ Solver::~Solver()
         free(fft_signal);
         free(fft_result);
         fftw_destroy_plan(plan1);
-        fftw_destroy_plan(plan2);
     }
 
     if(exhauststring != NULL)
@@ -644,13 +624,13 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   const int dim = n;
   bool allseqcomplete = true;
   
-  struct psd_holder psds[nchecks/2+1][4];
+  struct psd_holder psds[nchecks/2+1][2];
 
   double psdsum[nchecks/2+1];
   for(int i=0; i<=nchecks/2; i++)
     psdsum[i] = 0;
 
-  /*for(int seq=0; seq<4; seq++)
+  /*for(int seq=0; seq<2; seq++)
   { for(int i=0; i<dim; i++)
     { if(assigns[i+seq*dim] == l_Undef)
         printf("?");
@@ -663,7 +643,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   }
   printf("\n");*/
 
-  for(int seq=0; seq<4; seq++)
+  for(int seq=0; seq<2; seq++)
   { 
     bool seqcomplete = true;
     for(int i=seq*dim; i<(seq+1)*dim; i++)
@@ -685,13 +665,14 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
       for(int i=0; i<=nchecks/2; i++)
       { 
-        double psd_i = fft_result[i][0]*fft_result[i][0] + fft_result[i][1]*fft_result[i][1];
+        //double psd_i = fft_result[i][0]*fft_result[i][0] + fft_result[i][1]*fft_result[i][1];
+		double psd_i = creal(fft_result[i])*creal(fft_result[i]) + cimag(fft_result[i])*cimag(fft_result[i]);
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
         psdsum[i] += psd_i;
 
-        if(psdsum[i] > 4*n + 0.001)
+        if(psdsum[i] > 2*n + 0.001)
         { 
           // Sort PSDs
 #ifdef DEBUG
@@ -707,28 +688,6 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           { if(psds[i][0].psd < psds[i][1].psd)
               swap_psd_holders(psds[i], psds[i]+1);
           }
-          else if(seq==2)
-          { if(psds[i][1].psd < psds[i][2].psd)
-              swap_psd_holders(psds[i]+1, psds[i]+2);
-            if(psds[i][0].psd < psds[i][1].psd)
-              swap_psd_holders(psds[i], psds[i]+1);
-            if(psds[i][1].psd < psds[i][2].psd)
-              swap_psd_holders(psds[i]+1, psds[i]+2);
-          }
-          else if(seq==3)
-          { if(psds[i][0].psd < psds[i][1].psd)
-              swap_psd_holders(psds[i], psds[i]+1);
-            if(psds[i][2].psd < psds[i][3].psd)
-              swap_psd_holders(psds[i]+2, psds[i]+3);
-            if(psds[i][0].psd < psds[i][2].psd)
-              swap_psd_holders(psds[i], psds[i]+2);
-            if(psds[i][1].psd < psds[i][2].psd)
-              swap_psd_holders(psds[i]+1, psds[i]+2);
-            if(psds[i][1].psd < psds[i][3].psd)
-              swap_psd_holders(psds[i]+1, psds[i]+3);
-            if(psds[i][2].psd < psds[i][3].psd)
-              swap_psd_holders(psds[i]+2, psds[i]+3);
-          }
 
 #ifdef DEBUG
           printf("filtering PSDs after: ");
@@ -737,20 +696,20 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           printf("\n");
 #endif
           double this_psdsum = 0;
-          bool seqused[4] = {false, false, false, false};
+          bool seqused[2] = {false, false};
 
-          for(int seq=0; seq<4; seq++)
+          for(int seq=0; seq<2; seq++)
           { 
              assert(psds[i][seq].seqindex >= 0);
              seqused[psds[i][seq].seqindex] = true;
              this_psdsum += psds[i][seq].psd;
 
-             if(this_psdsum > 4*n + 0.01)
+             if(this_psdsum > 2*n + 0.01)
              {
                 int size = out_learnts.size();
                 out_learnts.push();
 
-                for(int s=0; s<4; s++)
+                for(int s=0; s<2; s++)
                 {
                   if(seqused[s])
                   { for(int j=s*dim; j<(s+1)*dim; j++)
@@ -793,7 +752,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   if(allseqcomplete && exhauststring != NULL)
   { 
     /*printf("Solution: ");
-    for(int k=0; k<4; k++)
+    for(int k=0; k<2; k++)
     { for(int i=0; i<dim; i++)
         printf("%c", (assigns[k*dim+i] == l_True) ? '+' : '-');
       printf(" ");
@@ -807,7 +766,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     
     numsols++;
     
-    for(int k=0; k<4; k++)
+    for(int k=0; k<2; k++)
     { for(int i=0; i<n; i++)
       { fprintf(exhaustfile, "%s ", (assigns[k*dim+i] == l_True) ? "1" : "-1");
       }
@@ -817,7 +776,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     int size = out_learnts.size();
     out_learnts.push();
 
-    for(int s=0; s<4; s++)
+    for(int s=0; s<2; s++)
     {
       for(int j=s*dim; j<(s+1)*dim; j++)
       { if(assigns[j] == l_True)
