@@ -600,32 +600,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 }
 
-struct psd_holder {
-	int seqindex;
-	double psd;
-};
-
-/*int compare_psd_holders(const void* x, const void* y) {
-	if((((struct psd_holder*)y)->psd - ((struct psd_holder*)x)->psd) > 0)
-		return 1;
-	else
-		return -1;
-}*/
-
-void swap_psd_holders(struct psd_holder* x, struct psd_holder* y)
-{ struct psd_holder tmp = *x;
-  *x = *y;
-  *y = tmp;
-}
-
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
   const int n = order;
   const int dim = n;
   bool allseqcomplete = true;
   
-  struct psd_holder psds[nchecks/2+1][2];
-
   double psdsum[nchecks/2+1];
   for(int i=0; i<=nchecks/2; i++)
     psdsum[i] = 0;
@@ -666,86 +646,52 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       for(int i=0; i<=nchecks/2; i++)
       { 
         //double psd_i = fft_result[i][0]*fft_result[i][0] + fft_result[i][1]*fft_result[i][1];
-		double psd_i = creal(fft_result[i])*creal(fft_result[i]) + cimag(fft_result[i])*cimag(fft_result[i]);
+	double psd_i = creal(fft_result[i])*creal(fft_result[i]) + cimag(fft_result[i])*cimag(fft_result[i]);
 
-        psds[i][seq].seqindex = seq;
-        psds[i][seq].psd = psd_i;
         psdsum[i] += psd_i;
+
+	if(psd_i > 2*n + 0.001)
+	{
+            int size = out_learnts.size();
+            out_learnts.push();
+
+            for(int j=seq*dim; j<(seq+1)*dim; j++)
+            { if(assigns[j] == l_True)
+              { out_learnts[size].push(mkLit(j, true));
+              }
+              else if(assigns[j] == l_False)
+              { out_learnts[size].push(mkLit(j, false));
+              }
+            }
+            return true;
+	}
 
         if(psdsum[i] > 2*n + 0.001)
         { 
-          // Sort PSDs
-#ifdef DEBUG
-          printf("filtering PSDs before: ");
-          for(int s=0; s<seq+1; s++)
-            printf("%.2f ", psds[i][s].psd);
-          printf("\n");
-#endif
+            int size = out_learnts.size();
+            out_learnts.push();
 
-          //qsort(psds[i], seq+1, sizeof(struct psd_holder), compare_psd_holders);
-          
-          if(seq==1)
-          { if(psds[i][0].psd < psds[i][1].psd)
-              swap_psd_holders(psds[i], psds[i]+1);
-          }
-
-#ifdef DEBUG
-          printf("filtering PSDs after: ");
-          for(int s=0; s<seq+1; s++)
-            printf("%.2f ", psds[i][s].psd);
-          printf("\n");
-#endif
-          double this_psdsum = 0;
-          bool seqused[2] = {false, false};
-
-          for(int seq=0; seq<2; seq++)
-          { 
-             assert(psds[i][seq].seqindex >= 0);
-             seqused[psds[i][seq].seqindex] = true;
-             this_psdsum += psds[i][seq].psd;
-
-             if(this_psdsum > 2*n + 0.01)
-             {
-                int size = out_learnts.size();
-                out_learnts.push();
-
-                for(int s=0; s<2; s++)
-                {
-                  if(seqused[s])
-                  { for(int j=s*dim; j<(s+1)*dim; j++)
-                    { if(assigns[j] == l_True)
-                      { out_learnts[size].push(mkLit(j, true));
-                      }
-                      else if(assigns[j] == l_False)
-                      { out_learnts[size].push(mkLit(j, false));
-                      }
-                    }
-                  }
-                }
+            for(int j=0; j<2*dim; j++)
+            { if(assigns[j] == l_True)
+              { out_learnts[size].push(mkLit(j, true));
+              }
+              else if(assigns[j] == l_False)
+              { out_learnts[size].push(mkLit(j, false));
+              }
+            }
 
 #ifdef PRINTLEARNT
-                fprintclause(out_learnt_file, out_learnts[size]);
+            fprintclause(out_learnt_file, out_learnts[size]);
 #endif
 
 #ifdef PRINTCONF
-                printf("out_learnt "), printclause(out_learnts[size]);
+            printf("out_learnt "), printclause(out_learnts[size]);
 #endif
 
-                return true;
-
-             }
-          }
+            return true;
 
         }
-
       }
-
-    }
-    else
-    {  for(int i=0; i<=n/2; i++)
-       {  psds[i][seq].seqindex = -1;
-          psds[i][seq].psd = -1;
-       }
     }
   }
 
