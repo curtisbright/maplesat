@@ -25,6 +25,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Minisat;
 
+FILE* outfile;
+long numsols = 0;
+
 //=================================================================================================
 // Options:
 
@@ -55,6 +58,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 
+static IntOption     opt_vars              (_cat, "vars",        "The number of vars to run exhaustive search on", -1, IntRange(-1, INT32_MAX));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -127,11 +131,14 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{	char filename[100];
+	sprintf(filename, "out-%d.txt", (int)opt_vars);
+	outfile = fopen(filename, "w");
+}
 
 
 Solver::~Solver()
-{
+{	fclose(outfile);
 }
 
 
@@ -341,24 +348,34 @@ Lit Solver::pickBranchLit()
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	
 	bool all_assigned = true;
-	for(int i=0; i<assigns.size(); i++)
-	{	printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+	for(int i=0; i<opt_vars; i++)
+	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
 		if(assigns[i]==l_Undef)
 			all_assigned = false;
 	}
-	printf("\n");
+	//printf("\n");
 
 	if(all_assigned)
 	{
 		out_learnts.push();
-		for(int i=0; i<assigns.size(); i++)
+		for(int i=0; i<opt_vars; i++)
 		{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+			//fprintf(outfile, "%c", sign(out_learnts[0][i]) ? '1' : '0');
+			fprintf(outfile, "%s%d ", sign(out_learnts[0][i]) ? "" : "-", var(out_learnts[0][i])+1);
 		}
+		fprintf(outfile, "\n");
 
+#ifdef DEBUG
 		printf("size %d\tconflict:", out_learnts[0].size());
+		char filename[100];
+		sprintf(filename, "assums/%ld.assum", numsols);
+		FILE* assums = fopen(filename, "w");
 		for(int i=0; i<out_learnts[0].size(); i++)
-			printf(" %c%d", sign(out_learnts[0][i]) ? '-' : '+', var(out_learnts[0][i])+1);
-		printf("\n");
+			fprintf(assums, "%s%d\n", sign(out_learnts[0][i]) ? "" : "-", var(out_learnts[0][i])+1);
+		fclose(assums);
+#endif
+
+		numsols++;
 	}
 }
 
@@ -1247,6 +1264,7 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
 
+    printf("Num solutions: %ld\n", numsols);
 
     if (status == l_True){
         // Extend & copy model:
