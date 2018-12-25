@@ -155,6 +155,80 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			}
 		}
 	}
+	else if(v == -d+4)
+	{	// at least two 1 variables
+		for(int j=0; j<d; j++)
+		{
+			vec<Lit> cl;
+			cl.clear();
+			for(int k=0; k<d; k++)
+			{	if(k==j)
+					continue;
+				int newindex = index + i+k*(n/d);
+				cl.push(mkLit(newindex, false));
+			}
+			addClause(cl);
+#ifdef PRINTCONF
+			printclause(cl);
+#endif
+		}
+		// at most two 1 variables
+		for(int j=0; j<d; j++)
+		{	int newindex_j = index + i+j*(n/d);
+			for(int k=j+1; k<d; k++)
+			{	int newindex_k = index + i+k*(n/d);
+				for(int l=k+1; l<d; l++)
+				{	vec<Lit> cl;
+					cl.clear();
+					int newindex_l = index + i+l*(n/d);
+					cl.push(mkLit(newindex_j, true));
+					cl.push(mkLit(newindex_k, true));
+					cl.push(mkLit(newindex_l, true));
+					addClause(cl);
+#ifdef PRINTCONF
+					printclause(cl);
+#endif
+				}
+			}
+		}
+	}
+	else if(v == d-4)
+	{	// at least two -1 variables
+		for(int j=0; j<d; j++)
+		{
+			vec<Lit> cl;
+			cl.clear();
+			for(int k=0; k<d; k++)
+			{	if(k==j)
+					continue;
+				int newindex = index + i+k*(n/d);
+				cl.push(mkLit(newindex, true));
+			}
+			addClause(cl);
+#ifdef PRINTCONF
+			printclause(cl);
+#endif
+		}
+		// at most two -1 variables
+		for(int j=0; j<d; j++)
+		{	int newindex_j = index + i+j*(n/d);
+			for(int k=j+1; k<d; k++)
+			{	int newindex_k = index + i+k*(n/d);
+				for(int l=k+1; l<d; l++)
+				{	vec<Lit> cl;
+					cl.clear();
+					int newindex_l = index + i+l*(n/d);
+					cl.push(mkLit(newindex_j, false));
+					cl.push(mkLit(newindex_k, false));
+					cl.push(mkLit(newindex_l, false));
+					addClause(cl);
+#ifdef PRINTCONF
+					printclause(cl);
+#endif
+				}
+			}
+		}
+	}
 	else if(v == d-2)
 	{	// at least one -1 variable
 		vec<Lit> cl;
@@ -629,7 +703,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   for(int i=0; i<=nchecks/2; i++)
     psdsum[i] = 0;
 
-  /*for(int seq=0; seq<4; seq++)
+  /*for(int seq=0; seq<2; seq++)
   { for(int i=0; i<dim; i++)
     { if(assigns[i+seq*dim] == l_Undef)
         printf("?");
@@ -660,6 +734,22 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       for(int i=0; i<dim; i++)
         fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
 
+      if(seq==0)
+      {
+		  fft_signal[(n-5)/2] = 0;
+		  fft_signal[n-4] = 0;
+		  fft_signal[n-3] = 0;
+		  fft_signal[n-2] = 0;
+		  fft_signal[n-1] = 0;
+      }
+      else
+      {
+		  fft_signal[0] = 0;
+		  fft_signal[1] = 0;
+		  fft_signal[2] = 0;
+		  fft_signal[3] = 0;
+      }
+
       fftw_execute(plan1);
 
       for(int i=0; i<=nchecks/2; i++)
@@ -668,7 +758,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         if(seq==0)
           psdsum[i] = psd_i;
 
-        if(psd_i > 2*n*(i==0 ? 0 : 1)/**(opt_filtpercent/100.0)*/ + 2.001)
+        if(psd_i > 2*n-9+0.001)
         { 
           int size = out_learnts.size();
           out_learnts.push();
@@ -692,17 +782,19 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         }
 
 
-        if(seq>0 && psdsum[i]+psd_i > 2*n*(i==0 ? 0 : 1) + 2.001)
+        if(seq>0 && psdsum[i]+psd_i > 2*n-9+0.001)
         { 
 
           //printf("psd[%d] = %.5f + %.5f = %.5f ", i, psdsum[i], psd_i, psdsum[i] + psd_i);
 
+#if 0
     for(int k=0; k<2; k++)
     { for(int i=0; i<n; i++)
       { printf("%s ", (assigns[k*dim+i] == l_True) ? "1" : "-1");
       }
     }
     printf("\n");
+#endif
 
           int size = out_learnts.size();
           out_learnts.push();
