@@ -736,9 +736,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
       if(seq==0)
       {
-		  fft_signal[(n-5)/2] = 0;
-		  fft_signal[n-4] = 0;
-		  fft_signal[n-3] = 0;
+		  fft_signal[(n-3)/2] = 0;
 		  fft_signal[n-2] = 0;
 		  fft_signal[n-1] = 0;
       }
@@ -746,8 +744,6 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       {
 		  fft_signal[0] = 0;
 		  fft_signal[1] = 0;
-		  fft_signal[2] = 0;
-		  fft_signal[3] = 0;
       }
 
       fftw_execute(plan1);
@@ -758,7 +754,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         if(seq==0)
           psdsum[i] = psd_i;
 
-        if(psd_i > 2*n-9+0.001)
+        if(psd_i > 2*n-5+0.001)
         { 
           int size = out_learnts.size();
           out_learnts.push();
@@ -782,7 +778,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         }
 
 
-        if(seq>0 && psdsum[i]+psd_i > 2*n-9+0.001)
+        if(seq>0 && psdsum[i]+psd_i > 2*n-5+0.001)
         { 
 
           //printf("psd[%d] = %.5f + %.5f = %.5f ", i, psdsum[i], psd_i, psdsum[i] + psd_i);
