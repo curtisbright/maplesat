@@ -832,7 +832,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
              seqused[psds[i][seq].seqindex] = true;
              this_psdsum += psds[i][seq].psd;
 
-             if(this_psdsum > 4*n + 0.01)
+             if(this_psdsum > 4*n + 0.001)
              {
                 int size = out_learnts.size();
                 out_learnts.push();
