@@ -173,6 +173,7 @@ public:
     const char* compsums;
     const char* compstring;
     const char* exhauststring;
+    const char* seqnsstring;
 
 protected:
 

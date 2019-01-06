@@ -47,7 +47,15 @@ double time1 = 0;
 #include <complex.h>
 #include <fftw3.h>
 
+#define MAX_N 70
+#include <array>
+#include <vector>
+
+std::vector<std::array<int, MAX_N>> seqns;
+std::vector<std::array<double, MAX_N/2+1>> psdlist;
+
 FILE* exhaustfile;
+FILE* seqnsfile;
 
 double* fft_signal;
 fftw_complex* fft_result;
@@ -89,6 +97,7 @@ static IntOption     opt_order      (_cat, "order",       "Order of sequences", 
 static StringOption  opt_compstring (_cat, "compstring",  "A string which contains a comma-separated list of the compression sums to be used.");
 static BoolOption    opt_filtering  (_cat, "filtering",   "Use PSD filtering programmatic check", false);
 static StringOption  opt_exhaustive (_cat, "exhaustive",  "Output for exhaustive search");
+static StringOption  opt_seqns      (_cat, "seqns",       "File containing list of sequences");
 
 #include "decomps.h"
 
@@ -379,6 +388,7 @@ Solver::Solver() :
   , order (opt_order) 
   , compstring (opt_compstring)
   , exhauststring (opt_exhaustive)
+  , seqnsstring (opt_seqns)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -420,6 +430,50 @@ Solver::Solver() :
 		{	fft_signal[i] = 0;
 		}
 	}
+
+	if(seqnsstring != NULL)
+	{	seqnsfile = fopen(seqnsstring, "r");
+		if(seqnsfile == NULL)
+			printf("Could not open %s.\n", seqnsstring), exit(1);
+		if(order == -1)
+			printf("Need to set order.\n"), exit(1);
+
+		const int n = order;
+		std::array<int, MAX_N> A = {};
+		int in;
+		while(fscanf(seqnsfile, "%d ", &in)>0)
+		{	A[0] = in;
+			for(int i=1; i<n; i++)
+			{	int res = fscanf(seqnsfile, "%d ", &in);
+				if(res!=1)
+					printf("Malformed seqnsfile.\n"), exit(1);
+				A[i] = in;
+			}
+			seqns.push_back(A);
+		}
+
+		for(unsigned int i=0; i<seqns.size(); i++)
+		{	for(int j=0; j<n; j++)
+				fft_signal[j] = seqns[i][j];
+			fftw_execute(plan1);
+
+			std::array<double, MAX_N/2+1> P = {};
+			for(int j=0; j<=n/2; j++)
+				P[j] = fft_result[j][0]*fft_result[j][0] + fft_result[j][1]*fft_result[j][1];
+			psdlist.push_back(P);
+		}
+	}
+
+	/*
+	for(int i=0; i<order; i++)
+		printf("%d ", seqns[0][i]);
+	printf("\n");
+
+	for(int i=0; i<order; i++)
+		printf("%.2f ", psds[0][i]);
+	printf("\n");
+	*/
+
 }
 
 
@@ -435,6 +489,10 @@ Solver::~Solver()
 
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
+    }
+
+    if(seqnsstring != NULL)
+    {	fclose(seqnsfile);
     }
 
 #ifdef PRINTLEARNT
@@ -680,11 +738,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     
 #ifdef PRINTCONF
     for(int i=0; i<out_learnts.size(); i++)
-    {   printf("learned clause %d: ", i);
+    {   printf("callback learned clause %d: ", i);
         printclause(out_learnts[i]);
     }
     if(out_learnts.size()==0)
-        printf("no learned clauses\n");
+        printf("no callback learned clauses\n");
 #endif
 
 }
@@ -723,31 +781,93 @@ int num_diff(const int n, const double* A, const int s)
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
-  const int n = order;
-  const int dim = n;
-  bool allseqcomplete = true;
+	const int n = order;
 
-  double seqns[4][n];
-  
-  struct psd_holder psds[order/2+1][4];
+	struct psd_holder psds[n/2+1][4];
 
-  double psdsum[order/2+1];
-  for(int i=0; i<=order/2; i++)
-    psdsum[i] = 0;
+	int k = 0;
+	for(int i=0; i<assigns.size(); i++)
+	{	if(assigns[i]==l_True)
+		{	for(int j=0; j<=n/2; j++)
+			{	psds[j][k].psd = psdlist[i][j];
+				psds[j][k].seqindex = i;
+			}
+			k++;
+		}
+	}
 
-  /*for(int seq=0; seq<4; seq++)
-  { for(int i=0; i<dim; i++)
-    { if(assigns[i+seq*dim] == l_Undef)
-        printf("?");
-      if(assigns[i+seq*dim] == l_True)
-        printf("+");
-      if(assigns[i+seq*dim] == l_False)
-        printf("-");
-    }
-    printf(" ");
-  }
-  printf("\n");*/
+	if(k==4)
+	{
+		for(int i=0; i<=n/2; i++)
+		{
+			if(psds[i][0].psd < psds[i][1].psd)
+				swap_psd_holders(psds[i], psds[i]+1);
+			if(psds[i][2].psd < psds[i][3].psd)
+				swap_psd_holders(psds[i]+2, psds[i]+3);
+			if(psds[i][0].psd < psds[i][2].psd)
+				swap_psd_holders(psds[i], psds[i]+2);
+			if(psds[i][1].psd < psds[i][2].psd)
+				swap_psd_holders(psds[i]+1, psds[i]+2);
+			if(psds[i][1].psd < psds[i][3].psd)
+				swap_psd_holders(psds[i]+1, psds[i]+3);
+			if(psds[i][2].psd < psds[i][3].psd)
+				swap_psd_holders(psds[i]+2, psds[i]+3);
 
+			double this_psdsum = 0;
+
+			for(int seq=0; seq<4; seq++)
+			{
+				assert(psds[i][seq].seqindex >= 0);
+				this_psdsum += psds[i][seq].psd;
+
+				if(this_psdsum > 4*n + 0.001)
+				{
+					int size = out_learnts.size();
+					out_learnts.push();
+
+					for(int j=0; j<=seq; j++)
+					{	out_learnts[size].push(mkLit(psds[i][j].seqindex, true));
+					}
+
+					return true;
+				}
+			}
+
+		}
+		
+		/*for(int j=0; j<assigns.size(); j++)
+		{	if(assigns[j]==l_True)
+			{	for(int i=0; i<n; i++)
+					printf("%d ", seqns[j][i]);
+			}
+		}
+		printf("\n");*/
+
+		if(exhauststring != NULL)
+		{	
+			int size = out_learnts.size();
+			out_learnts.push();
+
+			for(int j=0; j<assigns.size(); j++)
+			{	if(assigns[j]==l_True)
+				{	out_learnts[size].push(mkLit(j, true));
+
+					for(int i=0; i<n; i++)
+						fprintf(exhaustfile, "%d ", seqns[j][i]);
+				}
+			}
+			fprintf(exhaustfile, "\n");
+
+			numsols++;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/*
   for(int seq=0; seq<4; seq++)
   { 
     bool seqcomplete = true;
@@ -913,6 +1033,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   return false;
 
 }
+*/
 
 bool Solver::assertingClause(CRef confl) {
     Clause& c = ca[confl];
