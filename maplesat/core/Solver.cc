@@ -727,7 +727,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     if(order==-1)
         return;
 
-    if(opt_filtering || exhauststring != NULL)
+    if(complete && (opt_filtering || exhauststring != NULL))
     {   calls++;
         timestamp_t t0 = get_timestamp();
         if(filtering_check(out_learnts))
@@ -786,7 +786,7 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 	struct psd_holder psds[n/2+1][4];
 
 	int k = 0;
-	for(int i=0; i<assigns.size(); i++)
+	for(unsigned int i=0; i<seqns.size(); i++)
 	{	if(assigns[i]==l_True)
 		{	for(int j=0; j<=n/2; j++)
 			{	psds[j][k].psd = psdlist[i][j];
@@ -796,72 +796,74 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 		}
 	}
 
-	if(k==4)
+	assert(k==4);
+
+	for(int i=0; i<=n/2; i++)
 	{
-		for(int i=0; i<=n/2; i++)
+		if(psds[i][0].psd < psds[i][1].psd)
+			swap_psd_holders(psds[i], psds[i]+1);
+		if(psds[i][2].psd < psds[i][3].psd)
+			swap_psd_holders(psds[i]+2, psds[i]+3);
+		if(psds[i][0].psd < psds[i][2].psd)
+			swap_psd_holders(psds[i], psds[i]+2);
+		if(psds[i][1].psd < psds[i][2].psd)
+			swap_psd_holders(psds[i]+1, psds[i]+2);
+		if(psds[i][1].psd < psds[i][3].psd)
+			swap_psd_holders(psds[i]+1, psds[i]+3);
+		if(psds[i][2].psd < psds[i][3].psd)
+			swap_psd_holders(psds[i]+2, psds[i]+3);
+
+		double this_psdsum = 0;
+
+		for(int seq=0; seq<4; seq++)
 		{
-			if(psds[i][0].psd < psds[i][1].psd)
-				swap_psd_holders(psds[i], psds[i]+1);
-			if(psds[i][2].psd < psds[i][3].psd)
-				swap_psd_holders(psds[i]+2, psds[i]+3);
-			if(psds[i][0].psd < psds[i][2].psd)
-				swap_psd_holders(psds[i], psds[i]+2);
-			if(psds[i][1].psd < psds[i][2].psd)
-				swap_psd_holders(psds[i]+1, psds[i]+2);
-			if(psds[i][1].psd < psds[i][3].psd)
-				swap_psd_holders(psds[i]+1, psds[i]+3);
-			if(psds[i][2].psd < psds[i][3].psd)
-				swap_psd_holders(psds[i]+2, psds[i]+3);
+			assert(psds[i][seq].seqindex >= 0);
+			this_psdsum += psds[i][seq].psd;
 
-			double this_psdsum = 0;
-
-			for(int seq=0; seq<4; seq++)
+			if(this_psdsum > 4*n + 0.001)
 			{
-				assert(psds[i][seq].seqindex >= 0);
-				this_psdsum += psds[i][seq].psd;
+				int size = out_learnts.size();
+				out_learnts.push();
 
-				if(this_psdsum > 4*n + 0.001)
-				{
-					int size = out_learnts.size();
-					out_learnts.push();
-
-					for(int j=0; j<=seq; j++)
-					{	out_learnts[size].push(mkLit(psds[i][j].seqindex, true));
-					}
-
-					return true;
+				for(int j=0; j<=seq; j++)
+				{	out_learnts[size].push(mkLit(psds[i][j].seqindex, true));
 				}
-			}
 
+				return true;
+			}
 		}
-		
-		/*for(int j=0; j<assigns.size(); j++)
+
+	}
+
+#ifdef DEBUG	
+	for(unsigned int j=0; j<seqns.size(); j++)
+	{	if(assigns[j]==l_True)
+		{	for(int i=0; i<n; i++)
+				printf("%c", seqns[j][i]==1 ? '+' : '-');
+			printf(" ");
+		}
+	}
+	printf("\n");
+#endif
+
+	if(exhauststring != NULL)
+	{	
+		int size = out_learnts.size();
+		out_learnts.push();
+
+		for(unsigned int j=0; j<seqns.size(); j++)
 		{	if(assigns[j]==l_True)
-			{	for(int i=0; i<n; i++)
-					printf("%d ", seqns[j][i]);
+			{	out_learnts[size].push(mkLit(j, true));
+
+				for(int i=0; i<n; i++)
+					fprintf(exhaustfile, "%d ", seqns[j][i]);
 			}
 		}
-		printf("\n");*/
+		fprintf(exhaustfile, "\n");
 
-		if(exhauststring != NULL)
-		{	
-			int size = out_learnts.size();
-			out_learnts.push();
+		numsols++;
 
-			for(int j=0; j<assigns.size(); j++)
-			{	if(assigns[j]==l_True)
-				{	out_learnts[size].push(mkLit(j, true));
-
-					for(int i=0; i<n; i++)
-						fprintf(exhaustfile, "%d ", seqns[j][i]);
-				}
-			}
-			fprintf(exhaustfile, "\n");
-
-			numsols++;
-
-			return true;
-		}
+		return true;
 	}
 
 	return false;
