@@ -181,13 +181,34 @@ bool Solver::addClause_(vec<Lit>& ps)
 
     // Check if clause is satisfied and remove false/duplicate literals:
     sort(ps);
-    Lit p; int i, j;
+
+    vec<Lit>    oc;
+    oc.clear();
+
+    Lit p; int i, j, flag = 0;
+    for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
+        oc.push(ps[i]);
+        if (value(ps[i]) == l_True || ps[i] == ~p || value(ps[i]) == l_False)
+          flag = 1;
+    }
+
     for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
         if (value(ps[i]) == l_True || ps[i] == ~p)
             return true;
         else if (value(ps[i]) != l_False && ps[i] != p)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
+
+    if (flag && (output != NULL)) {
+      for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
+        fprintf(output, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
+      fprintf(output, "0\n");
+
+      fprintf(output, "d ");
+      for (i = j = 0, p = lit_Undef; i < oc.size(); i++)
+        fprintf(output, "%i ", (var(oc[i]) + 1) * (-2 * sign(oc[i]) + 1));
+      fprintf(output, "0\n");
+    }
 
     if (ps.size() == 0)
         return ok = false;
@@ -232,6 +253,14 @@ void Solver::detachClause(CRef cr, bool strict) {
 
 void Solver::removeClause(CRef cr) {
     Clause& c = ca[cr];
+
+    if (output != NULL) {
+      fprintf(output, "d ");
+      for (int i = 0; i < c.size(); i++)
+        fprintf(output, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+      fprintf(output, "0\n");
+    }
+
     detachClause(cr);
     // Don't leave pointers to free'd memory!
     if (locked(c)) vardata[var(c[0])].reason = CRef_Undef;
@@ -817,6 +846,12 @@ lbool Solver::search(int nof_conflicts)
                 claBumpActivity(ca[cr]);
 #endif
                 uncheckedEnqueue(learnt_clause[0], cr);
+            }
+            if (output != NULL) {
+              for (int i = 0; i < learnt_clause.size(); i++)
+                fprintf(output, "%i " , (var(learnt_clause[i]) + 1) *
+                                  (-2 * sign(learnt_clause[i]) + 1) );
+              fprintf(output, "0\n");
             }
 
 #if BRANCHING_HEURISTIC == VSIDS

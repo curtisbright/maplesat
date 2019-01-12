@@ -105,6 +105,9 @@ public:
     void    checkGarbage(double gf);
     void    checkGarbage();
 
+
+    FILE*               output;
+
     // Extra results: (read-only member variable)
     //
     vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
