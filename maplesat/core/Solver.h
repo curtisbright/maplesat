@@ -41,9 +41,6 @@ public:
     Solver();
     virtual ~Solver();
 
-    void generateCompClauses(int n, int d, int i, int c, int v);
-    void addCompClauses();
-
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
@@ -170,7 +167,6 @@ public:
     vec<int> total_actual_count;
 
     int order;
-    const char* compstring;
     const char* exhauststring;
 
 protected:

@@ -20,9 +20,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 
-#ifndef NDEBUG
-#define PRINTCONF
-#endif
+//#define DEBUG
+//#define PRINTCONF
+//#define PRINTPAFS
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
@@ -68,20 +68,8 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 
 static IntOption     opt_order     (_cat, "order",      "Order of matrix", -1, IntRange(-1, INT32_MAX));
-static StringOption  opt_compstring(_cat, "compstring", "A string which contains a comma-separated list of the compression sums to be used.");
-static BoolOption    opt_filtering (_cat, "filtering",  "Use PSD filtering programmatic check", false);
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 
-#ifdef PREASSIGN
-bool seq_assigned[4] = {false, false, false, false};
-double assigned_psds[4][99];
-#endif
-
-int div1, div2;
-int compA[2][99];
-int compB[2][99];
-int compC[2][99];
-int compD[2][99];
 #ifdef PRINTCONF
 void printclause(vec<Lit>& cl);
 #endif
@@ -89,370 +77,6 @@ void printclause(vec<Lit>& cl);
 void fprintclause(FILE* f, vec<Lit>& cl);
 FILE* out_learnt_file;
 #endif
-
-void Solver::generateCompClauses(int n, int d, int i, int c, int v)
-{
-	int index = c*(n/2+1);
-
-	if(v == -d)
-	{	// all variables -1 variable
-		for(int j=0; j<d; j++)
-		{	vec<Lit> cl;
-			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.clear();
-			cl.push(mkLit(newindex, true));
-			addClause(cl);
-#ifdef PRINTCONF
-			printclause(cl);
-#endif
-		}
-	}
-	else if(v == -d+2)
-	{	// at least one 1 variable
-		vec<Lit> cl;
-		cl.clear();
-		for(int j=0; j<d; j++)
-		{
-			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.push(mkLit(newindex, false));
-		}
-		addClause(cl);
-#ifdef PRINTCONF
-		printclause(cl);
-#endif
-		// at most one 1 variable
-		for(int j=0; j<d; j++)
-		{	
-			int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			for(int k=j+1; k<d; k++)
-			{	vec<Lit> cl;
-				cl.clear();
-				int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex_j, true));
-				cl.push(mkLit(newindex_k, true));
-				addClause(cl);
-#ifdef PRINTCONF
-				printclause(cl);
-#endif
-			}
-		}
-	}
-	else if(v == -d+4)
-	{	// at least two 1 variables
-		for(int j=0; j<d; j++)
-		{
-			vec<Lit> cl;
-			cl.clear();
-			for(int k=0; k<d; k++)
-			{	if(k==j)
-					continue;
-				int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex, false));
-			}
-			addClause(cl);
-#ifdef PRINTCONF
-			printclause(cl);
-#endif
-		}
-		// at most two 1 variables
-		for(int j=0; j<d; j++)
-		{	int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			for(int k=j+1; k<d; k++)
-			{	int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				for(int l=k+1; l<d; l++)
-				{	vec<Lit> cl;
-					cl.clear();
-					int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
-					cl.push(mkLit(newindex_j, true));
-					cl.push(mkLit(newindex_k, true));
-					cl.push(mkLit(newindex_l, true));
-					addClause(cl);
-#ifdef PRINTCONF
-					printclause(cl);
-#endif
-				}
-			}
-		}
-	}
-	else if(v == d-4)
-	{	// at least two -1 variables
-		for(int j=0; j<d; j++)
-		{
-			vec<Lit> cl;
-			cl.clear();
-			for(int k=0; k<d; k++)
-			{	if(k==j)
-					continue;
-				int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex, true));
-			}
-			addClause(cl);
-#ifdef PRINTCONF
-			printclause(cl);
-#endif
-		}
-		// at most two -1 variables
-		for(int j=0; j<d; j++)
-		{	int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			for(int k=j+1; k<d; k++)
-			{	int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				for(int l=k+1; l<d; l++)
-				{	vec<Lit> cl;
-					cl.clear();
-					int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
-					cl.push(mkLit(newindex_j, false));
-					cl.push(mkLit(newindex_k, false));
-					cl.push(mkLit(newindex_l, false));
-					addClause(cl);
-#ifdef PRINTCONF
-					printclause(cl);
-#endif
-				}
-			}
-		}
-	}
-	else if(v == d-2)
-	{	// at least one -1 variable
-		vec<Lit> cl;
-		cl.clear();
-		for(int j=0; j<d; j++)
-		{
-			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.push(mkLit(newindex, true));
-		}
-		addClause(cl);
-#ifdef PRINTCONF
-		printclause(cl);
-#endif
-		// at most one -1 variable
-		for(int j=0; j<d; j++)
-		{	
-			int newindex_j = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			for(int k=j+1; k<d; k++)
-			{	vec<Lit> cl;
-				cl.clear();
-				int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex_j, false));
-				cl.push(mkLit(newindex_k, false));
-				addClause(cl);
-#ifdef PRINTCONF
-				printclause(cl);
-#endif
-			}
-		}
-	}
-	else if(v == d)
-	{	// all variables 1
-		for(int j=0; j<d; j++)
-		{	vec<Lit> cl;
-			int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.clear();
-			cl.push(mkLit(newindex, false));
-			addClause(cl);
-#ifdef PRINTCONF
-			printclause(cl);
-#endif
-		}
-	}
-	
-}
-
-void Solver::addCompClauses()
-{	//printf("compstring: %s\n", compstring);	
-	if(compstring != NULL)
-	{	
-		char* tmp = (char*)compstring;
-
-		if(sscanf(tmp, "%d", &div1) != 1)
-			printf("ERROR! syntax error in compstring: %s\n", tmp), exit(1);
-
-		while(*tmp != ',')
-		{	if(*tmp == '\0')
-				return;
-			tmp++;
-		}
-		tmp++;
-
-		bool hadzero;
-		vec<Lit> cl;
-		const int n = order;
-		const int d = div1;
-		
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
-		{	sscanf(tmp, "%d", &compA[0][i]);
-			if(d == 2 && compA[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(0*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else
-				generateCompClauses(order, div1, i, 0, compA[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
-			}
-			tmp++;
-		}
-
-#ifdef PREASSIGN
-		if(d == 1)
-		{   seq_assigned[0] = true;
-			for(int i=0; i<order; i++)
-				fft_signal[i] = compA[0][i];
-			fftw_execute(plan);
-			for(int i=0; i<n/2+1; i++)
-				assigned_psds[0][i] = fft_result[i][0]*fft_result[i][0];
-		}
-#endif
-
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
-		{	sscanf(tmp, "%d", &compB[0][i]);
-			if(d == 2 && compB[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(1*(n/2+1) + i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(1*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else
-				generateCompClauses(order, div1, i, 1, compB[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
-			}
-			tmp++;
-		}
-
-#ifdef PREASSIGN
-		if(d == 1)
-		{   seq_assigned[1] = true;
-			for(int i=0; i<order; i++)
-				fft_signal[i] = compB[0][i];
-			fftw_execute(plan);
-			for(int i=0; i<n/2+1; i++)
-				assigned_psds[1][i] = fft_result[i][0]*fft_result[i][0];
-		}
-#endif
-
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
-		{	sscanf(tmp, "%d", &compC[0][i]);
-			if(d == 2 && compC[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(2*(n/2+1) + i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(2*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else
-				generateCompClauses(order, div1, i, 2, compC[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
-			}
-			tmp++;
-		}
-
-#ifdef PREASSIGN
-		if(d == 1)
-		{	seq_assigned[2] = true;
-			for(int i=0; i<order; i++)
-				fft_signal[i] = compC[0][i];
-			fftw_execute(plan);
-			for(int i=0; i<n/2+1; i++)
-				assigned_psds[2][i] = fft_result[i][0]*fft_result[i][0];
-		}
-#endif
-
-		hadzero = false;
-		for(int i=0; i<order/div1; i++)
-		{	sscanf(tmp, "%d", &compD[0][i]);
-			if(d == 2 && compD[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(3*(n/2+1) + i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(3*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else
-				generateCompClauses(order, div1, i, 3, compD[0][i]);
-			while(*tmp != ',')
-			{	if(*tmp == '\0')
-					return;
-				tmp++;
-			}
-			tmp++;
-		}
-
-#ifdef PREASSIGN
-		if(d == 1)
-		{   seq_assigned[3] = true;
-			for(int i=0; i<order; i++)
-				fft_signal[i] = compD[0][i];
-			fftw_execute(plan);
-			for(int i=0; i<n/2+1; i++)
-				assigned_psds[3][i] = fft_result[i][0]*fft_result[i][0];
-		}
-#endif
-
-		if(sscanf(tmp, "%d", &div2) == 1)
-		{
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-
-			for(int i=0; i<order/div2; i++)
-			{	sscanf(tmp, "%d", &compA[0][i]);
-				generateCompClauses(order, div2, i, 0, compA[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-			for(int i=0; i<order/div2; i++)
-			{	sscanf(tmp, "%d", &compB[0][i]);
-				generateCompClauses(order, div2, i, 1, compB[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-			for(int i=0; i<order/div2; i++)
-			{	sscanf(tmp, "%d", &compC[0][i]);
-				generateCompClauses(order, div2, i, 2, compC[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-			for(int i=0; i<order/div2; i++)
-			{	sscanf(tmp, "%d", &compD[0][i]);
-				generateCompClauses(order, div2, i, 3, compD[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-		}
-
-	}
- 
-}
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -506,7 +130,6 @@ Solver::Solver() :
 #endif
 
   , order (opt_order) 
-  , compstring (opt_compstring)
   , exhauststring (opt_exhaustive)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
@@ -530,38 +153,32 @@ Solver::Solver() :
   , asynch_interrupt   (false)
 {
 
-    if(exhauststring != NULL)
-    {   exhaustfile = fopen(exhauststring, "a");
-    }
+	if(exhauststring != NULL)
+		exhaustfile = fopen(exhauststring, "a");
 
 #ifdef PRINTLEARNT
-    out_learnt_file = fopen("out_learnt_file", "w");
+	out_learnt_file = fopen("out_learnt_file", "w");
 #endif
 
-	if(opt_filtering)
-	{	if(order == -1)
-			printf("need to set order\n"), exit(1);
-		fft_signal = (double*)malloc(sizeof(double)*order);
-		fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*order);
-		plan = fftw_plan_dft_r2c_1d(order, fft_signal, fft_result, FFTW_ESTIMATE);
-	}
-}
+	if(order == -1)
+		printf("need to set order\n"), exit(1);
+	fft_signal = (double*)malloc(sizeof(double)*(4*order));
+	fft_result = (fftw_complex*)malloc(sizeof(fftw_complex)*(4*order));
+	plan = fftw_plan_dft_r2c_1d(4*order, fft_signal, fft_result, FFTW_ESTIMATE);
 
+}
 
 Solver::~Solver()
 {
-    if(opt_filtering)
-    {   fftw_destroy_plan(plan);
-        free(fft_signal);
-        free(fft_result);
-    }
+	fftw_destroy_plan(plan);
+	free(fft_signal);
+	free(fft_result);
 
-    if(exhauststring != NULL)
-    {   fclose(exhaustfile);
-    }
+	if(exhauststring != NULL)
+		fclose(exhaustfile);
 
 #ifdef PRINTLEARNT
-    fclose(out_learnt_file);
+	fclose(out_learnt_file);
 #endif
 }
 
@@ -789,20 +406,16 @@ void fprintclause(FILE* f, vec<Lit>& cl)
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    if(order==-1)
-        return;
 
-    if(opt_filtering || exhauststring != NULL)
-    {   filtering_check(out_learnts);
-    }
+	filtering_check(out_learnts);
     
 #ifdef PRINTCONF
-    for(int i=0; i<out_learnts.size(); i++)
-    {   printf("learned clause %d: ", i);
-        printclause(out_learnts[i]);
-    }
-    if(out_learnts.size()==0)
-        printf("no learned clauses\n");
+	for(int i=0; i<out_learnts.size(); i++)
+	{	printf("learned clause %d: ", i);
+		printclause(out_learnts[i]);
+	}
+	if(out_learnts.size()==0)
+		printf("no learned clauses\n");
 #endif
 
 }
@@ -818,79 +431,70 @@ void swap_psd_holders(struct psd_holder* x, struct psd_holder* y)
   *y = tmp;
 }
 
-inline int minindex(int n, int i)
-{
-  return (i <= n/2) ? i : n-i;
+int paf(int n, int* A, int s)
+{	int res = 0;
+	for(int i=0; i<n; i++)
+		res += A[i]*A[(i+s)%n];
+	return res;
 }
 
 bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 {
-  const int n = order;
-  const int dim = n/2+1;
-  bool allseqcomplete = true;
-  
-  struct psd_holder psds[dim][4];
+	const int n = order;
+	const int dim = 2*order+1;
 
-  double psdsum[dim];
-  for(int i=0; i<dim; i++)
-    psdsum[i] = 0;
+	bool allseqcomplete = true;  
+	struct psd_holder psds[dim][4];
 
-  /*for(int seq=0; seq<4; seq++)
-  { for(int i=0; i<dim; i++)
-    { if(assigns[i+seq*dim] == l_Undef)
+	double psdsum[dim];
+	for(int i=0; i<dim; i++)
+		psdsum[i] = 0;
+
+  #ifdef DEBUG
+  for(int seq=0; seq<4; seq++)
+  { for(int i=0; i<n; i++)
+    { if(assigns[i+seq*n] == l_Undef)
         printf("?");
-      if(assigns[i+seq*dim] == l_True)
+      if(assigns[i+seq*n] == l_True)
         printf("+");
-      if(assigns[i+seq*dim] == l_False)
+      if(assigns[i+seq*n] == l_False)
         printf("-");
     }
     printf(" ");
   }
-  printf("\n");*/
+  printf("\n");
+  #endif
 
   for(int seq=0; seq<4; seq++)
   { 
     bool seqcomplete = true;
-    for(int i=seq*dim; i<(seq+1)*dim; i++)
+    for(int i=seq*n; i<(seq+1)*n; i++)
     { if(assigns[i] == l_Undef)
       { allseqcomplete = seqcomplete = false;
         break;
       }
     }
 
-    if(!opt_filtering)
-      continue;
-
     if(seqcomplete)
     { 
-
-#ifdef PREASSIGN
-      if(!seq_assigned[seq])
-#endif
-      {
-        fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
-        for(int i=1; i<dim; i++)
-            fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
-
-        fftw_execute(plan);
+      for(int i=0; i<n; i++)
+      { fft_signal[4*n-1-i] = fft_signal[i] = (assigns[i+seq*n] == l_True) ? 1 : -1;
+        fft_signal[2*n-1-i] = fft_signal[i+2*n] = -fft_signal[i];
       }
+
+      fftw_execute(plan);
 
       for(int i=0; i<dim; i++)
       { 
         double psd_i;
 
-#ifdef PREASSIGN
-        if(seq_assigned[seq])
-            psd_i = assigned_psds[seq][i];
-        else
-#endif
-            psd_i = fft_result[i][0]*fft_result[i][0];
+        psd_i = fft_result[i][0]*fft_result[i][0] + fft_result[i][1]*fft_result[i][1];
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
         psdsum[i] += psd_i;
 
-        if(psdsum[i] > 4*n+0.01)
+        if(psdsum[i] > 32*n+0.001)
         { 
           // Sort PSDs
 #ifdef DEBUG
@@ -940,58 +544,27 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
           { 
              assert(psds[i][seq].seqindex >= 0);
              seqused[psds[i][seq].seqindex] = true;
-#ifdef NDEBUG
              this_psdsum += psds[i][seq].psd;
-#else
-             double psd_i_alt;
-             int seqindex = psds[i][seq].seqindex;
-             if(assigns[seqindex*dim] == l_True)
-               psd_i_alt = 1;
-             else
-               psd_i_alt = -1;
-             for(int k=1; k<n/2+(n%2 == 0 ? 0 : 1); k++)
-             { if(assigns[k+seqindex*dim] == l_True)
-                 psd_i_alt += 2*cosarray[n][(i*k)%n];
-               else
-                 psd_i_alt -= 2*cosarray[n][(i*k)%n];
-             }
-             if(n%2==0)
-             { if(assigns[n/2+seqindex*dim] == l_True)
-                 psd_i_alt += (i % 2 == 0 ? 1 : -1);
-               else
-                 psd_i_alt -= (i % 2 == 0 ? 1 : -1);
-             }
-             psd_i_alt *= psd_i_alt;
-             this_psdsum += psd_i_alt;
-#endif
-             
-             assert(abs(psds[i][seq].psd-psd_i_alt) < 0.0001);
 
-             if(this_psdsum > 4*n + 0.01)
+             if(this_psdsum > 32*n + 0.001)
              {
 
                 int size = out_learnts.size();
                 out_learnts.push();
-                //vec<Lit> cl;
-                //cl.clear();
 
                 for(int s=0; s<4; s++)
                 {
                   if(seqused[s])
-                  { for(int j=s*dim; j<(s+1)*dim; j++)
+                  { for(int j=s*n; j<(s+1)*n; j++)
                     { if(assigns[j] == l_True)
-                      { out_learnts[size].push(mkLit(j, true)) /*, printf("+")*/;
-                        //cl.push(mkLit(j, true));
+                      { out_learnts[size].push(mkLit(j, true));
                       }
                       else if(assigns[j] == l_False)
-                      { out_learnts[size].push(mkLit(j, false))/*, printf("-")*/;
-                        //cl.push(mkLit(j, false));
+                      { out_learnts[size].push(mkLit(j, false));
                       }
                     }
                   }
-                  //printf(" ");
                 }
-                //printf("\n");
 
 #ifdef PRINTLEARNT
                 fprintclause(out_learnt_file, out_learnts[size]);
@@ -1023,9 +596,9 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   { /*printf("PSDs: ");
     for(int i=0; i<dim; i++)
        {  printf("%.2f ", psdsum[i]);
-       }*/
+       }
 
-    /*printf("Solution: ");
+    printf("Solution: ");
     for(int k=0; k<4; k++)
     { for(int i=0; i<dim; i++)
         printf("%c", (assigns[k*dim+i] == l_True) ? '+' : '-');
@@ -1033,25 +606,89 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     }
     printf("\n");*/
 
+    #ifdef PRINTPAFS
+    int A[4*n];
+    int B[4*n];
+    int C[4*n];
+    int D[4*n];
+
+	for(int i=0; i<n; i++)
+	{	A[4*n-i-1] = A[i] = ((assigns[i] == l_True) ? 1 : -1);
+		A[2*n-i-1] = A[i+2*n] = -A[i];
+	}
+
+	for(int i=0; i<n; i++)
+	{	B[4*n-i-1] = B[i] = ((assigns[n+i] == l_True) ? 1 : -1);
+		B[2*n-i-1] = B[i+2*n] = -B[i];
+	}
+
+	for(int i=0; i<n; i++)
+	{	C[4*n-i-1] = C[i] = ((assigns[2*n+i] == l_True) ? 1 : -1);
+		C[2*n-i-1] = C[i+2*n] = -C[i];
+	}
+
+	for(int i=0; i<n; i++)
+	{	D[4*n-i-1] = D[i] = ((assigns[3*n+i] == l_True) ? 1 : -1);
+		D[2*n-i-1] = D[i+2*n] = -D[i];
+	}
+    #endif
+
     for(int k=0; k<4; k++)
-    { for(int i=0; i<n; i++)
-      { int index = minindex(n, i);
-        fprintf(exhaustfile, "%s ", (assigns[k*dim+index] == l_True) ? "1" : "-1");
-      }
+    { 
+      #ifdef PRINTINT
+      for(int i=0; i<n; i++)
+        fprintf(exhaustfile, "%d ", (assigns[k*n+i] == l_True) ? 1 : -1);
+      for(int i=n-1; i>=0; i--)
+        fprintf(exhaustfile, "%d ", (assigns[k*n+i] == l_True) ? -1 : 1);
+      for(int i=0; i<n; i++)
+        fprintf(exhaustfile, "%d ", (assigns[k*n+i] == l_True) ? -1 : 1);
+      for(int i=n-1; i>=0; i--)
+        fprintf(exhaustfile, "%d ", (assigns[k*n+i] == l_True) ? 1 : -1);
+      #else
+      for(int i=0; i<n; i++)
+        fprintf(exhaustfile, "%c", (assigns[k*n+i] == l_True) ? '+' : '-');
+      for(int i=n-1; i>=0; i--)
+        fprintf(exhaustfile, "%c", (assigns[k*n+i] == l_True) ? '-' : '+');
+      for(int i=0; i<n; i++)
+        fprintf(exhaustfile, "%c", (assigns[k*n+i] == l_True) ? '-' : '+');
+      for(int i=n-1; i>=0; i--)
+        fprintf(exhaustfile, "%c", (assigns[k*n+i] == l_True) ? '+' : '-');
+      fprintf(exhaustfile, " ");
+      #endif
     }
+
+    #ifdef PRINTPAFS
+    fprintf(exhaustfile, "(");
+    for(int i=0; i<4*n; i++)
+      fprintf(exhaustfile, "%d ", paf(4*n, A, i));
+    fprintf(exhaustfile, ")");
+    fprintf(exhaustfile, "(");
+    for(int i=0; i<4*n; i++)
+      fprintf(exhaustfile, "%d ", paf(4*n, B, i));
+    fprintf(exhaustfile, ")");
+    fprintf(exhaustfile, "(");
+    for(int i=0; i<4*n; i++)
+      fprintf(exhaustfile, "%d ", paf(4*n, C, i));
+    fprintf(exhaustfile, ")");
+    fprintf(exhaustfile, "(");
+    for(int i=0; i<4*n; i++)
+      fprintf(exhaustfile, "%d ", paf(4*n, D, i));
+    fprintf(exhaustfile, ")");
+    fprintf(exhaustfile, "(");
+    for(int i=0; i<4*n; i++)
+      fprintf(exhaustfile, "%d ", paf(4*n, A, i)+paf(4*n, B, i)+paf(4*n, C, i)+paf(4*n, D, i));
+    fprintf(exhaustfile, ")");
+    #endif
     fprintf(exhaustfile, "\n");
 
     int size = out_learnts.size();
     out_learnts.push();
 
-    for(int s=0; s<4; s++)
-    {
-      for(int j=s*dim; j<(s+1)*dim; j++)
-      { if(assigns[j] == l_True)
-          out_learnts[size].push(mkLit(j, true));
-        else if(assigns[j] == l_False)
-          out_learnts[size].push(mkLit(j, false));
-      }
+    for(int j=0; j<4*n; j++)
+    { if(assigns[j] == l_True)
+        out_learnts[size].push(mkLit(j, true));
+      else if(assigns[j] == l_False)
+        out_learnts[size].push(mkLit(j, false));
     }
 
 #ifdef PRINTCONF
@@ -1060,6 +697,23 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
     return true;
 
+  }
+
+  if(allseqcomplete)
+  {
+    for(int k=0; k<4; k++)
+    { 
+      for(int i=0; i<n; i++)
+        printf("%c", (assigns[k*n+i] == l_True) ? '+' : '-');
+      for(int i=n-1; i>=0; i--)
+        printf("%c", (assigns[k*n+i] == l_True) ? '-' : '+');
+      for(int i=0; i<n; i++)
+        printf("%c", (assigns[k*n+i] == l_True) ? '-' : '+');
+      for(int i=n-1; i>=0; i--)
+        printf("%c", (assigns[k*n+i] == l_True) ? '+' : '-');
+      printf(" ");
+    }
+    printf("\n");
   }
 
   return false;
