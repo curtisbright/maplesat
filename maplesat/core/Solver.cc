@@ -74,7 +74,6 @@ int div1, div2;
 int compA[2][99];
 int compB[2][99];
 int compC[2][99];
-int compD[2][99];
 
 void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 {
@@ -84,9 +83,15 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 	{	// all variables -1 variable
 		for(int j=0; j<d; j++)
 		{	vec<Lit> cl;
-			const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
 			cl.clear();
-			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? false : true));
+			if(c<2)
+			{	const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+				cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? false : true));
+			}
+			else
+			{	const int newindex = index + i+j*(n/d);
+				cl.push(mkLit(newindex, true));
+			}
 			addClause(cl);
 		}
 	}
@@ -96,8 +101,14 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 		cl.clear();
 		for(int j=0; j<d; j++)
 		{
-			const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? true : false));
+			if(c<2)
+			{	const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+				cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? true : false));
+			}
+			else
+			{	const int newindex = index + i+j*(n/d);
+				cl.push(mkLit(newindex, false));
+			}
 		}
 		addClause(cl);
 		// at most one 1 variable
@@ -107,9 +118,18 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			for(int k=j+1; k<d; k++)
 			{	vec<Lit> cl;
 				cl.clear();
-				const int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? false : true));
-				cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? false : true));
+				if(c<2)
+				{
+					const int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+					cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? false : true));
+					cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? false : true));
+				}
+				else
+				{
+					const int newindex_k = index + i+k*(n/d);
+					cl.push(mkLit(newindex_j, true));
+					cl.push(mkLit(newindex_k, true));
+				}
 				addClause(cl);
 			}
 		}
@@ -123,8 +143,16 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			for(int k=0; k<d; k++)
 			{	if(k==j)
 					continue;
-				const int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex, c==0 && i+k*(n/d) > n/2 ? true : false));
+				if(c<2)
+				{
+					const int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+					cl.push(mkLit(newindex, c==0 && i+k*(n/d) > n/2 ? true : false));
+				}
+				else
+				{
+					const int newindex = index + i+k*(n/d);
+					cl.push(mkLit(newindex, false));
+				}
 			}
 			addClause(cl);
 		}
@@ -136,10 +164,20 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 				for(int l=k+1; l<d; l++)
 				{	vec<Lit> cl;
 					cl.clear();
-					const int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
-					cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? false : true));
-					cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? false : true));
-					cl.push(mkLit(newindex_l, c==0 && i+l*(n/d) > n/2 ? false : true));
+					if(c<2)
+					{
+						const int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
+						cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? false : true));
+						cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? false : true));
+						cl.push(mkLit(newindex_l, c==0 && i+l*(n/d) > n/2 ? false : true));
+					}
+					else
+					{
+						const int newindex_l = index + i+l*(n/d);
+						cl.push(mkLit(newindex_j, true));
+						cl.push(mkLit(newindex_k, true));
+						cl.push(mkLit(newindex_l, true));
+					}
 					addClause(cl);
 				}
 			}
@@ -154,8 +192,16 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			for(int k=0; k<d; k++)
 			{	if(k==j)
 					continue;
-				const int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex, c==0 && i+k*(n/d) > n/2 ? false : true));
+				if(c<2)
+				{
+					const int newindex = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+					cl.push(mkLit(newindex, c==0 && i+k*(n/d) > n/2 ? false : true));
+				}
+				else
+				{
+					const int newindex = index + i+k*(n/d);
+					cl.push(mkLit(newindex, true));
+				}
 			}
 			addClause(cl);
 		}
@@ -167,10 +213,20 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 				for(int l=k+1; l<d; l++)
 				{	vec<Lit> cl;
 					cl.clear();
-					const int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
-					cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? true : false));
-					cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? true : false));
-					cl.push(mkLit(newindex_l, c==0 && i+l*(n/d) > n/2 ? true : false));
+					if(c<2)
+					{
+						const int newindex_l = index + (i+l*(n/d) <= n/2 ? i+l*(n/d) : n-i-l*(n/d));
+						cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? true : false));
+						cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? true : false));
+						cl.push(mkLit(newindex_l, c==0 && i+l*(n/d) > n/2 ? true : false));
+					}
+					else
+					{
+						const int newindex_l = index + i+l*(n/d);
+						cl.push(mkLit(newindex_j, false));
+						cl.push(mkLit(newindex_k, false));
+						cl.push(mkLit(newindex_l, false));
+					}
 					addClause(cl);
 				}
 			}
@@ -182,8 +238,16 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 		cl.clear();
 		for(int j=0; j<d; j++)
 		{
-			const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
-			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? false : true));
+			if(c<2)
+			{
+				const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+				cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? false : true));
+			}
+			else
+			{
+				const int newindex = index + i+j*(n/d);
+				cl.push(mkLit(newindex, true));
+			}
 		}
 		addClause(cl);
 		// at most one -1 variable
@@ -193,9 +257,18 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 			for(int k=j+1; k<d; k++)
 			{	vec<Lit> cl;
 				cl.clear();
-				const int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
-				cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? true : false));
-				cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? true : false));
+				if(c<2)
+				{
+					const int newindex_k = index + (i+k*(n/d) <= n/2 ? i+k*(n/d) : n-i-k*(n/d));
+					cl.push(mkLit(newindex_j, c==0 && i+j*(n/d) > n/2 ? true : false));
+					cl.push(mkLit(newindex_k, c==0 && i+k*(n/d) > n/2 ? true : false));
+				}
+				else
+				{
+					const int newindex_k = index + i+k*(n/d);
+					cl.push(mkLit(newindex_j, false));
+					cl.push(mkLit(newindex_k, false));
+				}
 				addClause(cl);
 			}
 		}
@@ -204,9 +277,17 @@ void Solver::generateCompClauses(int n, int d, int i, int c, int v)
 	{	// all variables 1
 		for(int j=0; j<d; j++)
 		{	vec<Lit> cl;
-			const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
 			cl.clear();
-			cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? true : false));
+			if(c<2)
+			{
+				const int newindex = index + (i+j*(n/d) <= n/2 ? i+j*(n/d) : n-i-j*(n/d));
+				cl.push(mkLit(newindex, c==0 && i+j*(n/d) > n/2 ? true : false));
+			}
+			else
+			{
+				const int newindex = index + i+j*(n/d);
+				cl.push(mkLit(newindex, false));
+			}
 			addClause(cl);
 		}
 	}
@@ -225,126 +306,29 @@ void Solver::addCompClauses()
 			tmp++;
 		tmp++;
 
-		//bool hadzero;
-		//vec<Lit> cl;
-		//const int n = N;
-		//const int d = div1;
-		
-		//hadzero = false;
 		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compA[0][i]);
-			/*if(d == 2 && compA[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(0*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else*/
-				generateCompClauses(N, div1, i, 0, compA[0][i]);
+			generateCompClauses(N, div1, i, 0, compA[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
-		//hadzero = false;
 		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compB[0][i]);
-			/*if(d == 2 && compB[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(1*(n/2+1) + i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(1*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else*/
-				generateCompClauses(N, div1, i, 1, compB[0][i]);
+			generateCompClauses(N, div1, i, 1, compB[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
 
-		//hadzero = false;
 		for(int i=0; i<N/div1; i++)
 		{	sscanf(tmp, "%d", &compC[0][i]);
-			/*if(d == 2 && compC[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(2*(n/2+1) + i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(2*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else*/
-				generateCompClauses(N, div1, i, 2, compC[0][i]);
+			generateCompClauses(N, div1, i, 2, compC[0][i]);
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			tmp++;
 		}
-
-		//hadzero = false;
-		for(int i=0; i<N/div1; i++)
-		{	sscanf(tmp, "%d", &compD[0][i]);
-			/*if(d == 2 && compD[0][i] == 0 && hadzero == false)
-			{	hadzero = true;
-				cl.clear();
-				cl.push(mkLit(3*(n/2+1) + i, false));
-				addClause(cl);
-				cl.clear();
-				cl.push(mkLit(3*(n/2+1) + (i+(n/d) <= n/2 ? i+(n/d) : n-i-(n/d)), true));
-				addClause(cl);
-			}
-			else*/
-				generateCompClauses(N, div1, i, 3, compD[0][i]);
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-		}
-
-		/*if(sscanf(tmp, "%d", &div2) == 1)
-		{
-			while(*tmp != ',' && *tmp != '\0')
-				tmp++;
-			tmp++;
-
-			for(int i=0; i<N/div2; i++)
-			{	sscanf(tmp, "%d", &compA[0][i]);
-				generateCompClauses(N, div2, i, 0, compA[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-			for(int i=0; i<N/div2; i++)
-			{	sscanf(tmp, "%d", &compB[0][i]);
-				generateCompClauses(N, div2, i, 1, compB[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-			for(int i=0; i<N/div2; i++)
-			{	sscanf(tmp, "%d", &compC[0][i]);
-				generateCompClauses(N, div2, i, 2, compC[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-			for(int i=0; i<N/div2; i++)
-			{	sscanf(tmp, "%d", &compD[0][i]);
-				generateCompClauses(N, div2, i, 3, compD[0][i]);
-				while(*tmp != ',' && *tmp != '\0')
-					tmp++;
-				tmp++;
-			}
-
-		}*/
 
 	}
  
@@ -677,32 +661,52 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
   const int dim = N/2+1;
   bool allseqcomplete = true;
   
-  struct psd_holder psds[dim][4];
+  struct psd_holder psds[dim][3];
 
   double psdsum[dim];
   for(int i=0; i<dim; i++)
     psdsum[i] = 0;
 
-  for(int seq=0; seq<4; seq++)
+  for(int seq=0; seq<3; seq++)
   { 
     bool seqcomplete = true;
-    for(int i=seq*dim; i<(seq+1)*dim; i++)
-    { if(assigns[i] == l_Undef)
-      { allseqcomplete = seqcomplete = false;
-        break;
-      }
-    }
+	if(seq<2)
+	{
+		for(int i=seq*dim; i<(seq+1)*dim; i++)
+		{ if(assigns[i] == l_Undef)
+		  { allseqcomplete = seqcomplete = false;
+		    break;
+		  }
+		}
+	}
+	else
+	{
+		for(int i=2*dim; i<2*dim+n; i++)
+		{ if(assigns[i] == l_Undef)
+		  { allseqcomplete = seqcomplete = false;
+		    break;
+		  }
+		}
+	}
 
     if(seqcomplete)
     { 
-      fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
-              
-      for(int i=1; i<dim; i++)
-        fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
+      if(seq<2)
+      {
+        fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
+      
+        for(int i=1; i<dim; i++)
+          fft_signal[n-i] = fft_signal[i] = (assigns[i+seq*dim] == l_True) ? 1 : -1;
 
-      if(seq==0)
-      { for(int i=dim; i<n; i++)
-          fft_signal[i] *= -1;
+        if(seq==0)
+        { for(int i=dim; i<n; i++)
+            fft_signal[i] *= -1;
+        }
+      }
+      else
+      {
+        for(int i=0; i<n; i++)
+          fft_signal[i] = (assigns[i+2*dim] == l_True) ? 1 : -1;
       }
 
       fftw_execute(plan);
@@ -710,6 +714,8 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
       for(int i=0; i<dim; i++)
       { 
         double psd_i = fft_result[i][0]*fft_result[i][0]+fft_result[i][1]*fft_result[i][1];
+        if(seq==2)
+          psd_i *= 2;
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
@@ -729,25 +735,11 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
             if(psds[i][1].psd < psds[i][2].psd)
               swap_psd_holders(psds[i]+1, psds[i]+2);
           }
-          else if(seq==3)
-          { if(psds[i][0].psd < psds[i][1].psd)
-              swap_psd_holders(psds[i], psds[i]+1);
-            if(psds[i][2].psd < psds[i][3].psd)
-              swap_psd_holders(psds[i]+2, psds[i]+3);
-            if(psds[i][0].psd < psds[i][2].psd)
-              swap_psd_holders(psds[i], psds[i]+2);
-            if(psds[i][1].psd < psds[i][2].psd)
-              swap_psd_holders(psds[i]+1, psds[i]+2);
-            if(psds[i][1].psd < psds[i][3].psd)
-              swap_psd_holders(psds[i]+1, psds[i]+3);
-            if(psds[i][2].psd < psds[i][3].psd)
-              swap_psd_holders(psds[i]+2, psds[i]+3);
-          }
 
           double this_psdsum = 0;
-          bool seqused[4] = {false, false, false, false};
+          bool seqused[3] = {false, false, false};
 
-          for(int seq=0; seq<4; seq++)
+          for(int seq=0; seq<3; seq++)
           { 
              assert(psds[i][seq].seqindex >= 0);
              seqused[psds[i][seq].seqindex] = true;
@@ -758,10 +750,20 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
                 int size = out_learnts.size();
                 out_learnts.push();
 
-                for(int s=0; s<4; s++)
+                for(int s=0; s<3; s++)
                 {
-                  if(seqused[s])
+                  if(s<2 && seqused[s])
                   { for(int j=s*dim; j<(s+1)*dim; j++)
+                    { if(assigns[j] == l_True)
+                      { out_learnts[size].push(mkLit(j, true));
+                      }
+                      else if(assigns[j] == l_False)
+                      { out_learnts[size].push(mkLit(j, false));
+                      }
+                    }
+                  }
+                  else if(s==2 && seqused[s])
+                  { for(int j=2*dim; j<2*dim+n; j++)
                     { if(assigns[j] == l_True)
                       { out_learnts[size].push(mkLit(j, true));
                       }
@@ -796,18 +798,22 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
     { int index = minindex(i);
   	  fprintf(exhaustfile, "%s ", (assigns[index] == l_True) ? "-1" : "1");
     }
-    for(int k=1; k<4; k++)
-    { for(int i=0; i<n; i++)
-      { int index = minindex(i);
-        fprintf(exhaustfile, "%s ", (assigns[k*dim+index] == l_True) ? "1" : "-1");
-      }
+    for(int i=0; i<n; i++)
+    { int index = minindex(i);
+      fprintf(exhaustfile, "%s ", (assigns[dim+index] == l_True) ? "1" : "-1");
+    }
+    for(int i=0; i<n; i++)
+    { fprintf(exhaustfile, "%s ", (assigns[2*dim+i] == l_True) ? "1" : "-1");
+    }
+    for(int i=0; i<n; i++)
+    { fprintf(exhaustfile, "%s ", (assigns[2*dim+i] == l_True) ? "1" : "-1");
     }
     fprintf(exhaustfile, "\n");
 
     int size = out_learnts.size();
     out_learnts.push();
 
-    for(int s=0; s<4; s++)
+    for(int s=0; s<2; s++)
     {
       for(int j=s*dim; j<(s+1)*dim; j++)
       { if(assigns[j] == l_True)
@@ -815,6 +821,12 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         else if(assigns[j] == l_False)
           out_learnts[size].push(mkLit(j, false));
       }
+    }
+    for(int j=2*dim; j<2*dim+n; j++)
+    { if(assigns[j] == l_True)
+        out_learnts[size].push(mkLit(j, true));
+      else if(assigns[j] == l_False)
+        out_learnts[size].push(mkLit(j, false));
     }
 
     return true;
