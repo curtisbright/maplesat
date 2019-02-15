@@ -7,7 +7,7 @@ maplesat_static_%:
 	echo "#define N $*" > core/defineN.h
 	rm -f core/Solver.or
 	make -C simp rs
-	mv simp/maplesat_static simp/maplesat_static_AD_$*
+	mv simp/maplesat_static simp/maplesat_static_B_$*
 
 debug:
 	make -C simp d
