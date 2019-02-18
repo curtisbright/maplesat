@@ -148,6 +148,7 @@ public:
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
     uint64_t lbd_calls;
+    const char* exhauststring;
     vec<uint64_t> lbd_seen;
     vec<uint64_t> picked;
     vec<uint64_t> conflicted;

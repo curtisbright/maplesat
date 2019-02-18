@@ -23,6 +23,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
+FILE* exhaustfile = NULL;
+long numsols = 0;
+
 using namespace Minisat;
 
 //=================================================================================================
@@ -54,6 +57,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
+static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 
 
 //=================================================================================================
@@ -107,6 +111,7 @@ Solver::Solver() :
   , reward_multiplier(opt_reward_multiplier)
 #endif
 
+  , exhauststring (opt_exhaustive)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -127,11 +132,18 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+    if(exhauststring != NULL)
+    {   exhaustfile = fopen(exhauststring, "a");
+    }
+}
 
 
 Solver::~Solver()
 {
+    if(exhauststring != NULL)
+    {   fclose(exhaustfile);
+    }
 }
 
 
@@ -340,25 +352,30 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	
+	if(exhaustfile==NULL)
+		return;
+
 	bool all_assigned = true;
 	for(int i=0; i<assigns.size(); i++)
-	{	printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
 		if(assigns[i]==l_Undef)
-			all_assigned = false;
+		{	all_assigned = false;
+			break;
+		}
 	}
-	printf("\n");
+	//printf("\n");
 
 	if(all_assigned)
 	{
 		out_learnts.push();
+
+		fprintf(exhaustfile, "a ");
 		for(int i=0; i<assigns.size(); i++)
 		{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+			fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
 		}
-
-		printf("size %d\tconflict:", out_learnts[0].size());
-		for(int i=0; i<out_learnts[0].size(); i++)
-			printf(" %c%d", sign(out_learnts[0][i]) ? '-' : '+', var(out_learnts[0][i])+1);
-		printf("\n");
+		fprintf(exhaustfile, "0\n");
+		numsols++;
 	}
 }
 
@@ -1246,6 +1263,7 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
+    printf("Number of solutions: %ld\n", numsols);
 
 
     if (status == l_True){
