@@ -25,7 +25,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Minisat;
 
-FILE* outfile;
+FILE* outfile = NULL;
 long numsols = 0;
 
 //=================================================================================================
@@ -131,14 +131,18 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{	char filename[100];
-	sprintf(filename, "out-%d.txt", (int)opt_vars);
-	outfile = fopen(filename, "w");
+{	
+	if(opt_vars!=-1)
+	{	char filename[100];
+		sprintf(filename, "out-%d.txt", (int)opt_vars);
+		outfile = fopen(filename, "w");
+	}
 }
 
 
 Solver::~Solver()
-{	fclose(outfile);
+{	if(outfile)
+		fclose(outfile);
 }
 
 
@@ -347,6 +351,9 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	
+	if(!outfile)
+		return;
+
 	bool all_assigned = true;
 	for(int i=0; i<opt_vars; i++)
 	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
@@ -358,12 +365,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(all_assigned)
 	{
 		out_learnts.push();
+		fprintf(outfile, "a ");
 		for(int i=0; i<opt_vars; i++)
 		{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
 			//fprintf(outfile, "%c", sign(out_learnts[0][i]) ? '1' : '0');
 			fprintf(outfile, "%s%d ", sign(out_learnts[0][i]) ? "" : "-", var(out_learnts[0][i])+1);
 		}
-		fprintf(outfile, "\n");
+		fprintf(outfile, "0\n");
 
 #ifdef DEBUG
 		printf("size %d\tconflict:", out_learnts[0].size());
@@ -1264,7 +1272,8 @@ lbool Solver::solve_()
     if (verbosity >= 1)
         printf("===============================================================================\n");
 
-    printf("Num solutions: %ld\n", numsols);
+    if(outfile)
+        printf("Num solutions: %ld\n", numsols);
 
     if (status == l_True){
         // Extend & copy model:
