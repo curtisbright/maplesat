@@ -384,6 +384,37 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 #endif
 
 		numsols++;
+
+		/*{
+		    int max_i = 0;
+		    // Find the first literal assigned at the highest level:
+		    for (int i = 1; i < out_learnts[0].size(); i++)
+		        if (level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_i])))
+		            max_i = i;
+		    // Swap-in this literal at index 0:
+		    Lit p             = out_learnts[0][max_i];
+		    out_learnts[0][max_i] = out_learnts[0][0];
+		    out_learnts[0][0]     = p;
+		}
+
+		{
+		    int max_i = 1;
+		    // Find the first literal assigned at the next-highest level:
+		    for (int i = 2; i < out_learnts[0].size(); i++)
+		        if (level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_i])))
+		            max_i = i;
+		    // Swap-in this literal at index 1:
+		    Lit p             = out_learnts[0][max_i];
+		    out_learnts[0][max_i] = out_learnts[0][1];
+		    out_learnts[0][1]     = p;
+		}*/
+
+		//CRef confl_clause = ca.alloc(out_learnts[0]);
+		//attachClause(confl_clause);
+		//clauses.push(confl_clause);
+
+		//out_learnts.clear();
+
 	}
 }
 
@@ -1348,6 +1379,15 @@ void Solver::toDimacs(FILE* f, const vec<Lit>& assumps)
 
     // Assumptions are added as unit clauses:
     cnt += assumptions.size();
+
+	int prevmax = max;
+	for(int i=0; i<nVars(); i++)
+	{
+		if(mapVar(i, map, max)+1 < max)
+			fprintf(f, "c %d %d\n", i+1, mapVar(i, map, max)+1);
+	}
+
+	max = prevmax;
 
     fprintf(f, "p cnf %d %d\n", max, cnt);
 
