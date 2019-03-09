@@ -18,6 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define XOR
+
 #include <NTL/mat_GF2.h>
 
 //using namespace std;
@@ -446,6 +448,7 @@ void Solver::addCompClauses()
             }
             //printf("\n");
 
+#ifdef XOR
             Mat<GF2> M;
             M.SetDims(n/2, n/2+1);
 
@@ -495,6 +498,7 @@ void Solver::addCompClauses()
                 }
                 generateXorClauses(vars, IsZero(M[k][n/2]) ? 0 : 1);
             }
+#endif
 		}
 #endif
 
