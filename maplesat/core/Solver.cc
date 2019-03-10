@@ -18,8 +18,6 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#define PREASSIGN
-
 #include <math.h>
 #include <cstdio>
 #include "defineN.h"
@@ -284,8 +282,8 @@ void Solver::addCompClauses()
 		vec<Lit> cl;
 		
 		for(int i=0; i<N/div1; i++)
-		{	sscanf(tmp, "%d", &compD[i]);
-			generateCompClauses(N, div1, i, 3, compD[i]);
+		{	sscanf(tmp, "%d", &compA[i]);
+			generateCompClauses(N, div1, i, 0, compA[i]);
 			while(*tmp != ',')
 			{	if(*tmp == '\0')
 					break;
@@ -311,8 +309,14 @@ void Solver::addCompClauses()
 			return;
 
 		for(int i=0; i<N/div1; i++)
-		{	sscanf(tmp, "%d", &compA[i]);
-			generateCompClauses(N, div1, i, 0, compA[i]);
+		{
+#ifdef PREASSIGN
+			sscanf(tmp, "%d", &compA[i]);
+			generateCompClauses(N, div1, i, 3, compD[i]);
+#else
+			sscanf(tmp, "%d", &compB[i]);
+			generateCompClauses(N, div1, i, 1, compB[i]);
+#endif
 			while(*tmp != ',')
 			{	if(*tmp == '\0')
 					break;
@@ -361,8 +365,14 @@ void Solver::addCompClauses()
 #endif
 
 		for(int i=0; i<N/div1; i++)
-		{	sscanf(tmp, "%d", &compB[i]);
+		{
+#ifdef PREASSIGN
+			sscanf(tmp, "%d", &compB[i]);
 			generateCompClauses(N, div1, i, 1, compB[i]);
+#else
+			sscanf(tmp, "%d", &compD[i]);
+			generateCompClauses(N, div1, i, 3, compD[i]);
+#endif
 			while(*tmp != ',')
 			{	if(*tmp == '\0')
 					return;
