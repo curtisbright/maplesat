@@ -42,6 +42,8 @@ static void readClause(B& in, Solver& S, vec<Lit>& lits) {
         while (var >= S.nVars()) S.newVar();
         lits.push( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
     }
+	if(lits.size() == 1)
+		unit_clauses[var] = 1;
 }
 
 template<class B, class Solver>

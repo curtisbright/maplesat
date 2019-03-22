@@ -18,6 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+int unit_clauses[10000] = {};
+
 #include <errno.h>
 
 #include <signal.h>
@@ -95,6 +97,7 @@ int main(int argc, char** argv)
         StringOption assums ("MAIN", "assums", "Comma-separated list of assumptions to use.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        BoolOption   opt_exhaust("MAIN", "exhaust", "Run exhaustive search", false);
 
         parseOptions(argc, argv, true);
         
@@ -219,6 +222,46 @@ int main(int argc, char** argv)
             printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
         }}
         lbool ret = S.solveLimited(dummy);
+
+		if(opt_exhaust)
+		{
+			int exhaust_count = 0;
+			while(ret == l_True)
+			{	
+				int pos_count = 0;				
+				exhaust_count++;
+				vec<Lit> blocking_clause;
+				if(S.verbosity == 0){
+					printf("a ");
+				}
+				for(int i=0; i<S.nVars(); i++)
+				{	if(!unit_clauses[i] || S.model[i]==l_True)
+					{	if(S.model[i]==l_True)
+							blocking_clause.push(mkLit(i, S.model[i]==l_True));
+						if(S.verbosity > 0){
+							printf("%c", S.model[i]==l_True ? '1' : '0');
+						}
+						else
+						{	printf("%s%d ", S.model[i]==l_True ? "" : "-", i+1);
+						}
+						if(S.model[i]==l_True)
+							pos_count++;
+					}
+				}
+				if(S.verbosity == 0){
+					printf("0\n");
+				}
+				if(S.verbosity > 0){
+					printf("\n");
+					printf("SOLUTION %d POSITIVE COUNT: %d\n", exhaust_count, pos_count);
+				}
+				S.addClause(blocking_clause);
+				ret = S.solveLimited(dummy);
+			}
+			if(S.verbosity > 0){
+				printf("EXHAUST COUNT: %d\n", exhaust_count);
+			}
+		}
         
         if (S.verbosity > 0){
             printStats(S);
