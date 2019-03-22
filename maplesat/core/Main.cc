@@ -77,7 +77,7 @@ int main(int argc, char** argv)
 #if defined(__linux__) && defined(_FPU_EXTENDED) && defined(_FPU_DOUBLE) && defined(_FPU_GETCW)
         fpu_control_t oldcw, newcw;
         _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
-        printf("WARNING: for repeatability, setting FPU to use double precision\n");
+        //printf("WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
         // Extra options:
         //
@@ -154,8 +154,8 @@ int main(int argc, char** argv)
                 printf("===============================================================================\n");
                 printf("Solved by unit propagation\n");
                 printStats(S);
-                printf("\n"); }
-            printf("UNSATISFIABLE\n");
+                printf("\n");
+            printf("UNSATISFIABLE\n"); }
             exit(20);
         }
         
