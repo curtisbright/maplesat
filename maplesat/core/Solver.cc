@@ -58,6 +58,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
+static IntOption  opt_col(_cat, "col", "Maximum column to use for exhaustive search");
 
 
 //=================================================================================================
@@ -355,7 +356,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(exhaustfile==NULL)
 		return;
 
-	bool all_assigned = true;
+	/*bool all_assigned = true;
 	for(int i=0; i<assigns.size(); i++)
 	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
 		if(assigns[i]==l_Undef)
@@ -363,16 +364,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			break;
 		}
 	}
-	//printf("\n");
+	//printf("\n");*/
 
-	if(all_assigned)
+	if(complete)
 	{
 		out_learnts.push();
 
 		fprintf(exhaustfile, "a ");
 		for(int i=0; i<assigns.size(); i++)
-		{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
-			fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
+		{	if(unit_clauses[i] != 1 && assigns[i]==l_True && i/111 < 80 && i%111 < opt_col)
+			{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
+			}
 		}
 		fprintf(exhaustfile, "0\n");
 		numsols++;

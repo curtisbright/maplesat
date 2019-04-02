@@ -41,6 +41,8 @@ public:
     Solver();
     virtual ~Solver();
 
+    char unit_clauses[200000];
+
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
