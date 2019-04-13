@@ -1093,10 +1093,10 @@ lbool Solver::search(int nof_conflicts)
 #endif
 
                 if (verbosity >= 1)
-                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", 
+                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %8d |\n", 
                            (int)conflicts, 
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
-                           (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progressEstimate()*100);
+                           (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), numsols /*progressEstimate()*100*/);
             }
 
         }else{
@@ -1277,7 +1277,7 @@ lbool Solver::solve_()
         printf("Almost Conflict : %d\n", ALMOST_CONFLICT);
         printf("Anti Exploration : %d\n", ANTI_EXPLORATION);
         printf("============================[ Search Statistics ]==============================\n");
-        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
+        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Num Sols |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
         printf("===============================================================================\n");
     }
