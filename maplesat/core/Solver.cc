@@ -993,10 +993,10 @@ lbool Solver::solve_()
     lbool   status            = l_Undef;
 
     if (verbosity >= 1){
-        printf("LBD Based Clause Deletion : %d\n", LBD_BASED_CLAUSE_DELETION);
+        /*printf("LBD Based Clause Deletion : %d\n", LBD_BASED_CLAUSE_DELETION);
         printf("Rapid Deletion : %d\n", RAPID_DELETION);
         printf("Almost Conflict : %d\n", ALMOST_CONFLICT);
-        printf("Anti Exploration : %d\n", ANTI_EXPLORATION);
+        printf("Anti Exploration : %d\n", ANTI_EXPLORATION);*/
         printf("============================[ Search Statistics ]==============================\n");
         printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");

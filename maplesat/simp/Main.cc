@@ -187,6 +187,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
+        lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
             const char* file_name = assumptions;
@@ -194,17 +195,35 @@ int main(int argc, char** argv)
             if (assertion_file == NULL)
                 printf("ERROR! Could not open file: %s\n", file_name), exit(1);
             int i = 0;
-            while (fscanf(assertion_file, "%d", &i) == 1) {
-                Var v = abs(i) - 1;
-                Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
-                dummy.push(l);
+            int bound = 0;
+            int tmp = fscanf(assertion_file, "a ");
+            while (fscanf(assertion_file, "%d ", &i) == 1) {
+                if(i==0)
+                {
+                  printf("a ");
+                  for( int i = 0; i < dummy.size(); i++)
+                    printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
+                  printf("0\n");
+                  ret = S.solveLimited(dummy);
+                  printf("Bound %d: ", bound);
+                  bound++;
+                  printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                  dummy.clear();
+                  tmp = fscanf(assertion_file, "a ");
+                }
+                else
+                {
+                  Var v = abs(i) - 1;
+                  Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                  dummy.push(l);
+                }
             }
             fclose(assertion_file);
         }
-        for( int i = 0; i < dummy.size(); i++) {
+        /*for( int i = 0; i < dummy.size(); i++) {
             printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
         }
-        lbool ret = S.solveLimited(dummy);
+        lbool ret = S.solveLimited(dummy);*/
         
         if (S.verbosity > 0){
             printStats(S);
