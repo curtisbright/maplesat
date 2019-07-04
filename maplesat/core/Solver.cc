@@ -60,6 +60,8 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search");
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search");
+static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search");
+static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 80);
 
 
 //=================================================================================================
@@ -373,7 +375,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		out_learnts.push();
 		fprintf(exhaustfile, "a ");
 		for(int i=0; i<assigns.size(); i++)
-		{	if(unit_clauses[i] != 1 && assigns[i]==l_True && i/111 < 80 && i%111 < opt_colmax && i%111 >= opt_colmin)
+		{	if(unit_clauses[i] != 1 && assigns[i]==l_True && i/111 >= opt_rowmin && i/111 < opt_rowmax && i%111 < opt_colmax && i%111 >= opt_colmin)
 			{	clause.push(mkLit(i, assigns[i]==l_True));
 				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
 				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
