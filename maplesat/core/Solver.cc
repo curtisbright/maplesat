@@ -64,7 +64,7 @@ static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhausti
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search");
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search");
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search");
-static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 65));
+static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", -1, IntRange(-1, 65));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -404,66 +404,69 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");
 
-		int ind=0;
-		while(!(col[opt_caseno][ind][0]==0 && col[opt_caseno][ind][1]==0) && ind < 17280)
+		if(opt_caseno != -1)
 		{
-			std::array<std::array<int, 19>, 37> matrix;
-			for(int r=opt_rowmin; r<=opt_rowmax; r++)
-			{	for(int c=opt_colmin; c<=opt_colmax; c++)
-				{
-					const int index = 100*r+c-1;
-					if(assigns[index]==l_True)
-						matrix[r-7][col[opt_caseno][ind][c-1]] = 1;
-						//matrix[r-7][c-1] = 1;
-					else
-						matrix[r-7][col[opt_caseno][ind][c-1]] = 0;
-						//matrix[r-7][c-1] = 0;
-					
+			int ind=0;
+			while(!(col[opt_caseno][ind][0]==0 && col[opt_caseno][ind][1]==0) && ind < 17280)
+			{
+				std::array<std::array<int, 19>, 37> matrix;
+				for(int r=opt_rowmin; r<=opt_rowmax; r++)
+				{	for(int c=opt_colmin; c<=opt_colmax; c++)
+					{
+						const int index = 100*r+c-1;
+						if(assigns[index]==l_True)
+							matrix[r-7][col[opt_caseno][ind][c-1]] = 1;
+							//matrix[r-7][c-1] = 1;
+						else
+							matrix[r-7][col[opt_caseno][ind][c-1]] = 0;
+							//matrix[r-7][c-1] = 0;
+						
+					}
 				}
+
+				std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+
+				/*for(int i=0; i<37; i++)
+				{	printf("%02d ", i+7);
+					for(int j=0; j<19; j++)
+						printf("%d", matrix[i][j]);
+					printf("\n");
+				}*/
+
+				vec<Lit> clause;
+
+				for(int i=0; i<37; i++)
+				{	for(int j=0; j<19; j++)
+						if(matrix[i][j]==1)
+							clause.push(~mkLit((i+7)*100+j));
+				}
+
+				{
+					int max_index = 0;
+					for(int i=1; i<clause.size(); i++)
+						if(level(var(clause[i])) > level(var(clause[max_index])))
+							max_index = i;
+					Lit p = clause[0];
+					clause[0] = clause[max_index];
+					clause[max_index] = p;
+				}
+
+				{
+					int max_index = 1;
+					for(int i=2; i<clause.size(); i++)
+						if(level(var(clause[i])) > level(var(clause[max_index])))
+							max_index = i;
+					Lit p = clause[1];
+					clause[1] = clause[max_index];
+					clause[max_index] = p;
+				}
+
+				CRef confl_clause = ca.alloc(clause, false);
+				attachClause(confl_clause);
+				clauses.push(confl_clause);
+
+				ind++;
 			}
-
-			std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-
-			/*for(int i=0; i<37; i++)
-			{	printf("%02d ", i+7);
-				for(int j=0; j<19; j++)
-					printf("%d", matrix[i][j]);
-				printf("\n");
-			}*/
-
-			vec<Lit> clause;
-
-			for(int i=0; i<37; i++)
-			{	for(int j=0; j<19; j++)
-					if(matrix[i][j]==1)
-						clause.push(~mkLit((i+7)*100+j));
-			}
-
-			{
-				int max_index = 0;
-				for(int i=1; i<clause.size(); i++)
-					if(level(var(clause[i])) > level(var(clause[max_index])))
-						max_index = i;
-				Lit p = clause[0];
-				clause[0] = clause[max_index];
-				clause[max_index] = p;
-			}
-
-			{
-				int max_index = 1;
-				for(int i=2; i<clause.size(); i++)
-					if(level(var(clause[i])) > level(var(clause[max_index])))
-						max_index = i;
-				Lit p = clause[1];
-				clause[1] = clause[max_index];
-				clause[max_index] = p;
-			}
-
-			CRef confl_clause = ca.alloc(clause, false);
-			attachClause(confl_clause);
-			clauses.push(confl_clause);
-
-			ind++;
 		}
 
 		numsols++;
