@@ -18,6 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include "automorphisms.h"
+
 #include <math.h>
 
 #include "mtl/Sort.h"
@@ -343,6 +345,9 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+#include <array>
+#include <algorithm>
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -373,44 +378,92 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	{
 		vec<Lit> clause;
 		out_learnts.push();
-		fprintf(exhaustfile, "a ");
+		
+		/*fprintf(exhaustfile, "a ");
 		for(int i=0; i<assigns.size(); i++)
 		{	
 			int r = (i/111);
 			int c = (i%111);
-			if(/*unit_clauses[i] != 1 &&*/ assigns[i]==l_True && r >= opt_rowmin && r < opt_rowmax && c >= opt_colmin && c < opt_colmax)
+			if(assigns[i]==l_True && r >= opt_rowmin && r < opt_rowmax && c >= opt_colmin && c < opt_colmax)
 			{	clause.push(mkLit(i, assigns[i]==l_True));
 				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
 				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
 			}
 		}
+		fprintf(exhaustfile, "0\n");*/
+
+		fprintf(exhaustfile, "a ");
+		for(int r=opt_rowmin; r<opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<opt_colmax; c++)
+			{
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
+				{	out_learnts[0].push(~mkLit(index));
+					fprintf(exhaustfile, "%d ", index+1);
+				}
+			}
+		}
 		fprintf(exhaustfile, "0\n");
 
+		for(int k=0; k<48; k++)
 		{
-			int max_index = 0;
-			for(int i=1; i<clause.size(); i++)
-				if(level(var(clause[i])) > level(var(clause[max_index])))
-					max_index = i;
-			Lit p = clause[0];
-			clause[0] = clause[max_index];
-			clause[max_index] = p;
+			std::array<std::array<int, 75>, 6> matrix;
+			for(int r=21; r<27; r++)
+			{	for(int c=0; c<75; c++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+						matrix[r-21][col[k][c]] = 1;
+						//matrix[r-7][c-1] = 1;
+					else
+						matrix[r-21][col[k][c]] = 0;
+						//matrix[r-7][c-1] = 0;
+					
+				}
+			}
+
+			std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+
+			/*for(int i=0; i<37; i++)
+			{	printf("%02d ", i+7);
+				for(int j=0; j<19; j++)
+					printf("%d", matrix[i][j]);
+				printf("\n");
+			}*/
+
+			vec<Lit> clause;
+
+			for(int i=0; i<6; i++)
+			{	for(int j=0; j<75; j++)
+					if(matrix[i][j]==1)
+						clause.push(~mkLit((i+21)*111+j));
+			}
+
+			{
+				int max_index = 0;
+				for(int i=1; i<clause.size(); i++)
+					if(level(var(clause[i])) > level(var(clause[max_index])))
+						max_index = i;
+				Lit p = clause[0];
+				clause[0] = clause[max_index];
+				clause[max_index] = p;
+			}
+
+			{
+				int max_index = 1;
+				for(int i=2; i<clause.size(); i++)
+					if(level(var(clause[i])) > level(var(clause[max_index])))
+						max_index = i;
+				Lit p = clause[1];
+				clause[1] = clause[max_index];
+				clause[max_index] = p;
+			}
+
+			CRef confl_clause = ca.alloc(clause, false);
+			attachClause(confl_clause);
+			clauses.push(confl_clause);
 		}
 
-		{
-			int max_index = 1;
-			for(int i=2; i<clause.size(); i++)
-				if(level(var(clause[i])) > level(var(clause[max_index])))
-					max_index = i;
-			Lit p = clause[1];
-			clause[1] = clause[max_index];
-			clause[max_index] = p;
-		}
-
-		CRef confl_clause = ca.alloc(clause, false);
-		attachClause(confl_clause);
-		clauses.push(confl_clause);
-
-		clause.copyTo(out_learnts[0]);
 		numsols++;
 	}
 }
