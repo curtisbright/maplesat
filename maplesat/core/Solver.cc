@@ -376,9 +376,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		fprintf(exhaustfile, "a ");
 		for(int i=0; i<assigns.size(); i++)
 		{	
-			int r = (i/111)+1;
-			int c = (i%111)+1;
-			if(/*unit_clauses[i] != 1 &&*/ assigns[i]==l_True && r >= opt_rowmin  && r < opt_rowmax && c >= opt_colmin && c < opt_colmax)
+			int r = (i/111);
+			int c = (i%111);
+			if(/*unit_clauses[i] != 1 &&*/ assigns[i]==l_True && r >= opt_rowmin && r < opt_rowmax && c >= opt_colmin && c < opt_colmax)
 			{	clause.push(mkLit(i, assigns[i]==l_True));
 				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
 				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
