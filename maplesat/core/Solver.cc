@@ -64,6 +64,7 @@ static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhausti
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 111);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 27);
+static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
 
 
 //=================================================================================================
@@ -405,63 +406,66 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");
 
-		for(int k=0; k<48; k++)
+		if(opt_isoblock)
 		{
-			std::array<std::array<int, 75>, 6> matrix;
-			for(int r=21; r<27; r++)
-			{	for(int c=0; c<75; c++)
-				{
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-						matrix[r-21][col[k][c]] = 1;
-						//matrix[r-7][c-1] = 1;
-					else
-						matrix[r-21][col[k][c]] = 0;
-						//matrix[r-7][c-1] = 0;
-					
+			for(int k=0; k<48; k++)
+			{
+				std::array<std::array<int, 75>, 6> matrix;
+				for(int r=21; r<27; r++)
+				{	for(int c=0; c<75; c++)
+					{
+						const int index = 111*r+c;
+						if(assigns[index]==l_True)
+							matrix[r-21][col[k][c]] = 1;
+							//matrix[r-7][c-1] = 1;
+						else
+							matrix[r-21][col[k][c]] = 0;
+							//matrix[r-7][c-1] = 0;
+						
+					}
 				}
+
+				std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+
+				/*for(int i=0; i<37; i++)
+				{	printf("%02d ", i+7);
+					for(int j=0; j<19; j++)
+						printf("%d", matrix[i][j]);
+					printf("\n");
+				}*/
+
+				vec<Lit> clause;
+
+				for(int i=0; i<6; i++)
+				{	for(int j=0; j<75; j++)
+						if(matrix[i][j]==1)
+							clause.push(~mkLit((i+21)*111+j));
+				}
+
+				{
+					int max_index = 0;
+					for(int i=1; i<clause.size(); i++)
+						if(level(var(clause[i])) > level(var(clause[max_index])))
+							max_index = i;
+					Lit p = clause[0];
+					clause[0] = clause[max_index];
+					clause[max_index] = p;
+				}
+
+				{
+					int max_index = 1;
+					for(int i=2; i<clause.size(); i++)
+						if(level(var(clause[i])) > level(var(clause[max_index])))
+							max_index = i;
+					Lit p = clause[1];
+					clause[1] = clause[max_index];
+					clause[max_index] = p;
+				}
+
+				CRef confl_clause = ca.alloc(clause, false);
+				attachClause(confl_clause);
+				clauses.push(confl_clause);
 			}
-
-			std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-
-			/*for(int i=0; i<37; i++)
-			{	printf("%02d ", i+7);
-				for(int j=0; j<19; j++)
-					printf("%d", matrix[i][j]);
-				printf("\n");
-			}*/
-
-			vec<Lit> clause;
-
-			for(int i=0; i<6; i++)
-			{	for(int j=0; j<75; j++)
-					if(matrix[i][j]==1)
-						clause.push(~mkLit((i+21)*111+j));
-			}
-
-			{
-				int max_index = 0;
-				for(int i=1; i<clause.size(); i++)
-					if(level(var(clause[i])) > level(var(clause[max_index])))
-						max_index = i;
-				Lit p = clause[0];
-				clause[0] = clause[max_index];
-				clause[max_index] = p;
-			}
-
-			{
-				int max_index = 1;
-				for(int i=2; i<clause.size(); i++)
-					if(level(var(clause[i])) > level(var(clause[max_index])))
-						max_index = i;
-				Lit p = clause[1];
-				clause[1] = clause[max_index];
-				clause[max_index] = p;
-			}
-
-			CRef confl_clause = ca.alloc(clause, false);
-			attachClause(confl_clause);
-			clauses.push(confl_clause);
 		}
 
 		numsols++;
