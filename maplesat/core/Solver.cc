@@ -424,7 +424,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 
-				std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+				std::sort(matrix.begin(), matrix.end(), std::greater<std::array<int, 19>>()); 
 
 				/*for(int i=0; i<37; i++)
 				{	printf("%02d ", i+7);
