@@ -64,7 +64,7 @@ static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhausti
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search");
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search");
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search");
-static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", -1, IntRange(-1, 65));
+static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -404,10 +404,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");
 
-		if(opt_caseno != -1)
+		if(opt_caseno != 0)
 		{
 			int ind=0;
-			while(!(col[opt_caseno][ind][0]==0 && col[opt_caseno][ind][1]==0) && ind < 17280)
+			while(!(col[opt_caseno-1][ind][0]==0 && col[opt_caseno-1][ind][1]==0) && ind < 17280)
 			{
 				std::array<std::array<int, 19>, 37> matrix;
 				for(int r=opt_rowmin; r<=opt_rowmax; r++)
@@ -415,10 +415,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					{
 						const int index = 100*r+c-1;
 						if(assigns[index]==l_True)
-							matrix[r-7][col[opt_caseno][ind][c-1]] = 1;
+							matrix[r-7][col[opt_caseno-1][ind][c-1]] = 1;
 							//matrix[r-7][c-1] = 1;
 						else
-							matrix[r-7][col[opt_caseno][ind][c-1]] = 0;
+							matrix[r-7][col[opt_caseno-1][ind][c-1]] = 0;
 							//matrix[r-7][c-1] = 0;
 						
 					}
