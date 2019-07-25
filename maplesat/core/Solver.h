@@ -151,6 +151,7 @@ public:
 
     uint64_t lbd_calls;
     const char* exhauststring;
+    const char* exhauststring2;
     vec<uint64_t> lbd_seen;
     vec<uint64_t> picked;
     vec<uint64_t> conflicted;

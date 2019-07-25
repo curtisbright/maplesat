@@ -26,6 +26,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Solver.h"
 
 FILE* exhaustfile = NULL;
+FILE* exhaustfile2 = NULL;
 long numsols = 0;
 
 using namespace Minisat;
@@ -60,6 +61,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
+static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 0);
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 111);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
@@ -119,6 +121,7 @@ Solver::Solver() :
 #endif
 
   , exhauststring (opt_exhaustive)
+  , exhauststring2 (opt_exhaustive2)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -143,6 +146,9 @@ Solver::Solver() :
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
     }
+    if(exhauststring2 != NULL)
+    {   exhaustfile2 = fopen(exhauststring2, "a");
+    }
 }
 
 
@@ -150,6 +156,9 @@ Solver::~Solver()
 {
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
+    }
+    if(exhauststring2 != NULL)
+    {   fclose(exhaustfile2);
     }
 }
 
@@ -348,6 +357,7 @@ Lit Solver::pickBranchLit()
 
 #include <array>
 #include <algorithm>
+#include <utility>
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -408,63 +418,263 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		if(opt_isoblock)
 		{
-			for(int k=0; k<48; k++)
+			for(int k=0; k<192; k++)
 			{
 				std::array<std::array<int, 75>, 6> matrix;
-				for(int r=21; r<27; r++)
-				{	for(int c=0; c<75; c++)
-					{
-						const int index = 111*r+c;
-						if(assigns[index]==l_True)
-							matrix[r-21][col[k][c]] = 1;
-							//matrix[r-7][c-1] = 1;
-						else
-							matrix[r-21][col[k][c]] = 0;
-							//matrix[r-7][c-1] = 0;
-						
+
+				if(row[k]==1)
+				{
+					for(int r=21; r<27; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix[r-21][col[k][c]] = 1;
+								//matrix[r-7][c-1] = 1;
+							else
+								matrix[r-21][col[k][c]] = 0;
+								//matrix[r-7][c-1] = 0;
+							
+						}
 					}
+
+					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix[j][15+i]==1)
+								swap(matrix[i], matrix[j]);
+						}
+
+					}
+
+					vec<Lit> clause;
+
+					/*for(int i=0; i<6; i++)
+					{	for(int j=0; j<75; j++)
+							if(matrix[i][j]==1)
+							{	clause.push(~mkLit((i+21)*111+j));
+							fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+							}
+					}
+					fprintf(exhaustfile2, "0\n");*/
+
+					{
+						int max_index = 0;
+						for(int i=1; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[0];
+						clause[0] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[1];
+						clause[1] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(clause, false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
 				}
-
-				std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-
-				/*for(int i=0; i<37; i++)
-				{	printf("%02d ", i+7);
-					for(int j=0; j<19; j++)
-						printf("%d", matrix[i][j]);
-					printf("\n");
-				}*/
-
-				vec<Lit> clause;
-
-				for(int i=0; i<6; i++)
-				{	for(int j=0; j<75; j++)
-						if(matrix[i][j]==1)
-							clause.push(~mkLit((i+21)*111+j));
-				}
-
+				if(row[k]==10 && exhauststring2 != NULL)
 				{
-					int max_index = 0;
-					for(int i=1; i<clause.size(); i++)
-						if(level(var(clause[i])) > level(var(clause[max_index])))
-							max_index = i;
-					Lit p = clause[0];
-					clause[0] = clause[max_index];
-					clause[max_index] = p;
-				}
+					for(int r=21; r<27; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix[r-21][col[k][c]] = 1;
+								//matrix[r-7][c-1] = 1;
+							else
+								matrix[r-21][col[k][c]] = 0;
+								//matrix[r-7][c-1] = 0;
+							
+						}
+					}
 
+					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix[j][15+6+i]==1)
+								swap(matrix[i], matrix[j]);
+						}
+
+					}
+
+					vec<Lit> clause;
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<75; j++)
+							if(matrix[i][j]==1)
+							{	clause.push(~mkLit((i+21+6)*111+j));
+								fprintf(exhaustfile2, "-%d ", (i+21+6)*111+j+1);
+							}
+					}
+					fprintf(exhaustfile2, "0\n");
+
+					{
+						int max_index = 0;
+						for(int i=1; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[0];
+						clause[0] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[1];
+						clause[1] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(clause, false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
+				}
+				if(row[k]==15 && exhauststring2 != NULL)
 				{
-					int max_index = 1;
-					for(int i=2; i<clause.size(); i++)
-						if(level(var(clause[i])) > level(var(clause[max_index])))
-							max_index = i;
-					Lit p = clause[1];
-					clause[1] = clause[max_index];
-					clause[max_index] = p;
+					for(int r=21; r<27; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix[r-21][col[k][c]] = 1;
+								//matrix[r-7][c-1] = 1;
+							else
+								matrix[r-21][col[k][c]] = 0;
+								//matrix[r-7][c-1] = 0;
+							
+						}
+					}
+
+					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix[j][15+2*6+i]==1)
+								swap(matrix[i], matrix[j]);
+						}
+
+					}
+
+					vec<Lit> clause;
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<75; j++)
+							if(matrix[i][j]==1)
+							{	clause.push(~mkLit((i+21+2*6)*111+j));
+								fprintf(exhaustfile2, "-%d ", (i+21+2*6)*111+j+1);
+							}
+					}
+					fprintf(exhaustfile2, "0\n");
+
+					{
+						int max_index = 0;
+						for(int i=1; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[0];
+						clause[0] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[1];
+						clause[1] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(clause, false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
+				}
+				if(row[k]==11 && exhauststring2 != NULL)
+				{
+					std::array<std::array<int, 75>, 6> matrix;
+					for(int r=21; r<27; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix[r-21][col[k][c]] = 1;
+								//matrix[r-7][c-1] = 1;
+							else
+								matrix[r-21][col[k][c]] = 0;
+								//matrix[r-7][c-1] = 0;
+							
+						}
+					}
+
+					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix[j][15+3*6+i]==1)
+								swap(matrix[i], matrix[j]);
+						}
+
+					}
+
+					vec<Lit> clause;
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<75; j++)
+							if(matrix[i][j]==1)
+							{	clause.push(~mkLit((i+21+3*6)*111+j));
+								fprintf(exhaustfile2, "-%d ", (i+21+3*6)*111+j+1);
+							}
+					}
+					fprintf(exhaustfile2, "0\n");
+
+					{
+						int max_index = 0;
+						for(int i=1; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[0];
+						clause[0] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[1];
+						clause[1] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(clause, false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
 				}
 
-				CRef confl_clause = ca.alloc(clause, false);
-				attachClause(confl_clause);
-				clauses.push(confl_clause);
+				if((row[k]==1 || row[k]==10 || row[k]==11 || row[k]==15) && exhauststring2 != NULL)
+				{	/*printf("ROW %d CASE\n", row[k]);
+					for(int r=21; r<27; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							printf("%d", matrix[r-21][c]);					
+						}
+						printf("\n");
+					}
+					printf("\n");*/
+				}
 			}
 		}
 
