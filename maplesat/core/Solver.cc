@@ -449,14 +449,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					vec<Lit> clause;
 
-					/*for(int i=0; i<6; i++)
+					for(int i=0; i<6; i++)
 					{	for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
-							fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+							//fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
 							}
 					}
-					fprintf(exhaustfile2, "0\n");*/
+					/*fprintf(exhaustfile2, "0\n");*/
 
 					{
 						int max_index = 0;
@@ -518,29 +518,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					fprintf(exhaustfile2, "0\n");
 
-					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
 				}
 				if(row[k]==15 && exhauststring2 != NULL)
 				{
@@ -578,29 +555,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					fprintf(exhaustfile2, "0\n");
 
-					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
 				}
 				if(row[k]==11 && exhauststring2 != NULL)
 				{
@@ -639,29 +593,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					fprintf(exhaustfile2, "0\n");
 
-					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
 				}
 
 				if((row[k]==1 || row[k]==10 || row[k]==11 || row[k]==15) && exhauststring2 != NULL)
