@@ -456,10 +456,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
-							//fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+								if(k!=184)
+									fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
 							}
 					}
-					/*fprintf(exhaustfile2, "0\n");*/
+					if(k!=184)
+						fprintf(exhaustfile2, "0\n");
 
 					{
 						int max_index = 0;
@@ -485,7 +487,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					attachClause(confl_clause);
 					clauses.push(confl_clause);
 				}
-				if(row[k]==10 && exhauststring2 != NULL)
+				/*if(row[k]==10 && exhauststring2 != NULL)
 				{
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
@@ -602,7 +604,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					fprintf(exhaustfile2, "0\n");
 
-				}
+				}*/
 
 				if((row[k]==1 || row[k]==10 || row[k]==11 || row[k]==15) && exhauststring2 != NULL)
 				{	/*printf("ROW %d CASE\n", row[k]);
