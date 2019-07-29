@@ -66,6 +66,7 @@ static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhausti
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 111);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 27);
+static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
 
 
@@ -450,7 +451,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					vec<Lit> clause;
 
 					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
+					{	if(i+21 >= opt_colprint)
+							break;
+						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
 							//fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
@@ -510,7 +513,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					vec<Lit> clause;
 
 					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
+					{	if(i+21+6 >= opt_colprint)
+							break;
+						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21+6)*111+j));
 								fprintf(exhaustfile2, "-%d ", (i+21+6)*111+j+1);
@@ -547,7 +552,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					vec<Lit> clause;
 
 					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
+					{	if(i+21+2*6 >= opt_colprint)
+							break;
+						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21+2*6)*111+j));
 								fprintf(exhaustfile2, "-%d ", (i+21+2*6)*111+j+1);
@@ -585,7 +592,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					vec<Lit> clause;
 
 					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
+					{	if(i+21+3*6 >= opt_colprint)
+							break;
+						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21+3*6)*111+j));
 								fprintf(exhaustfile2, "-%d ", (i+21+3*6)*111+j+1);
