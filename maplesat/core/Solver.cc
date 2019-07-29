@@ -372,7 +372,7 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	
-	if(exhaustfile==NULL)
+	if(exhaustfile==NULL && exhaustfile2==NULL)
 		return;
 
 	/*bool all_assigned = true;
@@ -453,10 +453,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					{	for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
-							//fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+								//fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
 							}
 					}
-					/*fprintf(exhaustfile2, "0\n");*/
+					//fprintf(exhaustfile2, "0\n");
 
 					{
 						int max_index = 0;
@@ -481,8 +481,147 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					CRef confl_clause = ca.alloc(clause, false);
 					attachClause(confl_clause);
 					clauses.push(confl_clause);
+
+					{
+						const int l=0;
+						if(row[l]!=10)
+							printf("Error!\n");
+						std::array<std::array<int, 75>, 6> newmatrix;
+						for(int r=21; r<27; r++)
+						{	for(int c=0; c<75; c++)
+							{
+								if(matrix[r-21][c]==1)
+									newmatrix[r-21][col[l][c]] = 1;
+								else
+									newmatrix[r-21][col[l][c]] = 0;
+							}
+						}
+
+						for(int i=0; i<6; i++)
+						{	for(int j=0; j<6; j++)
+							{	if(newmatrix[j][15+i+6]==1)
+									swap(newmatrix[i], newmatrix[j]);
+							}
+
+						}
+
+						//printf("ROW 10\n");
+						for(int i=0; i<6; i++)
+						{	for(int j=0; j<75; j++)
+								if(newmatrix[i][j]==1)
+								{	fprintf(exhaustfile, "-%d ", (i+21+6)*111+j+1);
+									//printf("1");
+								}
+								//else
+									//printf("0");
+							//printf("\n");
+						}
+						//printf("\n");
+						fprintf(exhaustfile, "0\n");
+					}
+
+					{
+						const int l=68;
+						if(row[l]!=15)
+							printf("Error!\n");
+						std::array<std::array<int, 75>, 6> newmatrix;
+						for(int r=21; r<27; r++)
+						{	for(int c=0; c<75; c++)
+							{
+								if(matrix[r-21][c]==1)
+									newmatrix[r-21][col[l][c]] = 1;
+								else
+									newmatrix[r-21][col[l][c]] = 0;
+							}
+						}
+
+						for(int i=0; i<6; i++)
+						{	for(int j=0; j<6; j++)
+							{	if(newmatrix[j][15+i+2*6]==1)
+									swap(newmatrix[i], newmatrix[j]);
+							}
+
+						}
+
+						//printf("ROW 15\n");
+						for(int i=0; i<6; i++)
+						{	for(int j=0; j<75; j++)
+								if(newmatrix[i][j]==1)
+								{	fprintf(exhaustfile, "-%d ", (i+21+2*6)*111+j+1);
+									//printf("1");
+								}
+								//else
+									//printf("0");
+							//printf("\n");
+						}
+						//printf("\n");
+						fprintf(exhaustfile, "0\n");
+					}
+
+					{
+						const int l=69;
+						if(row[l]!=11)
+							printf("Error!\n");
+						std::array<std::array<int, 75>, 6> newmatrix;
+						for(int r=21; r<27; r++)
+						{	for(int c=0; c<75; c++)
+							{
+								if(matrix[r-21][c]==1)
+									newmatrix[r-21][col[l][c]] = 1;
+								else
+									newmatrix[r-21][col[l][c]] = 0;
+							}
+						}
+
+						for(int i=0; i<6; i++)
+						{	for(int j=0; j<6; j++)
+							{	if(newmatrix[j][15+i+3*6]==1)
+									swap(newmatrix[i], newmatrix[j]);
+							}
+
+						}
+
+						//printf("ROW 10\n");
+						for(int i=0; i<6; i++)
+						{	for(int j=0; j<75; j++)
+								if(newmatrix[i][j]==1)
+								{	fprintf(exhaustfile, "-%d ", (i+21+3*6)*111+j+1);
+									//printf("1");
+								}
+								//else
+									//printf("0");
+							//printf("\n");
+						}
+						//printf("\n");
+						fprintf(exhaustfile, "0\n");
+					}
+
+					/*for(int l=0; l<192; l++)
+					{	std::array<std::array<int, 75>, 6> newmatrix;
+						if(row[l]!=1)
+						{	
+							for(int r=21; r<27; r++)
+							{	for(int c=0; c<75; c++)
+								{
+									if(matrix[r-21][c]==1)
+										newmatrix[r-21][col[l][c]] = 1;
+									else
+										newmatrix[r-21][col[l][c]] = 0;
+								}
+							}
+
+							for(int i=0; i<6; i++)
+							{	for(int j=0; j<75; j++)
+									if(matrix[i][j]==1)
+									{	clause.push(~mkLit((i+21)*111+j));
+										fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+									}
+							}
+							fprintf(exhaustfile2, "0\n");
+						}
+					}*/
 				}
-				if(row[k]==10 && exhauststring2 != NULL)
+				/*if(row[k]==10 && exhauststring2 != NULL)
 				{
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
@@ -593,7 +732,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					fprintf(exhaustfile2, "0\n");
 
-				}
+				}*/
 
 				if((row[k]==1 || row[k]==10 || row[k]==11 || row[k]==15) && exhauststring2 != NULL)
 				{	/*printf("ROW %d CASE\n", row[k]);
