@@ -100,6 +100,7 @@ int main(int argc, char** argv)
         SimpSolver  S;
         double      initial_time = cpuTime();
 
+        S.parsing = 1;
         if (!pre) S.eliminate(true);
 
         S.verbosity = verb;
@@ -142,9 +143,9 @@ int main(int argc, char** argv)
             printf("============================[ Problem Statistics ]=============================\n");
             printf("|                                                                             |\n"); }
         
+        S.output = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
         parse_DIMACS(in, S);
         gzclose(in);
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 
         if (S.verbosity > 0){
             printf("|  Number of variables:  %12d                                         |\n", S.nVars());
@@ -159,6 +160,7 @@ int main(int argc, char** argv)
         signal(SIGINT, SIGINT_interrupt);
         signal(SIGXCPU,SIGINT_interrupt);
 
+        S.parsing = 0;
         S.eliminate(true);
         double simplified_time = cpuTime();
         if (S.verbosity > 0){
@@ -166,7 +168,7 @@ int main(int argc, char** argv)
             printf("|                                                                             |\n"); }
 
         if (!S.okay()){
-            if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
+            if (S.output != NULL) fprintf(S.output, "0\n"), fclose(S.output);
             if (S.verbosity > 0){
                 printf("===============================================================================\n");
                 printf("Solved by simplification\n");
@@ -208,22 +210,19 @@ int main(int argc, char** argv)
             printStats(S);
             printf("\n"); }
         printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
-        if (res != NULL){
+        if (S.output != NULL){
             if (ret == l_True){
-                fprintf(res, "SAT\n");
+                fclose(S.output);                 // Close the proof file
+                S.output = fopen(argv[2], "wb");  // Clear it to put in the solution
                 for (int i = 0; i < S.nVars(); i++)
                     if (S.model[i] != l_Undef)
-                        fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-                fprintf(res, " 0\n");
-            }else if (ret == l_False) {
-                fprintf(res, "UNSAT\n");
-                for (int i = 0; i < S.conflict.size(); i++) {
-                    // Reverse the signs to keep the same sign as the assertion file.
-                    fprintf(res, "%s%d\n", sign(S.conflict[i]) ? "" : "-", var(S.conflict[i]) + 1);
-                }
-            } else
-                fprintf(res, "INDET\n");
-            fclose(res);
+                        fprintf(S.output, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+                fprintf(S.output, " 0\n");
+            }else if (ret == l_False)
+                fprintf(S.output, "0\n");
+            else
+                fprintf(S.output, "INDET\n");
+            fclose(S.output);
         }
 
 #ifdef NDEBUG
