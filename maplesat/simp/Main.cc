@@ -187,6 +187,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
+	int numsat = 0;
         lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
@@ -210,6 +211,8 @@ int main(int argc, char** argv)
                   printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
                   dummy.clear();
                   tmp = fscanf(assertion_file, "a ");
+                  if(ret==l_True)
+                    numsat++;
                 }
                 else
                 {
@@ -224,7 +227,8 @@ int main(int argc, char** argv)
             printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
         }
         lbool ret = S.solveLimited(dummy);*/
-        
+	printf("Number of satisfiable bounds: %d\n", numsat);        
+
         if (S.verbosity > 0){
             printStats(S);
             printf("\n"); }
