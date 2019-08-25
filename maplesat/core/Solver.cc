@@ -339,7 +339,7 @@ Lit Solver::pickBranchLit()
 #if ANTI_EXPLORATION
             next = order_heap[0];
             uint64_t age = conflicts - canceled[next];
-            while (age > 0) {
+            while (age > 0 && value(next) == l_Undef) {
                 double decay = pow(0.95, age);
                 activity[next] *= decay;
                 if (order_heap.inHeap(next)) {
@@ -354,6 +354,207 @@ Lit Solver::pickBranchLit()
         }
 
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
+}
+
+int wait = 0;
+
+// A callback function for programmatic interface. If the callback detects conflicts, then
+// refine the clause database by adding clauses to out_learnts. This function is called
+// very frequently, if the analysis is expensive then add code to skip the analysis on
+// most calls. However, if complete is set to true, do not skip the analysis or else the
+// solver will be unsound.
+//
+// complete: true if and only if the current trail is a complete assignment that satisfies
+//           the clause database. Note that not every variable is necessarily assigned since
+//           the simplification steps may have removed some variables! If complete is true,
+//           the solver will return satisfiable immediately unless this function returns at
+//           least one clause.
+void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
+    wait++;
+    if (wait == 5 || complete) {
+        if (value(10) == l_True) {
+            out_learnts.push();
+            out_learnts[0].push(~mkLit(10));
+            out_learnts.push();
+            out_learnts[1].push(~mkLit(10));
+        }
+    }
+}
+
+bool Solver::assertingClause(CRef confl) {
+    Clause& c = ca[confl];
+    int asserting = -1;
+    for (int i = 0; i < c.size(); i++) {
+        if (value(c[i]) == l_Undef) {
+            if (asserting != -1) return false;
+            asserting = i;
+        }
+    }
+    return asserting == 0;
+}
+
+void Solver::analyze(vec<Lit>& conflvec, vec<Lit>& out_learnt, int& out_btlevel)
+{
+    int pathC = 0;
+    CRef confl;
+    Lit p     = lit_Undef;
+
+    int cur_max = level(var(conflvec[0]));
+    for(int j=1; j < conflvec.size(); j++) {
+        if(level(var(conflvec[j])) > cur_max) {
+            cur_max = level(var(conflvec[j]));
+        }
+    }
+    if(cur_max == 0) {
+        out_btlevel = -1;
+        return;
+    }
+    if (conflvec.size() == 1) {
+        out_btlevel = 0;
+        conflvec.copyTo(out_learnt);
+        return;
+    }
+
+    // Generate conflict clause:
+    //
+    out_learnt.push();      // (leave room for the asserting literal)
+    int index   = trail.size() - 1;
+
+        for (int j = (p == lit_Undef) ? 0 : 1; j < conflvec.size(); j++){
+            Lit q = conflvec[j];
+
+            if (!seen[var(q)] && level(var(q)) > 0){
+#if BRANCHING_HEURISTIC == CHB
+                last_conflict[var(q)] = conflicts;
+#elif BRANCHING_HEURISTIC == VSIDS
+                varBumpActivity(var(q));
+#endif
+                conflicted[var(q)]++;
+                seen[var(q)] = 1;
+                if (level(var(q)) >= cur_max)
+                    pathC++;
+                else
+                    out_learnt.push(q);
+            }
+        }
+
+        // Select next clause to look at:
+        while (!seen[var(trail[index--])]);
+        p     = trail[index+1];
+        confl = reason(var(p));
+        seen[var(p)] = 0;
+        pathC--;
+
+    while(pathC > 0){
+        assert(confl != CRef_Undef); // (otherwise should be UIP)
+        Clause& c = ca[confl];
+
+#if LBD_BASED_CLAUSE_DELETION
+        if (c.learnt() && c.activity() > 2)
+            c.activity() = lbd(c);
+#else
+        if (c.learnt())
+            claBumpActivity(c);
+#endif
+
+        for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
+            Lit q = c[j];
+
+            if (!seen[var(q)] && level(var(q)) > 0){
+#if BRANCHING_HEURISTIC == CHB
+                last_conflict[var(q)] = conflicts;
+#elif BRANCHING_HEURISTIC == VSIDS
+                varBumpActivity(var(q));
+#endif
+                conflicted[var(q)]++;
+                seen[var(q)] = 1;
+                if (level(var(q)) >= cur_max)
+                    pathC++;
+                else
+                    out_learnt.push(q);
+            }
+        }
+
+        // Select next clause to look at:
+        while (!seen[var(trail[index--])]);
+        p     = trail[index+1];
+        confl = reason(var(p));
+        seen[var(p)] = 0;
+        pathC--;
+
+    }
+    out_learnt[0] = ~p;
+
+    // Simplify conflict clause:
+    //
+    int i, j;
+    out_learnt.copyTo(analyze_toclear);
+    if (ccmin_mode == 2){
+        uint32_t abstract_level = 0;
+        for (i = 1; i < out_learnt.size(); i++)
+            abstract_level |= abstractLevel(var(out_learnt[i])); // (maintain an abstraction of levels involved in conflict)
+
+        for (i = j = 1; i < out_learnt.size(); i++)
+            if (reason(var(out_learnt[i])) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level))
+                out_learnt[j++] = out_learnt[i];
+
+    }else if (ccmin_mode == 1){
+        for (i = j = 1; i < out_learnt.size(); i++){
+            Var x = var(out_learnt[i]);
+
+            if (reason(x) == CRef_Undef)
+                out_learnt[j++] = out_learnt[i];
+            else{
+                Clause& c = ca[reason(var(out_learnt[i]))];
+                for (int k = 1; k < c.size(); k++)
+                    if (!seen[var(c[k])] && level(var(c[k])) > 0){
+                        out_learnt[j++] = out_learnt[i];
+                        break; }
+            }
+        }
+    }else
+        i = j = out_learnt.size();
+
+    max_literals += out_learnt.size();
+    out_learnt.shrink(i - j);
+    tot_literals += out_learnt.size();
+
+    // Find correct backtrack level:
+    //
+    if (out_learnt.size() == 1)
+        out_btlevel = 0;
+    else{
+        int max_i = 1;
+        // Find the first literal assigned at the next-highest level:
+        for (int i = 2; i < out_learnt.size(); i++)
+            if (level(var(out_learnt[i])) > level(var(out_learnt[max_i])))
+                max_i = i;
+        // Swap-in this literal at index 1:
+        Lit p             = out_learnt[max_i];
+        out_learnt[max_i] = out_learnt[1];
+        out_learnt[1]     = p;
+        out_btlevel       = level(var(p));
+    }
+
+#if ALMOST_CONFLICT
+    seen[var(p)] = true;
+    for(int i = out_learnt.size() - 1; i >= 0; i--) {
+        Var v = var(out_learnt[i]);
+        CRef rea = reason(v);
+        if (rea != CRef_Undef) {
+            Clause& reaC = ca[rea];
+            for (int i = 0; i < reaC.size(); i++) {
+                Lit l = reaC[i];
+                if (!seen[var(l)]) {
+                    seen[var(l)] = true;
+                    almost_conflicted[var(l)]++;
+                    analyze_toclear.push(l);
+                }
+            }
+        }
+    }
+#endif
+    for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
 }
 
 /*_________________________________________________________________________________________________
@@ -794,6 +995,7 @@ lbool Solver::search(int nof_conflicts)
     int         backtrack_level;
     int         conflictC = 0;
     vec<Lit>    learnt_clause;
+    vec<Lit>    units;
     starts++;
 
     for (;;){
@@ -916,17 +1118,72 @@ lbool Solver::search(int nof_conflicts)
                 decisions++;
                 next = pickBranchLit();
 
-                if (next == lit_Undef)
+                callbackLearntClauses.clear();
+                callbackFunction(next == lit_Undef, callbackLearntClauses);
+                if (callbackLearntClauses.size() > 0) {
+                    conflicts++; conflictC++;
+                    int pending = learnts.size();
+                    units.clear();
+                    backtrack_level = decisionLevel();
+                    for (int i = 0; i < callbackLearntClauses.size(); i++) {
+                        int level;
+                        learnt_clause.clear();
+                        analyze(callbackLearntClauses[i], learnt_clause, level);
+                        if (level == -1) {
+                            return l_False;
+                        } else if (level < backtrack_level) {
+                            backtrack_level = level;
+                        }
+                        if (learnt_clause.size() == 1) {
+                            units.push(learnt_clause[0]);
+                        } else {
+                            CRef cr = ca.alloc(learnt_clause, true);
+                            learnts.push(cr);
+                            attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+                            Clause& clause = ca[cr];
+                            clause.activity() = lbd(clause);
+#else
+                            claBumpActivity(ca[cr]);
+#endif
+                        }
+                    }
+
+                    cancelUntil(backtrack_level);
+
+#if BRANCHING_HEURISTIC == CHB
+                    action = trail.size();
+#endif
+
+                    for (int i = 0; i < units.size(); i++) {
+                        Lit l = units[i];
+                        // Make sure it wasn't assigned by one of the other callback learnt clauses.
+                        if (value(l) == l_Undef) uncheckedEnqueue(l);
+                    }
+                    for (int i = pending; i < learnts.size(); i++) {
+                        CRef cr = learnts[i];
+                        Clause& c = ca[cr];
+                        bool asserting = assertingClause(cr);
+                        if (asserting) uncheckedEnqueue(c[0], cr);
+                    }
+                    // Do not branch.
+                    if (next != lit_Undef) {
+                        insertVarOrder(var(next));
+                        next = lit_Undef;
+                    }
+                } else if (next == lit_Undef)
                     // Model found:
                     return l_True;
             }
 
-            // Increase decision level and enqueue 'next'
-            newDecisionLevel();
-#if BRANCHING_HEURISTIC == CHB
-            action = trail.size();
-#endif
-            uncheckedEnqueue(next);
+            if (next != lit_Undef) {
+                // Increase decision level and enqueue 'next'
+                newDecisionLevel();
+    #if BRANCHING_HEURISTIC == CHB
+                action = trail.size();
+    #endif
+                uncheckedEnqueue(next);
+            }
         }
     }
 }
