@@ -41,6 +41,8 @@ public:
     Solver();
     virtual ~Solver();
 
+    char unit_clauses[200000];
+
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
@@ -151,6 +153,7 @@ public:
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
     uint64_t lbd_calls;
+    const char* exhauststring;
     vec<uint64_t> lbd_seen;
     vec<uint64_t> picked;
     vec<uint64_t> conflicted;

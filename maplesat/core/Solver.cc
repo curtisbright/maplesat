@@ -18,10 +18,15 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include "automorphisms.h"
+
 #include <math.h>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
+
+FILE* exhaustfile = NULL;
+long numsols = 0;
 
 using namespace Minisat;
 
@@ -54,7 +59,12 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
-
+static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
+static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search");
+static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search");
+static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search");
+static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search");
+static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -107,6 +117,7 @@ Solver::Solver() :
   , reward_multiplier(opt_reward_multiplier)
 #endif
 
+  , exhauststring (opt_exhaustive)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -127,11 +138,18 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+    if(exhauststring != NULL)
+    {   exhaustfile = fopen(exhauststring, "a");
+    }
+}
 
 
 Solver::~Solver()
 {
+    if(exhauststring != NULL)
+    {   fclose(exhaustfile);
+    }
 }
 
 
@@ -356,7 +374,8 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-int wait = 0;
+#include <array>
+#include <algorithm>
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -370,15 +389,117 @@ int wait = 0;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-    wait++;
-    if (wait == 5 || complete) {
-        if (value(10) == l_True) {
-            out_learnts.push();
-            out_learnts[0].push(~mkLit(10));
-            out_learnts.push();
-            out_learnts[1].push(~mkLit(10));
-        }
-    }
+	
+	if(exhaustfile==NULL)
+		return;
+
+	/*bool all_assigned = true;
+	for(int i=0; i<assigns.size(); i++)
+	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+		if(assigns[i]==l_Undef)
+		{	all_assigned = false;
+			break;
+		}
+	}
+	//printf("\n");*/
+
+	if(complete)
+	{
+		out_learnts.push();
+
+		/*fprintf(exhaustfile, "a ");
+		for(int i=0; i<assigns.size(); i++)
+		{	
+			int r = (i+1)/100;
+			int c = (i+1)%100;
+			if(assigns[i]==l_True && r >= opt_rowmin && r <= opt_rowmax && c >= opt_colmin && c <= opt_colmax)
+			{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
+			}
+		}
+		fprintf(exhaustfile, "0\n");*/
+
+		fprintf(exhaustfile, "a ");
+		for(int r=opt_rowmin; r<=opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<=opt_colmax; c++)
+			{
+				const int index = 100*r+c-1;
+				if(assigns[index]==l_True)
+				{	out_learnts[0].push(~mkLit(index));
+					fprintf(exhaustfile, "%d ", index+1);
+				}
+			}
+		}
+		fprintf(exhaustfile, "0\n");
+
+		if(opt_caseno != 0)
+		{
+			int ind=0;
+			while(!(col[opt_caseno-1][ind][0]==0 && col[opt_caseno-1][ind][1]==0) && ind < 17280)
+			{
+				std::array<std::array<int, 19>, 37> matrix;
+				for(int r=opt_rowmin; r<=opt_rowmax; r++)
+				{	for(int c=opt_colmin; c<=opt_colmax; c++)
+					{
+						const int index = 100*r+c-1;
+						if(assigns[index]==l_True)
+							matrix[r-7][col[opt_caseno-1][ind][c-1]] = 1;
+							//matrix[r-7][c-1] = 1;
+						else
+							matrix[r-7][col[opt_caseno-1][ind][c-1]] = 0;
+							//matrix[r-7][c-1] = 0;
+						
+					}
+				}
+
+				std::sort(matrix.begin(), matrix.end(), std::greater<std::array<int, 19>>()); 
+
+				/*for(int i=0; i<37; i++)
+				{	printf("%02d ", i+7);
+					for(int j=0; j<19; j++)
+						printf("%d", matrix[i][j]);
+					printf("\n");
+				}*/
+
+				vec<Lit> clause;
+
+				for(int i=0; i<37; i++)
+				{	for(int j=0; j<19; j++)
+						if(matrix[i][j]==1)
+							clause.push(~mkLit((i+7)*100+j));
+				}
+
+				{
+					int max_index = 0;
+					for(int i=1; i<clause.size(); i++)
+						if(level(var(clause[i])) > level(var(clause[max_index])))
+							max_index = i;
+					Lit p = clause[0];
+					clause[0] = clause[max_index];
+					clause[max_index] = p;
+				}
+
+				{
+					int max_index = 1;
+					for(int i=2; i<clause.size(); i++)
+						if(level(var(clause[i])) > level(var(clause[max_index])))
+							max_index = i;
+					Lit p = clause[1];
+					clause[1] = clause[max_index];
+					clause[max_index] = p;
+				}
+
+				CRef confl_clause = ca.alloc(clause, false);
+				attachClause(confl_clause);
+				clauses.push(confl_clause);
+
+				ind++;
+			}
+		}
+
+		numsols++;
+	}
 }
 
 bool Solver::assertingClause(CRef confl) {
@@ -1071,10 +1192,10 @@ lbool Solver::search(int nof_conflicts)
 #endif
 
                 if (verbosity >= 1)
-                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", 
+                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %8d |\n", 
                            (int)conflicts, 
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
-                           (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progressEstimate()*100);
+                           (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), numsols /*progressEstimate()*100*/);
             }
 
         }else{
@@ -1255,7 +1376,7 @@ lbool Solver::solve_()
         printf("Almost Conflict : %d\n", ALMOST_CONFLICT);
         printf("Anti Exploration : %d\n", ANTI_EXPLORATION);*/
         printf("============================[ Search Statistics ]==============================\n");
-        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
+        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Num Sols |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
         printf("===============================================================================\n");
     }
@@ -1271,6 +1392,7 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
+    printf("Number of solutions: %ld\n", numsols);
 
 
     if (status == l_True){
