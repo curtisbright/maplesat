@@ -421,6 +421,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		fprintf(exhaustfile, "0\n");*/
 
 		fprintf(exhaustfile, "a ");
+		for(int r=7; r<=43; r++)
+		{	for(int c=1; c<=19; c++)
+			{
+				const int index = 100*r+c-1;
+				if(assigns[index]==l_True)
+				{	out_learnts[0].push(~mkLit(index));
+					fprintf(exhaustfile, "%d ", index+1);
+				}
+			}
+		}
 		for(int r=opt_rowmin; r<=opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<=opt_colmax; c++)
 			{
