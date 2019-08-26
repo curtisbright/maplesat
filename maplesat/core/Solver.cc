@@ -1401,9 +1401,9 @@ lbool Solver::solve_()
     }
 
     if (verbosity >= 1)
-        printf("===============================================================================\n");
-    printf("Number of solutions: %ld\n", numsols);
-
+    {   printf("===============================================================================\n");
+        printf("Number of solutions: %ld\n", numsols);
+    }
 
     if (status == l_True){
         // Extend & copy model:

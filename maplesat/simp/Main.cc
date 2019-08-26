@@ -201,14 +201,17 @@ int main(int argc, char** argv)
             while (fscanf(assertion_file, "%d ", &i) == 1) {
                 if(i==0)
                 {
-                  printf("a ");
-                  for( int i = 0; i < dummy.size(); i++)
-                    printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
-                  printf("0\n");
+                  if(S.verbosity > 0)
+                  {  printf("a ");
+                     for( int i = 0; i < dummy.size(); i++)
+                       printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
+                     printf("0\n");
+                     printf("Bound %d: ", bound);
+                  }
                   ret = S.solveLimited(dummy);
-                  printf("Bound %d: ", bound);
                   bound++;
-                  printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                  if(S.verbosity > 0)
+                    printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
                   dummy.clear();
                   tmp = fscanf(assertion_file, "a ");
                   if(ret==l_True)
@@ -227,12 +230,13 @@ int main(int argc, char** argv)
             printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
         }
         lbool ret = S.solveLimited(dummy);*/
-	printf("Number of satisfiable bounds: %d\n", numsat);        
 
         if (S.verbosity > 0){
+	    printf("Number of satisfiable bounds: %d\n", numsat);        
             printStats(S);
-            printf("\n"); }
-        printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            printf("\n");
+            printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+        }
         if (S.output != NULL){
             if (ret == l_True){
                 fclose(S.output);                 // Close the proof file
