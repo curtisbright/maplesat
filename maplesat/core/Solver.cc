@@ -60,10 +60,10 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
-static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search");
-static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search");
-static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search");
-static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search");
+static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 0);
+static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 0);
+static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
+static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 0);
 static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
 
 //=================================================================================================
@@ -402,6 +402,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 	}
 	//printf("\n");*/
+
+	if(opt_rowmin != 0 && opt_rowmax != 0 && opt_colmin != 0 && opt_colmax != 0)
+	{	
+		for(int r=opt_rowmin; r<=opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<=opt_colmax; c++)
+			{	const int index = 100*r+c-1;
+				if(assigns[index]==l_Undef)
+					return;
+			}
+		}
+		complete = true;
+	}
 
 	if(complete)
 	{
