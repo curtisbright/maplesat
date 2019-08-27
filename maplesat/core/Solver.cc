@@ -66,6 +66,7 @@ static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive 
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 0);
 static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
 static BoolOption opt_learnneg(_cat, "learnneg", "Use negative literals in programmatic learned clauses", false);
+static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -404,7 +405,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	//printf("\n");*/
 
-	if(opt_rowmin != 0 && opt_rowmax != 0 && opt_colmin != 0 && opt_colmax != 0)
+	if(opt_eager && opt_rowmin != 0 && opt_rowmax != 0 && opt_colmin != 0 && opt_colmax != 0)
 	{	
 		for(int r=opt_rowmin; r<=opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<=opt_colmax; c++)
