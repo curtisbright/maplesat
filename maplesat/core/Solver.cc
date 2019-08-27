@@ -443,7 +443,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					fprintf(exhaustfile, "%d ", index+1);
 				}
 				else if(opt_learnneg)
-				{	out_learnts[0].push(mkLit(index));
+				{	//out_learnts[0].push(mkLit(index));
 					fprintf(exhaustfile, "-%d ", index+1);
 				}
 			}
@@ -457,7 +457,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					fprintf(exhaustfile, "%d ", index+1);
 				}
 				else if(opt_learnneg)
-				{	out_learnts[0].push(mkLit(index));
+				{	//out_learnts[0].push(mkLit(index));
 					fprintf(exhaustfile, "-%d ", index+1);
 				}
 			}
