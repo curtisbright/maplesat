@@ -226,13 +226,12 @@ int main(int argc, char** argv)
             }
             fclose(assertion_file);
         }
-        /*for( int i = 0; i < dummy.size(); i++) {
-            printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
-        }
-        lbool ret = S.solveLimited(dummy);*/
+        else
+        	ret = S.solveLimited(dummy);
 
         if (S.verbosity > 0){
-	    printf("Number of satisfiable bounds: %d\n", numsat);        
+            if(assumptions)
+	      printf("Number of satisfiable bounds: %d\n", numsat);        
             printStats(S);
             printf("\n");
             printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");

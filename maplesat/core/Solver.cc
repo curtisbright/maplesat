@@ -414,6 +414,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					return;
 			}
 		}
+		/*if(!complete)
+		{	printf("The following variables were not set: ");
+			for(int i=0; i<assigns.size(); i++)
+				if(assigns[i]==l_Undef)
+					printf("%d ", i);
+			printf("\n");
+			exit(1);
+		}*/
 		complete = true;
 	}
 
@@ -435,17 +443,20 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		fprintf(exhaustfile, "0\n");*/
 
 		fprintf(exhaustfile, "a ");
-		for(int r=7; r<=43; r++)
-		{	for(int c=1; c<=19; c++)
-			{
-				const int index = 100*r+c-1;
-				if(assigns[index]==l_True)
-				{	out_learnts[0].push(~mkLit(index));
-					fprintf(exhaustfile, "%d ", index+1);
-				}
-				else if(opt_learnneg)
-				{	//out_learnts[0].push(mkLit(index));
-					fprintf(exhaustfile, "-%d ", index+1);
+		if(!(opt_rowmin==7&&opt_rowmax==43&&opt_colmin==1&&opt_colmax==19))
+		{
+			for(int r=7; r<=43; r++)
+			{	for(int c=1; c<=19; c++)
+				{
+					const int index = 100*r+c-1;
+					if(assigns[index]==l_True)
+					{	out_learnts[0].push(~mkLit(index));
+						fprintf(exhaustfile, "%d ", index+1);
+					}
+					else if(opt_learnneg)
+					{	//out_learnts[0].push(mkLit(index));
+						fprintf(exhaustfile, "-%d ", index+1);
+					}
 				}
 			}
 		}
