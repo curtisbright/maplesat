@@ -30,6 +30,7 @@ namespace Minisat {
 
 //=================================================================================================
 // DIMACS Parser:
+char var_used[100000] = {};
 
 template<class B, class Solver>
 static void readClause(B& in, Solver& S, vec<Lit>& lits) {
@@ -39,11 +40,12 @@ static void readClause(B& in, Solver& S, vec<Lit>& lits) {
         parsed_lit = parseInt(in);
         if (parsed_lit == 0) break;
         var = abs(parsed_lit)-1;
+	var_used[var] = 1;
         while (var >= S.nVars()) S.newVar();
         lits.push( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
     }
-	if(lits.size() == 1)
-		S.unit_clauses[var] = 1;
+	//if(lits.size() == 1)
+	//	S.unit_clauses[var] = 1;
 }
 
 template<class B, class Solver>
@@ -76,6 +78,13 @@ static void parse_DIMACS_main(B& in, Solver& S) {
         fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
     if (cnt  != clauses)
         fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
+    int addedunits = 0;
+    for(int i=0; i<100000 && i<S.nVars(); i++)
+      if(!var_used[i])
+      {  S.addClause(mkLit(i, true));
+         addedunits++;
+      }
+    printf("Added %d units\n", addedunits);
 }
 
 // Inserts problem into solver.
