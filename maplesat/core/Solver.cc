@@ -443,7 +443,21 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		fprintf(exhaustfile, "0\n");*/
 
 		fprintf(exhaustfile, "a ");
-		if(!(opt_rowmin==7&&opt_rowmax==43&&opt_colmin==1&&opt_colmax==19))
+		for(int i=0; i<assumptions.size(); i++)
+		{	//out_learnts[0].push(~assumptions[i]);
+			if(sign(assumptions[i]))
+			{	
+				out_learnts[0].push(mkLit(var(assumptions[i])));
+				fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
+			}
+			else
+			{	//if(opt_learnneg)
+				//out_learnts[0].push(~mkLit(var(assumptions[i])));
+				if(opt_learnneg)
+					fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
+			}
+		}
+		/*if(!(opt_rowmin==7&&opt_rowmax==43&&opt_colmin==1&&opt_colmax==19))
 		{
 			for(int r=7; r<=43; r++)
 			{	for(int c=1; c<=19; c++)
@@ -459,7 +473,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 			}
-		}
+		}*/
 		for(int r=opt_rowmin; r<=opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<=opt_colmax; c++)
 			{
