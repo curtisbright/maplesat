@@ -446,16 +446,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		fprintf(exhaustfile, "a ");
 		for(int i=0; i<assumptions.size(); i++)
-		{	//out_learnts[0].push(~assumptions[i]);
+		{	out_learnts[0].push(~assumptions[i]);
 			if(sign(assumptions[i]))
 			{	
 				//out_learnts[0].push(mkLit(var(assumptions[i])));
-				if(opt_printneg)
-					fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
+				//if(opt_printneg)
+				fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
 			}
 			else
 			{	
-				out_learnts[0].push(~mkLit(var(assumptions[i])));
+				//out_learnts[0].push(~mkLit(var(assumptions[i])));
 				fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
 			}
 		}
