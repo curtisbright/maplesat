@@ -65,7 +65,7 @@ static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhausti
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 0);
 static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
-static BoolOption opt_learnneg(_cat, "learnneg", "Use negative literals in programmatic learned clauses", false);
+static BoolOption opt_printneg(_cat, "printneg", "Include negative literals in exhaustive output", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 
@@ -449,14 +449,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		{	//out_learnts[0].push(~assumptions[i]);
 			if(sign(assumptions[i]))
 			{	
-				out_learnts[0].push(mkLit(var(assumptions[i])));
-				fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
+				//out_learnts[0].push(mkLit(var(assumptions[i])));
+				if(opt_printneg)
+					fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
 			}
 			else
-			{	//if(opt_learnneg)
-				//out_learnts[0].push(~mkLit(var(assumptions[i])));
-				if(opt_learnneg)
-					fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
+			{	
+				out_learnts[0].push(~mkLit(var(assumptions[i])));
+				fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
 			}
 		}
 		/*if(!(opt_rowmin==7&&opt_rowmax==43&&opt_colmin==1&&opt_colmax==19))
@@ -469,7 +469,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					{	out_learnts[0].push(~mkLit(index));
 						fprintf(exhaustfile, "%d ", index+1);
 					}
-					else if(opt_learnneg)
+					else if(opt_printneg)
 					{	//out_learnts[0].push(mkLit(index));
 						fprintf(exhaustfile, "-%d ", index+1);
 					}
@@ -484,7 +484,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				{	out_learnts[0].push(~mkLit(index));
 					fprintf(exhaustfile, "%d ", index+1);
 				}
-				else if(opt_learnneg)
+				else if(opt_printneg)
 				{	//out_learnts[0].push(mkLit(index));
 					fprintf(exhaustfile, "-%d ", index+1);
 				}
