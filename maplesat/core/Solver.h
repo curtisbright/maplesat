@@ -42,6 +42,7 @@ public:
     virtual ~Solver();
 
     char unit_clauses[200000];
+    bool addunits = false;
 
     // Problem specification:
     //

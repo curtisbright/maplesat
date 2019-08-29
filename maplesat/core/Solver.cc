@@ -67,6 +67,7 @@ static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive 
 static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
 static BoolOption opt_learnneg(_cat, "learnneg", "Use negative literals in programmatic learned clauses", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
+static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -118,6 +119,7 @@ Solver::Solver() :
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
 #endif
+  , addunits           (opt_addunits)
 
   , exhauststring (opt_exhaustive)
   , ok                 (true)
