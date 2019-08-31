@@ -62,6 +62,8 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 0);
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 0);
+static IntOption  opt_extracolmin(_cat, "extracolmin", "Minimum extra column to use for exhaustive search", 0);
+static IntOption  opt_extracolmax(_cat, "extracolmax", "Maximum extra column to use for exhaustive search", 0);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 0);
 static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
@@ -487,6 +489,21 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				else if(opt_printneg)
 				{	//out_learnts[0].push(mkLit(index));
 					fprintf(exhaustfile, "-%d ", index+1);
+				}
+			}
+			if(opt_extracolmin > 0 && opt_extracolmax > 0)
+			{
+				for(int c=opt_extracolmin; c<=opt_extracolmax; c++)
+				{
+					const int index = 100*r+c-1;
+					if(assigns[index]==l_True)
+					{	out_learnts[0].push(~mkLit(index));
+						fprintf(exhaustfile, "%d ", index+1);
+					}
+					else if(opt_printneg)
+					{	//out_learnts[0].push(mkLit(index));
+						fprintf(exhaustfile, "-%d ", index+1);
+					}
 				}
 			}
 		}
