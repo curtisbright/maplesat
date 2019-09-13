@@ -185,6 +185,8 @@ int main(int argc, char** argv)
             exit(0);
         }
 
+	int numsat = 0;
+        lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
             const char* file_name = assumptions;
@@ -192,39 +194,61 @@ int main(int argc, char** argv)
             if (assertion_file == NULL)
                 printf("ERROR! Could not open file: %s\n", file_name), exit(1);
             int i = 0;
-            while (fscanf(assertion_file, "%d", &i) == 1) {
-                Var v = abs(i) - 1;
-                Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
-                dummy.push(l);
+            int bound = 0;
+            int tmp = fscanf(assertion_file, "a ");
+            while (fscanf(assertion_file, "%d ", &i) == 1) {
+                if(i==0)
+                {
+                  if(S.verbosity > 0)
+                  {  printf("a ");
+                     for( int i = 0; i < dummy.size(); i++)
+                       printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
+                     printf("0\n");
+                     printf("Bound %d: ", bound);
+                  }
+                  ret = S.solveLimited(dummy);
+                  bound++;
+                  if(S.verbosity > 0)
+                    printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                  dummy.clear();
+                  tmp = fscanf(assertion_file, "a ");
+                  if(ret==l_True)
+                    numsat++;
+                }
+                else
+                {
+                  Var v = abs(i) - 1;
+                  Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                  dummy.push(l);
+                }
             }
             fclose(assertion_file);
         }
-        for( int i = 0; i < dummy.size(); i++) {
-            printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
-        }
-        lbool ret = S.solveLimited(dummy);
-        
+        else
+        	ret = S.solveLimited(dummy);
+
         if (S.verbosity > 0){
+            if(assumptions)
+	      printf("Number of satisfiable bounds: %d\n", numsat);        
             printStats(S);
-            printf("\n"); }
-        printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            printf("\n");
+            printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+        }
         if (res != NULL){
             if (ret == l_True){
-                fprintf(res, "SAT\n");
+                fclose(res);                 // Close the proof file
+                res = fopen(argv[2], "wb");  // Clear it to put in the solution
                 for (int i = 0; i < S.nVars(); i++)
                     if (S.model[i] != l_Undef)
                         fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(res, " 0\n");
-            }else if (ret == l_False) {
-                fprintf(res, "UNSAT\n");
-                for (int i = 0; i < S.conflict.size(); i++) {
-                    // Reverse the signs to keep the same sign as the assertion file.
-                    fprintf(res, "%s%d\n", sign(S.conflict[i]) ? "" : "-", var(S.conflict[i]) + 1);
-                }
-            } else
+            }else if (ret == l_False)
+                fprintf(res, "0\n");
+            else
                 fprintf(res, "INDET\n");
             fclose(res);
         }
+
 
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
