@@ -227,7 +227,7 @@ int main(int argc, char** argv)
         else
         	ret = S.solveLimited(dummy);
 
-        if (S.verbosity > 0){
+        /*if (S.verbosity > 0)*/{
             if(assumptions)
 	      printf("Number of satisfiable bounds: %d\n", numsat);        
             printStats(S);
