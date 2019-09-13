@@ -65,7 +65,7 @@ static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhausti
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", -1);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", -1);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
-static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
+//static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 //static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
@@ -362,6 +362,11 @@ Lit Solver::pickBranchLit()
 #include <algorithm>
 #include <utility>
 
+#ifdef BLOCKING
+vec<Lit> blocking_clauses[1021];
+int blocking_num = 0;
+#endif
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -489,8 +494,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					vec<Lit> clause;
 
 					for(int i=0; i<6; i++)
-					{	if(i+21 >= opt_colprint)
-							break;
+					{	//if(i+21 >= opt_colprint)
+						//	break;
 						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
@@ -500,6 +505,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					if(k!=184)
 						fprintf(exhaustfile2, "0\n");
+#ifdef BLOCKING
+					else
+					{
+						clause.copyTo(blocking_clauses[blocking_num]);
+						blocking_num++;
+						printf("%d\n", blocking_num);
+					}
+#endif
 
 					{
 						int max_index = 0;
@@ -526,7 +539,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					clauses.push(confl_clause);
 
 				}
-#if 0
+#ifdef BLOCKING
 				if(row[k]==10 && exhauststring2 != NULL)
 				{
 					for(int r=21; r<27; r++)
@@ -552,19 +565,25 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
-					vec<Lit> clause;
+					for(int l=0; l<blocking_num; l++)
+					{
+						for(int i=0; i<blocking_clauses[l]; i++)
+							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
 
-					for(int i=0; i<6; i++)
-					{	if(i+21+6 >= opt_colprint)
-							break;
-						for(int j=0; j<75; j++)
-							if(matrix[i][j]==1)
-							{	//clause.push(~mkLit((i+21+6)*111+j));
-								fprintf(exhaustfile, "-%d ", (i+21+6)*111+j+1);
-							}
+						vec<Lit> clause;
+
+						for(int i=0; i<6; i++)
+						{	//if(i+21+6 >= opt_colprint)
+							//	break;
+							for(int j=0; j<75; j++)
+								if(matrix[i][j]==1)
+								{	//clause.push(~mkLit((i+21+6)*111+j));
+									fprintf(exhaustfile2, "-%d ", (i+21+6)*111+j+1);
+								}
+						}
+						fprintf(exhaustfile2, "0\n");
+
 					}
-					fprintf(exhaustfile, "0\n");
-
 				}
 				if(row[k]==15 && exhauststring2 != NULL)
 				{
@@ -591,18 +610,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
-					vec<Lit> clause;
+					for(int l=0; l<blocking_num; l++)
+					{
+						for(int i=0; i<blocking_clauses[l]; i++)
+							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
 
-					for(int i=0; i<6; i++)
-					{	if(i+21+2*6 >= opt_colprint)
-							break;
-						for(int j=0; j<75; j++)
-							if(matrix[i][j]==1)
-							{	//clause.push(~mkLit((i+21+2*6)*111+j));
-								fprintf(exhaustfile, "-%d ", (i+21+2*6)*111+j+1);
-							}
+						vec<Lit> clause;
+
+						for(int i=0; i<6; i++)
+						{	//if(i+21+2*6 >= opt_colprint)
+							//	break;
+							for(int j=0; j<75; j++)
+								if(matrix[i][j]==1)
+								{	//clause.push(~mkLit((i+21+2*6)*111+j));
+									fprintf(exhaustfile2, "-%d ", (i+21+2*6)*111+j+1);
+								}
+						}
+						fprintf(exhaustfile2, "0\n");
 					}
-					fprintf(exhaustfile, "0\n");
 
 				}
 				if(row[k]==11 && exhauststring2 != NULL)
@@ -631,31 +656,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
-					vec<Lit> clause;
+					for(int l=0; l<blocking_num; l++)
+					{
+						for(int i=0; i<blocking_clauses[l]; i++)
+							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
 
-					for(int i=0; i<6; i++)
-					{	if(i+21+3*6 >= opt_colprint)
-							break;
-						for(int j=0; j<75; j++)
-							if(matrix[i][j]==1)
-							{	//clause.push(~mkLit((i+21+3*6)*111+j));
-								fprintf(exhaustfile, "-%d ", (i+21+3*6)*111+j+1);
-							}
-					}
-					fprintf(exhaustfile, "0\n");
+						vec<Lit> clause;
 
-				}
-
-				if((row[k]==1 || row[k]==10 || row[k]==11 || row[k]==15) && exhauststring2 != NULL)
-				{	/*printf("ROW %d CASE\n", row[k]);
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							printf("%d", matrix[r-21][c]);					
+						for(int i=0; i<6; i++)
+						{	//if(i+21+3*6 >= opt_colprint)
+							//	break;
+							for(int j=0; j<75; j++)
+								if(matrix[i][j]==1)
+								{	//clause.push(~mkLit((i+21+3*6)*111+j));
+									fprintf(exhaustfile2, "-%d ", (i+21+3*6)*111+j+1);
+								}
 						}
-						printf("\n");
+						fprintf(exhaustfile2, "0\n");
 					}
-					printf("\n");*/
 				}
 #endif
 			}
