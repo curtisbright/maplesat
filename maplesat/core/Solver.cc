@@ -62,10 +62,10 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
-static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 0);
-static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 111);
-static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
-static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 27);
+static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", -1);
+static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", -1);
+static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", -1);
+static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
 static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
@@ -389,7 +389,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	//printf("\n");*/
 
-	if(opt_eager && opt_rowmin != 0 && opt_rowmax != 0 && opt_colmin != 0 && opt_colmax != 0)
+	if(opt_eager && opt_rowmin != -1 && opt_rowmax != -1 && opt_colmin != -1 && opt_colmax != -1)
 	{	
 		for(int r=opt_rowmin; r<opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<opt_colmax; c++)
