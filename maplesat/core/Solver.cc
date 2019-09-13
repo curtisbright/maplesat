@@ -27,7 +27,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 FILE* exhaustfile = NULL;
 FILE* exhaustfile2 = NULL;
-long numsols = 0;
 
 using namespace Minisat;
 
@@ -428,6 +427,22 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		fprintf(exhaustfile, "0\n");*/
 
 		fprintf(exhaustfile, "a ");
+
+		for(int i=0; i<assumptions.size(); i++)
+		{	out_learnts[0].push(~assumptions[i]);
+			if(sign(assumptions[i]))
+			{	
+				//out_learnts[0].push(mkLit(var(assumptions[i])));
+				//if(opt_printneg)
+				fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
+			}
+			else
+			{	
+				//out_learnts[0].push(~mkLit(var(assumptions[i])));
+				fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
+			}
+		}
+
 		for(int r=opt_rowmin; r<opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<opt_colmax; c++)
 			{
