@@ -362,6 +362,8 @@ Lit Solver::pickBranchLit()
 #include <algorithm>
 #include <utility>
 
+#define BLOCKING
+
 #ifdef BLOCKING
 vec<Lit> blocking_clauses[1021];
 int blocking_num = 0;
@@ -567,7 +569,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					for(int l=0; l<blocking_num; l++)
 					{
-						for(int i=0; i<blocking_clauses[l]; i++)
+						for(int i=0; i<blocking_clauses[l].size(); i++)
 							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
 
 						vec<Lit> clause;
@@ -612,7 +614,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					for(int l=0; l<blocking_num; l++)
 					{
-						for(int i=0; i<blocking_clauses[l]; i++)
+						for(int i=0; i<blocking_clauses[l].size(); i++)
 							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
 
 						vec<Lit> clause;
@@ -658,7 +660,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					for(int l=0; l<blocking_num; l++)
 					{
-						for(int i=0; i<blocking_clauses[l]; i++)
+						for(int i=0; i<blocking_clauses[l].size(); i++)
 							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
 
 						vec<Lit> clause;
