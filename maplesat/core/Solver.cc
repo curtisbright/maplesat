@@ -68,6 +68,8 @@ static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive 
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 27);
 static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
+static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
+//static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 
 
 //=================================================================================================
@@ -120,6 +122,7 @@ Solver::Solver() :
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
 #endif
+//  , addunits           (opt_addunits)
 
   , exhauststring (opt_exhaustive)
   , exhauststring2 (opt_exhaustive2)
@@ -386,6 +389,26 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	//printf("\n");*/
 
+	if(opt_eager && opt_rowmin != 0 && opt_rowmax != 0 && opt_colmin != 0 && opt_colmax != 0)
+	{	
+		for(int r=opt_rowmin; r<opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<opt_colmax; c++)
+			{	const int index = 111*r+c;
+				if(assigns[index]==l_Undef)
+					return;
+			}
+		}
+		/*if(!complete)
+		{	printf("The following variables were not set: ");
+			for(int i=0; i<assigns.size(); i++)
+				if(assigns[i]==l_Undef)
+					printf("%d ", i);
+			printf("\n");
+			exit(1);
+		}*/
+		complete = true;
+	}
+
 	if(complete)
 	{
 		vec<Lit> clause;
@@ -488,6 +511,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					clauses.push(confl_clause);
 
 				}
+#if 0
 				if(row[k]==10 && exhauststring2 != NULL)
 				{
 					for(int r=21; r<27; r++)
@@ -618,6 +642,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					printf("\n");*/
 				}
+#endif
 			}
 		}
 
@@ -1488,10 +1513,10 @@ lbool Solver::solve_()
     lbool   status            = l_Undef;
 
     if (verbosity >= 1){
-        printf("LBD Based Clause Deletion : %d\n", LBD_BASED_CLAUSE_DELETION);
+        /*printf("LBD Based Clause Deletion : %d\n", LBD_BASED_CLAUSE_DELETION);
         printf("Rapid Deletion : %d\n", RAPID_DELETION);
         printf("Almost Conflict : %d\n", ALMOST_CONFLICT);
-        printf("Anti Exploration : %d\n", ANTI_EXPLORATION);
+        printf("Anti Exploration : %d\n", ANTI_EXPLORATION);*/
         printf("============================[ Search Statistics ]==============================\n");
         printf("| Conflicts |          ORIGINAL         |          LEARNT          | Num Sols |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
@@ -1508,9 +1533,9 @@ lbool Solver::solve_()
     }
 
     if (verbosity >= 1)
-        printf("===============================================================================\n");
-    printf("Number of solutions: %ld\n", numsols);
-
+    {   printf("===============================================================================\n");
+        printf("Number of solutions: %ld\n", numsols);
+    }
 
     if (status == l_True){
         // Extend & copy model:
