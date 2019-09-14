@@ -365,8 +365,7 @@ Lit Solver::pickBranchLit()
 #define BLOCKING
 
 #ifdef BLOCKING
-vec<Lit> blocking_clauses[1021];
-int blocking_num = 0;
+vec<Lit> blocking_clause;
 #endif
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
@@ -462,8 +461,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");
 
+		out_learnts[0].copyTo(blocking_clause);
+
 		if(opt_isoblock)
 		{
+
 			for(int k=0; k<192; k++)
 			{
 				std::array<std::array<int, 75>, 6> matrix;
@@ -507,14 +509,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					if(k!=184)
 						fprintf(exhaustfile2, "0\n");
-#ifdef BLOCKING
-					else
-					{
-						clause.copyTo(blocking_clauses[blocking_num]);
-						blocking_num++;
-						printf("%d\n", blocking_num);
-					}
-#endif
 
 					{
 						int max_index = 0;
@@ -567,10 +561,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
-					for(int l=0; l<blocking_num; l++)
 					{
-						for(int i=0; i<blocking_clauses[l].size(); i++)
-							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
+						for(int i=0; i<blocking_clause.size(); i++)
+							fprintf(exhaustfile2, "-%d ", var(blocking_clause[i])+1);
 
 						vec<Lit> clause;
 
@@ -612,10 +605,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
-					for(int l=0; l<blocking_num; l++)
 					{
-						for(int i=0; i<blocking_clauses[l].size(); i++)
-							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
+						for(int i=0; i<blocking_clause.size(); i++)
+							fprintf(exhaustfile2, "-%d ", var(blocking_clause[i])+1);
 
 						vec<Lit> clause;
 
@@ -658,10 +650,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
-					for(int l=0; l<blocking_num; l++)
 					{
-						for(int i=0; i<blocking_clauses[l].size(); i++)
-							fprintf(exhaustfile2, "-%d ", var(blocking_clauses[l][i])+1);
+						for(int i=0; i<blocking_clause.size(); i++)
+							fprintf(exhaustfile2, "-%d ", var(blocking_clause[i])+1);
 
 						vec<Lit> clause;
 
