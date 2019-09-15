@@ -27,6 +27,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 FILE* exhaustfile = NULL;
 FILE* exhaustfile2 = NULL;
+FILE* transfile = NULL;
 
 using namespace Minisat;
 
@@ -61,6 +62,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
+static StringOption  opt_transfile(_cat, "transfile", "Output for transitive blocking clauses");
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", -1);
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", -1);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", -1);
@@ -126,6 +128,7 @@ Solver::Solver() :
 
   , exhauststring (opt_exhaustive)
   , exhauststring2 (opt_exhaustive2)
+  , transstring (opt_transfile)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -153,6 +156,9 @@ Solver::Solver() :
     if(exhauststring2 != NULL)
     {   exhaustfile2 = fopen(exhauststring2, "a");
     }
+    if(transstring != NULL)
+    {   transfile = fopen(transstring, "a");
+    }
 }
 
 
@@ -163,6 +169,9 @@ Solver::~Solver()
     }
     if(exhauststring2 != NULL)
     {   fclose(exhaustfile2);
+    }
+    if(transfile != NULL)
+    {   fclose(transfile);
     }
 }
 
@@ -532,7 +541,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					clauses.push(confl_clause);
 
 				}
-				if(opt_transblock && row[k]==10 && exhauststring2 != NULL)
+				if(opt_transblock && row[k]==10 && transfile != NULL)
 				{
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
@@ -559,7 +568,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					{
 						for(int i=0; i<blocking_clause.size(); i++)
-							fprintf(exhaustfile2, "-%d ", var(blocking_clause[i])+1);
+							fprintf(transfile, "-%d ", var(blocking_clause[i])+1);
 
 						vec<Lit> clause;
 
@@ -569,14 +578,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							for(int j=0; j<75; j++)
 								if(matrix[i][j]==1)
 								{	//clause.push(~mkLit((i+21+6)*111+j));
-									fprintf(exhaustfile2, "-%d ", (i+21+6)*111+j+1);
+									fprintf(transfile, "-%d ", (i+21+6)*111+j+1);
 								}
 						}
-						fprintf(exhaustfile2, "0\n");
+						fprintf(transfile, "0\n");
 
 					}
 				}
-				if(opt_transblock && row[k]==15 && exhauststring2 != NULL)
+				if(opt_transblock && row[k]==15 && transfile != NULL)
 				{
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
@@ -603,7 +612,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					{
 						for(int i=0; i<blocking_clause.size(); i++)
-							fprintf(exhaustfile2, "-%d ", var(blocking_clause[i])+1);
+							fprintf(transfile, "-%d ", var(blocking_clause[i])+1);
 
 						vec<Lit> clause;
 
@@ -613,14 +622,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							for(int j=0; j<75; j++)
 								if(matrix[i][j]==1)
 								{	//clause.push(~mkLit((i+21+2*6)*111+j));
-									fprintf(exhaustfile2, "-%d ", (i+21+2*6)*111+j+1);
+									fprintf(transfile, "-%d ", (i+21+2*6)*111+j+1);
 								}
 						}
-						fprintf(exhaustfile2, "0\n");
+						fprintf(transfile, "0\n");
 					}
 
 				}
-				if(opt_transblock && row[k]==11 && exhauststring2 != NULL)
+				if(opt_transblock && row[k]==11 && transfile != NULL)
 				{
 					std::array<std::array<int, 75>, 6> matrix;
 					for(int r=21; r<27; r++)
@@ -648,7 +657,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					{
 						for(int i=0; i<blocking_clause.size(); i++)
-							fprintf(exhaustfile2, "-%d ", var(blocking_clause[i])+1);
+							fprintf(transfile, "-%d ", var(blocking_clause[i])+1);
 
 						vec<Lit> clause;
 
@@ -658,10 +667,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							for(int j=0; j<75; j++)
 								if(matrix[i][j]==1)
 								{	//clause.push(~mkLit((i+21+3*6)*111+j));
-									fprintf(exhaustfile2, "-%d ", (i+21+3*6)*111+j+1);
+									fprintf(transfile, "-%d ", (i+21+3*6)*111+j+1);
 								}
 						}
-						fprintf(exhaustfile2, "0\n");
+						fprintf(transfile, "0\n");
 					}
 				}
 			}
