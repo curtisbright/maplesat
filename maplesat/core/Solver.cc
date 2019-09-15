@@ -69,6 +69,7 @@ static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive 
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 //static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
+static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
 
 
 //=================================================================================================
@@ -362,11 +363,7 @@ Lit Solver::pickBranchLit()
 #include <algorithm>
 #include <utility>
 
-#define BLOCKING
-
-#ifdef BLOCKING
 vec<Lit> blocking_clause;
-#endif
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -535,8 +532,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					clauses.push(confl_clause);
 
 				}
-#ifdef BLOCKING
-				if(row[k]==10 && exhauststring2 != NULL)
+				if(opt_transblock && row[k]==10 && exhauststring2 != NULL)
 				{
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
@@ -580,7 +576,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 				}
-				if(row[k]==15 && exhauststring2 != NULL)
+				if(opt_transblock && row[k]==15 && exhauststring2 != NULL)
 				{
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
@@ -624,7 +620,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 
 				}
-				if(row[k]==11 && exhauststring2 != NULL)
+				if(opt_transblock && row[k]==11 && exhauststring2 != NULL)
 				{
 					std::array<std::array<int, 75>, 6> matrix;
 					for(int r=21; r<27; r++)
@@ -668,7 +664,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						fprintf(exhaustfile2, "0\n");
 					}
 				}
-#endif
 			}
 		}
 
