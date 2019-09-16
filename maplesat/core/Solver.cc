@@ -27,9 +27,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 FILE* exhaustfile = NULL;
 FILE* exhaustfile2 = NULL;
-FILE* transfile = NULL;
+//FILE* transfile = NULL;
 
 using namespace Minisat;
+
+/*#include <set>
+#include <vector>
+std::set<std::vector<int>> transset;*/
 
 //=================================================================================================
 // Options:
@@ -62,16 +66,18 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
-static StringOption  opt_transfile(_cat, "transfile", "Output for transitive blocking clauses");
+//static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", -1);
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", -1);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", -1);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
 //static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
+static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 //static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
-static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
+//static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
+//static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
 
 
 //=================================================================================================
@@ -128,7 +134,7 @@ Solver::Solver() :
 
   , exhauststring (opt_exhaustive)
   , exhauststring2 (opt_exhaustive2)
-  , transstring (opt_transfile)
+  //, transstring (opt_transfile)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -156,9 +162,26 @@ Solver::Solver() :
     if(exhauststring2 != NULL)
     {   exhaustfile2 = fopen(exhauststring2, "a");
     }
-    if(transstring != NULL)
+    /*if(transstring != NULL && opt_transblock)
     {   transfile = fopen(transstring, "a");
-    }
+    }*/
+	/*if(transstring != NULL && opt_transread)
+	{	transfile = fopen(transstring, "r");
+		std::vector<int> clause;
+		int i;
+		fscanf(transfile, "%d", &i);    
+		while(!feof(transfile))
+	    	{	if(i!=0)
+			{	clause.push_back(abs(i)-1);
+			}
+			else
+			{	transset.insert(clause);
+				clause.clear();
+			}
+			fscanf(transfile, "%d", &i);      
+		}
+		fclose(transfile);
+	}*/
 }
 
 
@@ -170,9 +193,9 @@ Solver::~Solver()
     if(exhauststring2 != NULL)
     {   fclose(exhaustfile2);
     }
-    if(transfile != NULL)
+    /*if(transfile != NULL)
     {   fclose(transfile);
-    }
+    }*/
 }
 
 
@@ -369,10 +392,10 @@ Lit Solver::pickBranchLit()
 }
 
 #include <array>
-#include <algorithm>
-#include <utility>
+//#include <algorithm>
+//#include <utility>
 
-vec<Lit> blocking_clause;
+//vec<Lit> blocking_clause;
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -467,7 +490,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");
 
-		out_learnts[0].copyTo(blocking_clause);
+		//out_learnts[0].copyTo(blocking_clause);
 
 		if(opt_isoblock)
 		{
@@ -541,7 +564,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					clauses.push(confl_clause);
 
 				}
-				if(opt_transblock && row[k]==10 && transfile != NULL)
+				/*if(opt_transblock && row[k]==10 && transfile != NULL)
 				{
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
@@ -672,6 +695,177 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						}
 						fprintf(transfile, "0\n");
 					}
+				}*/
+			}
+		}
+
+		if(opt_isoblock2)
+		{
+
+			for(int k=0; k<16; k++)
+			{
+				std::array<std::array<int, 75>, 6> matrix;
+				std::array<std::array<int, 75>, 6> matrix2;
+
+				if(row2[k]==1)
+				{
+					for(int r=21; r<27; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix[r-21][col2[k][c]] = 1;
+							else
+								matrix[r-21][col2[k][c]] = 0;
+							
+						}
+					}
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix[j][15+i]==1)
+								swap(matrix[i], matrix[j]);
+						}
+
+					}
+
+					for(int r=27; r<33; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix2[r-27][col2[k][c]] = 1;
+							else
+								matrix2[r-27][col2[k][c]] = 0;
+							
+						}
+					}
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix2[j][15+6+i]==1)
+								swap(matrix2[i], matrix2[j]);
+						}
+
+					}
+
+					vec<Lit> clause;
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<75; j++)
+						{	if(matrix[i][j]==1)
+							{	clause.push(~mkLit((i+21)*111+j));
+							}
+							if(matrix2[i][j]==1)
+							{	clause.push(~mkLit((i+27)*111+j));
+							}
+						}
+					}
+
+					{
+						int max_index = 0;
+						for(int i=1; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[0];
+						clause[0] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[1];
+						clause[1] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(clause, false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
+
+				}
+				if(row2[k]==10)
+				{
+					for(int r=27; r<33; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix[r-27][col2[k][c]] = 1;
+							else
+								matrix[r-27][col2[k][c]] = 0;
+							
+						}
+					}
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix[j][15+6+i]==1)
+								swap(matrix[i], matrix[j]);
+						}
+
+					}
+
+					for(int r=21; r<27; r++)
+					{	for(int c=0; c<75; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+								matrix2[r-21][col2[k][c]] = 1;
+							else
+								matrix2[r-21][col2[k][c]] = 0;
+							
+						}
+					}
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<6; j++)
+						{	if(matrix2[j][15+i]==1)
+								swap(matrix2[i], matrix2[j]);
+						}
+
+					}
+
+					vec<Lit> clause;
+
+					for(int i=0; i<6; i++)
+					{	for(int j=0; j<75; j++)
+						{	if(matrix[i][j]==1)
+							{	clause.push(~mkLit((i+21)*111+j));
+							}
+							if(matrix2[i][j]==1)
+							{	clause.push(~mkLit((i+27)*111+j));
+							}
+						}
+					}
+
+					{
+						int max_index = 0;
+						for(int i=1; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[0];
+						clause[0] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[1];
+						clause[1] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(clause, false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
+
 				}
 			}
 		}
