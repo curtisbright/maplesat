@@ -75,7 +75,7 @@ static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive 
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
 static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
-//static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
+static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 //static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
 
@@ -130,7 +130,7 @@ Solver::Solver() :
   , action(0)
   , reward_multiplier(opt_reward_multiplier)
 #endif
-//  , addunits           (opt_addunits)
+  , addunits           (opt_addunits)
 
   , exhauststring (opt_exhaustive)
   , exhauststring2 (opt_exhaustive2)

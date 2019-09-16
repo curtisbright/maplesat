@@ -43,7 +43,7 @@ public:
     long numsols = 0;
 
     char unit_clauses[200000];
-    //bool addunits = false;
+    bool addunits = false;
 
     // Problem specification:
     //
