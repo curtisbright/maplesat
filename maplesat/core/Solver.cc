@@ -73,7 +73,7 @@ static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive 
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
 //static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
-static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
+//static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 //static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
@@ -554,14 +554,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
-								if(k!=184 && exhaustfile2 != NULL)
+								if(k!=identity_index && exhaustfile2 != NULL)
 									fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
 							}
 					}
-					if(k!=184 && exhaustfile2 != NULL)
+					if(k!=identity_index && exhaustfile2 != NULL)
 						fprintf(exhaustfile2, "0\n");
 
-					if(k!=184)
+					if(k!=identity_index)
 					{
 						{
 							int max_index = 0;
@@ -724,7 +724,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 
-		if(opt_isoblock2)
+		/*if(opt_isoblock2)
 		{
 
 			for(int k=0; k<16; k++)
@@ -893,7 +893,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 				}
 			}
-		}
+		}*/
 
 		numsols++;
 	}
