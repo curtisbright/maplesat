@@ -1,0 +1,41 @@
+Latest news on MapleSAT can be found here: https://sites.google.com/a/gsd.uwaterloo.ca/maplesat/maplesat
+
+You can cite our work in Latex with the following .bib
+
+@inproceedings{DBLP:conf/sat/LiangGPC16,
+  author    = {Jia Hui Liang and
+               Vijay Ganesh and
+               Pascal Poupart and
+               Krzysztof Czarnecki},
+  title     = {Learning Rate Based Branching Heuristic for {SAT} Solvers},
+  booktitle = {Theory and Applications of Satisfiability Testing - {SAT} 2016 - 19th
+               International Conference, Bordeaux, France, July 5--8, 2016, Proceedings},
+  pages     = {123--140},
+  year      = {2016},
+}
+
+
+================================================================================
+DIRECTORY OVERVIEW:
+
+mtl/            Mini Template Library
+utils/          Generic helper code (I/O, Parsing, CPU-time, etc)
+core/           A core version of the solver
+simp/           An extended solver with simplification capabilities
+README
+LICENSE
+
+================================================================================
+BUILDING: (release version: without assertions, statically linked, etc)
+
+export MROOT=<maplesat-dir>              (or setenv in cshell)
+cd { core | simp }
+gmake rs
+cp maplesat_static <install-dir>/maplesat
+
+================================================================================
+EXAMPLES:
+
+Run maplesat with same heuristics as version 2.0:
+
+> maplesat <cnf-file> -no-luby -rinc=1.5 -phase-saving=0 -rnd-freq=0.02
