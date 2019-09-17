@@ -532,11 +532,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
-								if(k!=184)
+								if(k!=184 && exhaustfile2 != NULL)
 									fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
 							}
 					}
-					if(k!=184)
+					if(k!=184 && exhaustfile2 != NULL)
 						fprintf(exhaustfile2, "0\n");
 
 					{
