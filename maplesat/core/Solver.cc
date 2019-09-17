@@ -490,7 +490,29 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");
 
-		//out_learnts[0].copyTo(blocking_clause);
+		{
+			int max_index = 0;
+			for(int i=1; i<out_learnts[0].size(); i++)
+				if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+					max_index = i;
+			Lit p = out_learnts[0][0];
+			out_learnts[0][0] = out_learnts[0][max_index];
+			out_learnts[0][max_index] = p;
+		}
+
+		{
+			int max_index = 1;
+			for(int i=2; i<out_learnts[0].size(); i++)
+				if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+					max_index = i;
+			Lit p = out_learnts[0][1];
+			out_learnts[0][1] = out_learnts[0][max_index];
+			out_learnts[0][max_index] = p;
+		}
+
+		CRef confl_clause = ca.alloc(out_learnts[0], false);
+		attachClause(confl_clause);
+		clauses.push(confl_clause);
 
 		if(opt_isoblock)
 		{
@@ -539,29 +561,32 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					if(k!=184 && exhaustfile2 != NULL)
 						fprintf(exhaustfile2, "0\n");
 
+					if(k!=184)
 					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
+						{
+							int max_index = 0;
+							for(int i=1; i<clause.size(); i++)
+								if(level(var(clause[i])) > level(var(clause[max_index])))
+									max_index = i;
+							Lit p = clause[0];
+							clause[0] = clause[max_index];
+							clause[max_index] = p;
+						}
 
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
+						{
+							int max_index = 1;
+							for(int i=2; i<clause.size(); i++)
+								if(level(var(clause[i])) > level(var(clause[max_index])))
+									max_index = i;
+							Lit p = clause[1];
+							clause[1] = clause[max_index];
+							clause[max_index] = p;
+						}
 
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
+						CRef confl_clause = ca.alloc(clause, false);
+						attachClause(confl_clause);
+						clauses.push(confl_clause);
+					}
 
 				}
 				/*if(opt_transblock && row[k]==10 && transfile != NULL)
