@@ -392,6 +392,8 @@ Lit Solver::pickBranchLit()
 }
 
 #include <array>
+#include <set>
+
 //#include <algorithm>
 //#include <utility>
 
@@ -516,13 +518,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		if(opt_isoblock)
 		{
+			std::array<std::array<int, 75>, 6> matrix;
+			std::set<std::array<std::array<int, 75>, 6>> matrixset;
+			for(int i=0; i<6; i++)
+				for(int j=0; j<75; j++)
+					matrix[i][j] = (assigns[111*(i+21)+j]==l_True?1:0);
+			matrixset.insert(matrix);
 
 			for(int k=0; k<192; k++)
 			{
-				std::array<std::array<int, 75>, 6> matrix;
-
-				if(row[k]==1)
+				if(row[k]==1 && k!=identity_index)
 				{
+
 					for(int r=21; r<27; r++)
 					{	for(int c=0; c<75; c++)
 						{
@@ -546,6 +553,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
+					if(matrixset.count(matrix)>0)
+						continue;
+
+					matrixset.insert(matrix);
+
 					vec<Lit> clause;
 
 					for(int i=0; i<6; i++)
@@ -554,14 +566,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						for(int j=0; j<75; j++)
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
-								if(k!=identity_index && exhaustfile2 != NULL)
+								if(exhaustfile2 != NULL)
 									fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
 							}
 					}
-					if(k!=identity_index && exhaustfile2 != NULL)
+					if(exhaustfile2 != NULL)
 						fprintf(exhaustfile2, "0\n");
 
-					if(k!=identity_index)
 					{
 						{
 							int max_index = 0;
