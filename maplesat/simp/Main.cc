@@ -95,6 +95,7 @@ int main(int argc, char** argv)
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
+        StringOption assumout ("MAIN", "assumout", "Output results of each instance (using assumptions) to a file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
@@ -189,6 +190,11 @@ int main(int argc, char** argv)
         }
 
 	int numsat = 0;
+        FILE* outfile;
+        if(assumout)
+        { const char* file_name = assumout;
+          outfile = fopen(file_name, "w");
+        }
         lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
@@ -218,6 +224,8 @@ int main(int argc, char** argv)
                   tmp = fscanf(assertion_file, "a ");
                   if(ret==l_True)
                     numsat++;
+                  if(assumout)
+                    fprintf(outfile, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
                 }
                 else
                 {
@@ -230,6 +238,9 @@ int main(int argc, char** argv)
         }
         else
         	ret = S.solveLimited(dummy);
+
+        if(assumout)
+          fclose(outfile);
 
         /*if (S.verbosity > 0)*/{
             if(assumptions)
