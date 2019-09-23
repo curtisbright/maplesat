@@ -225,7 +225,14 @@ int main(int argc, char** argv)
                   if(ret==l_True)
                     numsat++;
                   if(assumout)
-                    fprintf(outfile, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                  {  fprintf(outfile, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                     if(ret == l_True)
+                     { for(int i = 0; i < S.nVars(); i++)
+                         if(S.model[i] != l_Undef)
+                           fprintf(outfile, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+                       fprintf(outfile, "\n");
+                     }
+                  }
                 }
                 else
                 {
