@@ -78,6 +78,7 @@ static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly",
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 //static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
+static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
 
 
 //=================================================================================================
@@ -490,7 +491,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 		}
-		fprintf(exhaustfile, "0\n");
+		if(!opt_printtags)
+			fprintf(exhaustfile, "0\n");
+		else
+			fprintf(exhaustfile, "0 %d\n", numsols+1);
 
 		{
 			int max_index = 0;
@@ -567,11 +571,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							if(matrix[i][j]==1)
 							{	clause.push(~mkLit((i+21)*111+j));
 								if(exhaustfile2 != NULL)
-									fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+								{	if(opt_printtags)
+										fprintf(exhaustfile2, "%d ", (i+21)*111+j+1);
+									else
+										fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+								}
 							}
 					}
 					if(exhaustfile2 != NULL)
-						fprintf(exhaustfile2, "0\n");
+					{	if(!opt_printtags)
+							fprintf(exhaustfile2, "0\n");
+						else
+							fprintf(exhaustfile2, "0 %d\n", numsols+1);
+					}
 
 					{
 						{
