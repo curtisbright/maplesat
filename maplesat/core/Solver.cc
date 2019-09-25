@@ -564,6 +564,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					vec<Lit> clause;
 
+					if(opt_printtags)
+						fprintf(exhaustfile2, "a ");
+
 					for(int i=0; i<6; i++)
 					{	//if(i+21 >= opt_colprint)
 						//	break;
@@ -572,7 +575,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							{	clause.push(~mkLit((i+21)*111+j));
 								if(exhaustfile2 != NULL)
 								{	if(opt_printtags)
-										fprintf(exhaustfile2, "%d ", (i+21)*111+j+1);
+									{	if(j>0)
+											fprintf(exhaustfile2, "%d ", (i+21)*111+j+1);
+									}
 									else
 										fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
 								}
