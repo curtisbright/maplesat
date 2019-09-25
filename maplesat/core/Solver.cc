@@ -1413,6 +1413,12 @@ int min(int a, int b) {
     return a < b ? a : b;
 }
 
+const int firstReduceDB = 2000;
+const int incReduceDB = 300;
+const int specialIncReduceDB = 1000;
+long curRestart = 1;
+int nbclausesbeforereduce = firstReduceDB;
+
 /*_________________________________________________________________________________________________
 |
 |  reduceDB : ()  ->  [void]
@@ -1439,6 +1445,7 @@ struct reduceDB_lt {
 };
 void Solver::reduceDB()
 {
+
     int     i, j;
 #if LBD_BASED_CLAUSE_DELETION
     sort(learnts, reduceDB_lt(ca, activity));
@@ -1446,6 +1453,11 @@ void Solver::reduceDB()
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
     sort(learnts, reduceDB_lt(ca));
 #endif
+
+  // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
+  if(ca[learnts[learnts.size() / 2]].activity()<=3) {nbclausesbeforereduce +=specialIncReduceDB;}
+  // Useless :-)
+  if(ca[learnts.last()].activity()<=5)  {nbclausesbeforereduce +=specialIncReduceDB;}
 
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
@@ -1629,13 +1641,14 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (learnts.size()-nAssigns() >= max_learnts) {
-                // Reduce the set of learnt clauses:
+	    // Perform clause database reduction !
+	    if(conflicts >=  curRestart * nbclausesbeforereduce )
+	      {
+		assert(learnts.size()>0);
+		curRestart = (conflicts/ nbclausesbeforereduce)+1;
                 reduceDB();
-#if RAPID_DELETION
-                max_learnts += 500;
-#endif
-            }
+		nbclausesbeforereduce += incReduceDB;
+	      }
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()){
@@ -1646,6 +1659,9 @@ lbool Solver::search(int nof_conflicts)
                     newDecisionLevel();
                 }else if (value(p) == l_False){
                     analyzeFinal(~p, conflict);
+                    cancelUntil(0);
+                    //addClause_(conflict);
+                    nbclausesbeforereduce = firstReduceDB;
                     return l_False;
                 }else{
                     next = p;
