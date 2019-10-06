@@ -62,6 +62,7 @@ static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhausti
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search");
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search");
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 80);
+static BoolOption opt_printunits(_cat, "printunits", "Print the true variables given as unit clauses in exhaustive output", false);
 
 
 //=================================================================================================
@@ -404,7 +405,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		out_learnts.push();
 		fprintf(exhaustfile, "a ");
 		for(int i=0; i<assigns.size(); i++)
-		{	if(/*unit_clauses[i] != 1 &&*/ assigns[i]==l_True && i/111 >= opt_rowmin && i/111 < opt_rowmax && i%111 < opt_colmax && i%111 >= opt_colmin)
+		{	if((unit_clauses[i] != 1 || opt_printunits) && assigns[i]==l_True && i/111 >= opt_rowmin && i/111 < opt_rowmax && i%111 < opt_colmax && i%111 >= opt_colmin)
 			{	clause.push(mkLit(i, assigns[i]==l_True));
 				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
 				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
