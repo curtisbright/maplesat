@@ -522,44 +522,39 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		if(opt_isoblock)
 		{
-			std::array<std::array<int, 75>, 6> matrix;
-			std::set<std::array<std::array<int, 75>, 6>> matrixset;
-			for(int i=0; i<6; i++)
-				for(int j=0; j<75; j++)
-					matrix[i][j] = (assigns[111*(i+21)+j]==l_True?1:0);
+			std::array<std::array<int, 9>, 36> matrix;
+			std::set<std::array<std::array<int, 9>, 36>> matrixset;
+			for(int i=0; i<36; i++)
+				for(int j=0; j<9; j++)
+					matrix[i][j] = (assigns[111*(i+30)+(j+12)]==l_True?1:0);
 			matrixset.insert(matrix);
 
-			for(int k=0; k<192; k++)
+			for(int k=1; k<725760; k++)
 			{
-				if(row[k]==1 && k!=identity_index)
 				{
-
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
+					for(int r=30; r<66; r++)
+					{	for(int c=12; c<21; c++)
 						{
 							const int index = 111*r+c;
 							if(assigns[index]==l_True)
-								matrix[r-21][col[k][c]] = 1;
-								//matrix[r-7][c-1] = 1;
+								matrix[row[k][r]-30][col[k][c]-12] = 1;
 							else
-								matrix[r-21][col[k][c]] = 0;
-								//matrix[r-7][c-1] = 0;
+								matrix[row[k][r]-30][col[k][c]-12] = 0;
 							
 						}
 					}
 
 					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-					for(int i=0; i<6; i++)
+					/*for(int i=0; i<6; i++)
 					{	for(int j=0; j<6; j++)
 						{	if(matrix[j][15+i]==1)
 								swap(matrix[i], matrix[j]);
 						}
 
-					}
+					}*/
 
 					if(matrixset.count(matrix)>0)
 						continue;
-
 					matrixset.insert(matrix);
 
 					vec<Lit> clause;
@@ -567,19 +562,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					if(opt_printtags)
 						fprintf(exhaustfile2, "a ");
 
-					for(int i=0; i<6; i++)
+					for(int i=0; i<36; i++)
 					{	//if(i+21 >= opt_colprint)
 						//	break;
-						for(int j=0; j<75; j++)
+						for(int j=0; j<9; j++)
 							if(matrix[i][j]==1)
-							{	clause.push(~mkLit((i+21)*111+j));
+							{	clause.push(~mkLit((i+30)*111+(j+12)));
 								if(exhaustfile2 != NULL)
 								{	if(opt_printtags)
 									{	if(j>0)
-											fprintf(exhaustfile2, "%d ", (i+21)*111+j+1);
+											fprintf(exhaustfile2, "%d ", (i+30)*111+(j+12)+1);
 									}
 									else
-										fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
+										fprintf(exhaustfile2, "-%d ", (i+30)*111+(j+12)+1);
 								}
 							}
 					}
