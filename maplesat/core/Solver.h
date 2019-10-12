@@ -41,6 +41,7 @@ public:
     Solver();
     virtual ~Solver();
     long numsols = 0;
+    void addLexClauses();
 
     char unit_clauses[200000];
     bool addunits = false;

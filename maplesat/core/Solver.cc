@@ -203,6 +203,36 @@ Solver::~Solver()
 //=================================================================================================
 // Minor methods:
 
+void Solver::addLexClauses()
+{
+	for(int k=1; k<725760; k++)
+	{
+		for(int i=30; i<66; i++)
+		{	for(int j=12; j<21; j++)
+			{	const int a1 = 111*i+j;
+				const int a2 = 111*row[k][i]+col[k][j];
+				if(i==30 && j==12)
+				{	Var v = newVar();
+					addClause(~mkLit(a1), mkLit(a2));
+					addClause(~mkLit(a1), mkLit(v));
+					addClause(mkLit(a2), mkLit(v));
+				}
+				else if(!(i==65 && j==20))
+				{	Var v1 = nVars()-1;
+					Var v2 = newVar();
+					addClause(~mkLit(a1), mkLit(a2), ~mkLit(v1));
+					addClause(~mkLit(a1), mkLit(v2), ~mkLit(v1));
+					addClause(mkLit(a2), mkLit(v2), ~mkLit(v1));
+				}
+				else
+				{	Var v = nVars()-1;
+					addClause(~mkLit(a1), mkLit(a2), ~mkLit(v));
+				}
+			}
+		}
+	}
+}
+
 
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
 // used as a decision variable (NOTE! This has effects on the meaning of a SATISFIABLE result).
