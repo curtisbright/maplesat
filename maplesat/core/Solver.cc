@@ -417,6 +417,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				if(assigns[index]==l_Undef)
 					return;
 			}
+			if(opt_extracolmin > 0 && opt_extracolmax > 0)
+			{
+				for(int c=opt_extracolmin; c<=opt_extracolmax; c++)
+				{	const int index = 100*r+c-1;
+					if(assigns[index]==l_Undef)
+						return;
+				}
+			}
 		}
 		/*if(!complete)
 		{	printf("The following variables were not set: ");
