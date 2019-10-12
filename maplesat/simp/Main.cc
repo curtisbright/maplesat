@@ -34,11 +34,14 @@ using namespace Minisat;
 
 //=================================================================================================
 
+bool print_numsols = false;
 
 void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
+    if (print_numsols)
+      printf("Number of solutions: %ld\n", solver.numsols);
     printf("restarts              : %"PRIu64"\n", solver.starts);
     printf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
     printf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
@@ -92,8 +95,10 @@ int main(int argc, char** argv)
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
+        StringOption assumout ("MAIN", "assumout", "Output results of each instance (using assumptions) to a file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        BoolOption   lex    ("MAIN", "lex",    "Use lexicographic constraints.", false);
 
         parseOptions(argc, argv, true);
         
@@ -143,6 +148,8 @@ int main(int argc, char** argv)
             printf("|                                                                             |\n"); }
         
         parse_DIMACS(in, S);
+        if(lex)
+            S.addLexClauses();
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 
@@ -185,46 +192,88 @@ int main(int argc, char** argv)
             exit(0);
         }
 
+	int numsat = 0;
+        FILE* outfile;
+        if(assumout)
+        { const char* file_name = assumout;
+          outfile = fopen(file_name, "w");
+        }
+        lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
+            print_numsols = true;
             const char* file_name = assumptions;
             FILE* assertion_file = fopen (file_name, "r");
             if (assertion_file == NULL)
                 printf("ERROR! Could not open file: %s\n", file_name), exit(1);
             int i = 0;
-            while (fscanf(assertion_file, "%d", &i) == 1) {
-                Var v = abs(i) - 1;
-                Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
-                dummy.push(l);
+            int bound = 0;
+            int tmp = fscanf(assertion_file, "a ");
+            while (fscanf(assertion_file, "%d ", &i) == 1) {
+                if(i==0)
+                {
+                  if(S.verbosity > 0)
+                  {  printf("a ");
+                     for( int i = 0; i < dummy.size(); i++)
+                       printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
+                     printf("0\n");
+                     printf("Bound %d: ", bound);
+                  }
+                  ret = S.solveLimited(dummy);
+                  bound++;
+                  if(S.verbosity > 0)
+                    printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                  dummy.clear();
+                  tmp = fscanf(assertion_file, "a ");
+                  if(ret==l_True)
+                    numsat++;
+                  if(assumout)
+                  {  fprintf(outfile, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                     /*if(ret == l_True)
+                     { for(int i = 0; i < S.nVars(); i++)
+                         if(S.model[i] != l_Undef)
+                           fprintf(outfile, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+                       fprintf(outfile, "\n");
+                     }*/
+                  }
+                }
+                else
+                {
+                  Var v = abs(i) - 1;
+                  Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                  dummy.push(l);
+                }
             }
             fclose(assertion_file);
         }
-        for( int i = 0; i < dummy.size(); i++) {
-            printf("%s%d\n", sign(dummy[i]) ? "-" : "", var(dummy[i]));
-        }
-        lbool ret = S.solveLimited(dummy);
-        
-        if (S.verbosity > 0){
+        else
+        	ret = S.solveLimited(dummy);
+
+        if(assumout)
+          fclose(outfile);
+
+        /*if (S.verbosity > 0)*/{
+            if(assumptions)
+	      printf("Number of satisfiable bounds: %d\n", numsat);        
             printStats(S);
-            printf("\n"); }
-        printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            printf("\n");
+            printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+        }
         if (res != NULL){
             if (ret == l_True){
-                fprintf(res, "SAT\n");
+                fclose(res);                 // Close the proof file
+                res = fopen(argv[2], "wb");  // Clear it to put in the solution
                 for (int i = 0; i < S.nVars(); i++)
                     if (S.model[i] != l_Undef)
                         fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(res, " 0\n");
-            }else if (ret == l_False) {
-                fprintf(res, "UNSAT\n");
-                for (int i = 0; i < S.conflict.size(); i++) {
-                    // Reverse the signs to keep the same sign as the assertion file.
-                    fprintf(res, "%s%d\n", sign(S.conflict[i]) ? "" : "-", var(S.conflict[i]) + 1);
-                }
-            } else
+            }else if (ret == l_False)
+                fprintf(res, "0\n");
+            else
                 fprintf(res, "INDET\n");
             fclose(res);
         }
+
 
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
