@@ -585,6 +585,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					if(matrixset.count(matrix)>0)
 						continue;
+
+					if(matrix[8][0]!=1 || matrix[21][0]!=1 || matrix[30][0]!=1 || matrix[35][0]!=1)
+						continue;
+
 					matrixset.insert(matrix);
 
 					vec<Lit> clause;
