@@ -205,7 +205,7 @@ Solver::~Solver()
 
 void Solver::addLexClauses()
 {
-	for(int k=1; k<768; k++)
+	/*for(int k=1; k<768; k++)
 	{
 		for(int i=30; i<66; i++)
 		{	for(int j=13; j<21; j++)
@@ -230,7 +230,7 @@ void Solver::addLexClauses()
 				}
 			}
 		}
-	}
+	}*/
 }
 
 
@@ -553,40 +553,50 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		if(opt_isoblock)
 		{
 			std::array<std::array<int, 9>, 36> matrix;
+			std::array<std::array<int, 9>, 36> matrix2;
 			std::set<std::array<std::array<int, 9>, 36>> matrixset;
 			for(int i=0; i<36; i++)
 				for(int j=0; j<9; j++)
 					matrix[i][j] = (assigns[111*(i+30)+(j+12)]==l_True?1:0);
 			matrixset.insert(matrix);
 
-			for(int k=0; k<768; k++)
+			for(int k=1; k<7257600; k++)
 			{
-				if(k != identity_index)
+				//if(k != identity_index)
 				{
 					for(int r=30; r<66; r++)
 					{	for(int c=12; c<21; c++)
 						{
 							const int index = 111*r+c;
 							if(assigns[index]==l_True)
-								matrix[row[k][r]-30][col[k][c]-12] = 1;
+								matrix[row[k][r]-30][c-12] = 1;
 							else
-								matrix[row[k][r]-30][col[k][c]-12] = 0;
+								matrix[row[k][r]-30][c-12] = 0;
 							
 						}
 					}
 
 					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-					/*for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+i]==1)
-								swap(matrix[i], matrix[j]);
+					for(int i=0; i<9; i++)
+					{	for(int j=0; j<9; j++)
+						{	if(matrix[i][j]==1)
+							{
+								for(int i2=0; i2<36; i2++)
+								{
+									matrix2[i2][j] = matrix[i2][i];
+								}
+							}
 						}
 
-					}*/
+					}
 
-					if(matrixset.count(matrix)>0)
+					if(matrix2[8][0]!=1 || matrix2[21][0]!=1 || matrix2[30][0]!=1 || matrix2[35][0]!=1)
 						continue;
-					matrixset.insert(matrix);
+
+					if(matrixset.count(matrix2)>0)
+						continue;
+
+					matrixset.insert(matrix2);
 
 					//if(k == identity_index)
 					//	printf("error!\n");
@@ -611,7 +621,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					{	//if(i+21 >= opt_colprint)
 						//	break;
 						for(int j=0; j<9; j++)
-						{	if(matrix[i][j]==1)
+						{	if(matrix2[i][j]==1)
 							{	clause.push(~mkLit((i+30)*111+(j+12)));
 								if(exhaustfile2 != NULL)
 								{	if(opt_printtags)
