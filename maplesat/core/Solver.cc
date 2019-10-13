@@ -552,26 +552,26 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		if(opt_isoblock)
 		{
-			std::array<std::array<int, 9>, 36> matrix;
-			std::array<std::array<int, 9>, 36> matrix2;
-			std::set<std::array<std::array<int, 9>, 36>> matrixset;
-			for(int i=0; i<36; i++)
+			std::array<std::array<int, 9>, 45> matrix;
+			std::array<std::array<int, 9>, 45> matrix2;
+			std::set<std::array<std::array<int, 9>, 45>> matrixset;
+			for(int i=0; i<45; i++)
 				for(int j=0; j<9; j++)
-					matrix[i][j] = (assigns[111*(i+30)+(j+12)]==l_True?1:0);
+					matrix[i][j] = (assigns[111*(i+21)+(j+12)]==l_True?1:0);
 			matrixset.insert(matrix);
 
 			for(int k=1; k<72; k++)
 			{
 				//if(k != identity_index)
 				{
-					for(int r=30; r<66; r++)
+					for(int r=21; r<66; r++)
 					{	for(int c=12; c<21; c++)
 						{
 							const int index = 111*r+c;
 							if(assigns[index]==l_True)
-								matrix[row[k][r]-30][c-12] = 1;
+								matrix[row[k][r]-21][c-12] = 1;
 							else
-								matrix[row[k][r]-30][c-12] = 0;
+								matrix[row[k][r]-21][c-12] = 0;
 							
 						}
 					}
@@ -581,7 +581,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					{	for(int j=0; j<9; j++)
 						{	if(matrix[i][j]==1)
 							{
-								for(int i2=0; i2<36; i2++)
+								for(int i2=0; i2<45; i2++)
 								{
 									matrix2[i2][j] = matrix[i2][i];
 								}
@@ -590,7 +590,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					}
 
-					if(matrix2[8][0]!=1 || matrix2[21][0]!=1 || matrix2[30][0]!=1 || matrix2[35][0]!=1)
+					if(matrix2[17][0]!=1 || matrix2[30][0]!=1 || matrix2[39][0]!=1 || matrix2[44][0]!=1)
 						continue;
 
 					if(matrixset.count(matrix2)>0)
@@ -617,18 +617,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						}
 					}
 
-					for(int i=0; i<36; i++)
+					for(int i=0; i<45; i++)
 					{	//if(i+21 >= opt_colprint)
 						//	break;
 						for(int j=0; j<9; j++)
 						{	if(matrix2[i][j]==1)
-							{	clause.push(~mkLit((i+30)*111+(j+12)));
+							{	clause.push(~mkLit((i+21)*111+(j+12)));
 								if(exhaustfile2 != NULL)
 								{	if(opt_printtags)
-									{	fprintf(exhaustfile2, "%d ", (i+30)*111+(j+12)+1);
+									{	fprintf(exhaustfile2, "%d ", (i+21)*111+(j+12)+1);
 									}
 									else
-									{	fprintf(exhaustfile2, "-%d ", (i+30)*111+(j+12)+1);
+									{	fprintf(exhaustfile2, "-%d ", (i+21)*111+(j+12)+1);
 									}
 								}
 							}
