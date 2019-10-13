@@ -560,7 +560,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					matrix[i][j] = (assigns[111*(i+30)+(j+12)]==l_True?1:0);
 			matrixset.insert(matrix);
 
-			for(int k=1; k<7257600; k++)
+			for(int k=1; k<72; k++)
 			{
 				//if(k != identity_index)
 				{
