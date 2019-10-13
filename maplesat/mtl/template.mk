@@ -19,13 +19,13 @@ RCOBJS     = $(addsuffix r,  $(COBJS))
 
 
 CXX       ?= g++
-CFLAGS    ?= -Wall -Wno-parentheses $(CMD_CFLAGS)
+CFLAGS    ?= -Wall -Wno-parentheses $(CMD_CFLAGS) -std=c++0x
 LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3
 
-CFLAGS    += -I$(MROOT) -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
-LFLAGS    += -lz
+CFLAGS    += -I$(MROOT) -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -I/usr/include/x86_64-linux-gnu/nauty/ -I/usr/include/nauty/
+LFLAGS    += -lz -lnauty
 
 .PHONY : s p d r rs clean 
 

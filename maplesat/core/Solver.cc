@@ -20,6 +20,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "automorphisms.h"
 
+#define MAXN 66
+
+//#include "nauty.h"
+#include "naututil.h"
+
 #include <math.h>
 
 #include "mtl/Sort.h"
@@ -425,6 +430,14 @@ Lit Solver::pickBranchLit()
 #include <array>
 #include <set>
 
+graph g[MAXN*MAXM];
+graph canong[MAXN*MAXM];
+int lab[MAXN],ptn[MAXN],orbits[MAXN];
+DEFAULTOPTIONS_GRAPH(options);
+statsblk stats;
+
+long glist[10000];
+
 //#include <algorithm>
 //#include <utility>
 
@@ -494,35 +507,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");*/
 
-		fprintf(exhaustfile, "a ");
-
-		for(int i=0; i<assumptions.size(); i++)
-		{	out_learnts[0].push(~assumptions[i]);
-			if(sign(assumptions[i]))
-			{	
-				//out_learnts[0].push(mkLit(var(assumptions[i])));
-				//if(opt_printneg)
-				fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
-			}
-			else
-			{	
-				//out_learnts[0].push(~mkLit(var(assumptions[i])));
-				fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
-			}
-		}
-
-		for(int r=0; r<66; r++)
-		{	for(int c=0; c<21; c++)
+		for(int r=opt_rowmin; r<opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<opt_colmax; c++)
 			{
 				const int index = 111*r+c;
 				if(assigns[index]==l_True)
 				{	out_learnts[0].push(~mkLit(index));
-					fprintf(exhaustfile, "%d ", index+1);
+					//fprintf(exhaustfile, "%d ", index+1);
 				}
 			}
 		}
 		//if(!opt_printtags)
-			fprintf(exhaustfile, "0\n");
+		//	fprintf(exhaustfile, "0\n");
 		//else
 		//	fprintf(exhaustfile, "0 %d\n", numsols+1);
 
@@ -550,13 +546,97 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		attachClause(confl_clause);
 		clauses.push(confl_clause);
 
+		const int m = SETWORDSNEEDED(MAXN);
+		const int n = MAXN;
+
+		EMPTYGRAPH(g,m,n);
+
+		for(int c=0; c<21; c++)
+		{	for(int r1=0; r1<66; r1++)
+			{	for(int r2=r1+1; r2<66; r2++)
+				{
+					const int index1 = 111*r1+c;
+					const int index2 = 111*r2+c;
+					if(assigns[index1]==l_True && assigns[index2]==l_True)
+					{	ADDONEEDGE(g,r1,r2,m);
+					}
+				}
+			}
+		}
+
+		//printf("%d\n", sizeof(graph));
+
+		//putgraph(stdout, g, 0, m, n);
+
+		options.writeautoms = FALSE;
+		options.defaultptn = TRUE;
+		options.writemarkers = FALSE;
+		options.getcanon = TRUE;
+		options.outfile=NULL;
+
+		//nauty_check(WORDSIZE,m,n,NAUTYVERSIONID);
+
+		densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+
+		/*printf("in");
+		putgraph(stdout, g, 0, m, n);
+		printf("out");
+		putgraph(stdout, canong, 0, m, n);*/
+
+		long hash = hashgraph(canong, m, n, 19883109L);
+
+		bool found = true;
+		for(int k=0; k<numsols; k++)
+		{	//if(memcmp(&canong, &(glist[k]), sizeof(graph)*MAXN*MAXM)==0)
+			if(hash==glist[k])
+			{	found = false;
+				//printf("Already found!\n");
+				break;
+			}
+		}
+
+		if(found)
+		{	//memcpy(&(glist[numsols]), &canong, sizeof(graph)*MAXN*MAXM);
+			glist[numsols] = hash;
+			numsols++;
+
+			fprintf(exhaustfile, "a ");
+
+			for(int i=0; i<assumptions.size(); i++)
+			{	out_learnts[0].push(~assumptions[i]);
+				if(sign(assumptions[i]))
+				{	
+					//out_learnts[0].push(mkLit(var(assumptions[i])));
+					//if(opt_printneg)
+					fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
+				}
+				else
+				{	
+					//out_learnts[0].push(~mkLit(var(assumptions[i])));
+					fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
+				}
+			}
+
+			for(int r=opt_rowmin; r<opt_rowmax; r++)
+			{	for(int c=opt_colmin; c<opt_colmax; c++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{	
+						fprintf(exhaustfile, "%d ", index+1);
+					}
+				}
+			}
+			fprintf(exhaustfile, "0\n");
+		}
+
 		if(opt_isoblock)
 		{
-			std::array<std::array<int, 9>, 36> matrix;
-			std::set<std::array<std::array<int, 9>, 36>> matrixset;
+			std::array<std::array<int, 8>, 36> matrix;
+			std::set<std::array<std::array<int, 8>, 36>> matrixset;
 			for(int i=0; i<36; i++)
-				for(int j=0; j<9; j++)
-					matrix[i][j] = (assigns[111*(i+30)+(j+12)]==l_True?1:0);
+				for(int j=0; j<8; j++)
+					matrix[i][j] = (assigns[111*(i+30)+(j+13)]==l_True?1:0);
 			matrixset.insert(matrix);
 
 			for(int k=0; k<768; k++)
@@ -564,13 +644,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				if(k != identity_index)
 				{
 					for(int r=30; r<66; r++)
-					{	for(int c=12; c<21; c++)
+					{	for(int c=13; c<21; c++)
 						{
 							const int index = 111*r+c;
 							if(assigns[index]==l_True)
-								matrix[row[k][r]-30][col[k][c]-12] = 1;
+								matrix[row[k][r]-30][col[k][c]-13] = 1;
 							else
-								matrix[row[k][r]-30][col[k][c]-12] = 0;
+								matrix[row[k][r]-30][col[k][c]-13] = 0;
 							
 						}
 					}
@@ -586,6 +666,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					if(matrixset.count(matrix)>0)
 						continue;
+
 					matrixset.insert(matrix);
 
 					//if(k == identity_index)
@@ -593,41 +674,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 					vec<Lit> clause;
 
-					if(exhaustfile2 != NULL && opt_printtags)
-					{	fprintf(exhaustfile2, "a ");
-						for(int r=0; r<66; r++)
-						{	for(int c=0; c<21; c++)
-							{	if(c>=12 && r>= 30)
-									continue;
-								const int index = 111*r+c;
-								if(assigns[index]==l_True)
-								{	fprintf(exhaustfile2, "%d ", index+1);
-								}
-							}
-						}
-					}
-
 					for(int i=0; i<36; i++)
-					{	//if(i+21 >= opt_colprint)
-						//	break;
-						for(int j=0; j<9; j++)
-						{	if(matrix[i][j]==1)
-							{	clause.push(~mkLit((i+30)*111+(j+12)));
-								if(exhaustfile2 != NULL)
-								{	if(opt_printtags)
-									{	fprintf(exhaustfile2, "%d ", (i+30)*111+(j+12)+1);
-									}
-									else
-									{	fprintf(exhaustfile2, "-%d ", (i+30)*111+(j+12)+1);
-									}
-								}
-							}
-						}
-					}
-					if(exhaustfile2 != NULL)
-					{	//if(!opt_printtags)
-						fprintf(exhaustfile2, "0\n");
-					}
+						for(int j=0; j<8; j++)
+							if(matrix[i][j]==1)
+								clause.push(~mkLit((i+30)*111+(j+13)));
 
 					{
 						{
@@ -654,6 +704,41 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						attachClause(confl_clause);
 						clauses.push(confl_clause);
 					}
+
+					/*
+					if(exhaustfile2 != NULL && opt_printtags)
+					{	fprintf(exhaustfile2, "a ");
+						for(int r=0; r<66; r++)
+						{	for(int c=0; c<21; c++)
+							{	if(c>=12 && r>= 30)
+									continue;
+								const int index = 111*r+c;
+								if(assigns[index]==l_True)
+								{	fprintf(exhaustfile2, "%d ", index+1);
+								}
+							}
+						}
+					}
+
+					for(int i=0; i<36; i++)
+					{	
+						for(int j=0; j<9; j++)
+						{	if(matrix[i][j]==1)
+							{	
+								if(exhaustfile2 != NULL)
+								{	if(opt_printtags)
+									{	fprintf(exhaustfile2, "%d ", (i+30)*111+(j+12)+1);
+									}
+									else
+									{	fprintf(exhaustfile2, "-%d ", (i+30)*111+(j+12)+1);
+									}
+								}
+							}
+						}
+					}
+					if(exhaustfile2 != NULL)
+					{	fprintf(exhaustfile2, "0\n");
+					}*/
 
 				}
 			}
@@ -829,8 +914,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 		}*/
-
-		numsols++;
 	}
 }
 
