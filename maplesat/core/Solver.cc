@@ -522,6 +522,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		//else
 		//	fprintf(exhaustfile, "0 %d\n", numsols+1);
 
+		/*
 		{
 			int max_index = 0;
 			for(int i=1; i<out_learnts[0].size(); i++)
@@ -545,6 +546,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		CRef confl_clause = ca.alloc(out_learnts[0], false);
 		attachClause(confl_clause);
 		clauses.push(confl_clause);
+		*/
 
 		const int m = SETWORDSNEEDED(MAXN);
 		const int n = MAXN;
@@ -672,13 +674,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					//if(k == identity_index)
 					//	printf("error!\n");
 
-					vec<Lit> clause;
+					//vec<Lit> clause;
+					const int len = out_learnts.size();
+					out_learnts.push();
 
 					for(int i=0; i<36; i++)
 						for(int j=0; j<8; j++)
 							if(matrix[i][j]==1)
-								clause.push(~mkLit((i+30)*111+(j+13)));
-
+								//clause.push(~mkLit((i+30)*111+(j+13)));
+								out_learnts[len].push(~mkLit((i+30)*111+(j+13)));
+					/*
 					{
 						{
 							int max_index = 0;
@@ -704,6 +709,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						attachClause(confl_clause);
 						clauses.push(confl_clause);
 					}
+					*/
 
 					/*
 					if(exhaustfile2 != NULL && opt_printtags)
