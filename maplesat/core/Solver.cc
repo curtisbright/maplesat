@@ -36,6 +36,8 @@ FILE* exhaustfile2 = NULL;
 
 using namespace Minisat;
 
+void printclause(vec<Lit>& cl);
+
 /*#include <set>
 #include <vector>
 std::set<std::vector<int>> transset;*/
@@ -84,6 +86,7 @@ static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variab
 //static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
+static BoolOption opt_transblock(_cat, "transblock", "Transitive blocking clauses", false);
 
 
 //=================================================================================================
@@ -430,6 +433,8 @@ Lit Solver::pickBranchLit()
 #include <array>
 #include <set>
 
+long firsthash = 0;
+
 graph g[MAXN*MAXM];
 graph canong[MAXN*MAXM];
 int lab[MAXN],ptn[MAXN],orbits[MAXN];
@@ -455,7 +460,136 @@ long glist[10000];
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-	
+
+	if(opt_transblock)
+	{
+		bool block_complete[11];
+
+		for(int k=0; k<2; k++)
+		{	
+			if(k==0 && firsthash!=0)
+				continue;
+
+			block_complete[k] = true;
+			for(int r=21; r<65; r++)
+			{	for(int c=12+9*k; c<12+9*(k+1); c++)
+				{	const int index = 111*r+c;
+					if(assigns[index]==l_Undef)
+					{	block_complete[k] = false;
+						break;
+					}
+				}
+				if(block_complete[k]==false)
+					break;
+			}
+
+			if(block_complete[k]==false)
+				continue;
+
+			const int m = SETWORDSNEEDED(MAXN);
+			const int n = MAXN;
+
+			EMPTYGRAPH(g,m,n);
+
+			for(int c=0; c<12; c++)
+			{	for(int r1=0; r1<66; r1++)
+				{	for(int r2=r1+1; r2<66; r2++)
+					{
+						const int index1 = 111*r1+c;
+						const int index2 = 111*r2+c;
+						if(assigns[index1]==l_True && assigns[index2]==l_True)
+						{	ADDONEEDGE(g,r1,r2,m);
+						}
+					}
+				}
+			}
+
+			for(int c=12+9*k; c<12+9*(k+1); c++)
+			{	for(int r1=0; r1<66; r1++)
+				{	for(int r2=r1+1; r2<66; r2++)
+					{
+						const int index1 = 111*r1+c;
+						const int index2 = 111*r2+c;
+						if(assigns[index1]==l_True && assigns[index2]==l_True)
+						{	ADDONEEDGE(g,r1,r2,m);
+						}
+					}
+				}
+			}
+
+			options.writeautoms = FALSE;
+			options.defaultptn = TRUE;
+			options.writemarkers = FALSE;
+			options.getcanon = TRUE;
+			options.outfile=NULL;
+
+			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+
+			long hash = hashgraph(canong, m, n, 19883109L);
+
+			if(k==0)
+				firsthash = hash;
+
+			if(hash != firsthash)
+			{
+				const int size = out_learnts.size();
+				out_learnts.push();
+				
+				for(int r=21; r<65; r++)
+				{	for(int c=12+9*k; c<12+9*(k+1); c++)
+					{
+						const int index = 111*r+c;
+						if(assigns[index]==l_True)
+						{	out_learnts[size].push(~mkLit(index));
+						}
+					}
+				}
+
+				//printclause(out_learnts[size]);
+				//return;
+
+			}
+
+			/*
+			{
+				int max_index = 0;
+				for(int i=1; i<clause.size(); i++)
+					if(level(var(clause[i])) > level(var(clause[max_index])))
+						max_index = i;
+				Lit p = clause[0];
+				clause[0] = clause[max_index];
+				clause[max_index] = p;
+			}
+
+			{
+				int max_index = 1;
+				for(int i=2; i<clause.size(); i++)
+					if(level(var(clause[i])) > level(var(clause[max_index])))
+						max_index = i;
+				Lit p = clause[1];
+				clause[1] = clause[max_index];
+				clause[max_index] = p;
+			}
+
+			CRef confl_clause = ca.alloc(clause, false);
+			attachClause(confl_clause);
+			clauses.push(confl_clause);
+			*/
+
+			/*bool found = true;
+			for(int k=0; k<numsols; k++)
+			{	//if(memcmp(&canong, &(glist[k]), sizeof(graph)*MAXN*MAXM)==0)
+				if(hash==glist[k])
+				{	found = false;
+					//printf("Already found!\n");
+					break;
+				}
+			}*/
+		}
+
+		return;
+	}
+
 	if(exhaustfile==NULL)
 		return;
 
@@ -921,6 +1055,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}*/
 	}
+
 }
 
 bool Solver::assertingClause(CRef confl) {
@@ -1530,6 +1665,14 @@ bool Solver::simplify()
     return true;
 }
 
+void printclause(vec<Lit>& cl)
+{ printf("clause size %d: ", cl.size());
+  for(int i=0; i<cl.size(); i++)
+  { printf("%c%d ", sign(cl[i]) ? '-' : '+', var(cl[i])+1);
+  }
+  printf("\n");
+}
+
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1678,6 +1821,23 @@ lbool Solver::search(int nof_conflicts)
                     units.clear();
                     backtrack_level = decisionLevel();
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
+                        /*printclause(callbackLearntClauses[i]);
+                        bool in_conflict = true;
+                        for(int j=0; j<callbackLearntClauses[i].size(); j++)
+                        {   Lit x = callbackLearntClauses[i][j];
+                            if(assigns[var(x)]==l_True && sign(x)==false)
+                            {  in_conflict = false;
+                               break;
+                            }
+                            if(assigns[var(x)]==l_False && sign(x)==true)
+                            {  in_conflict = false;
+                               break;
+                            }
+                        }
+                        if(!in_conflict)
+                            printf("clause %i not in conflict\n", i), exit(1);
+                        else
+                            printf("clause %i in conflict\n", i);*/
                         int level;
                         learnt_clause.clear();
                         analyze(callbackLearntClauses[i], learnt_clause, level);
