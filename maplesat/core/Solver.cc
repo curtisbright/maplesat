@@ -471,7 +471,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				continue;
 
 			block_complete[k] = true;
-			for(int r=21; r<65; r++)
+			for(int r=21; r<66; r++)
 			{	for(int c=12+9*k; c<12+9*(k+1); c++)
 				{	const int index = 111*r+c;
 					if(assigns[index]==l_Undef)
@@ -535,7 +535,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				const int size = out_learnts.size();
 				out_learnts.push();
 				
-				for(int r=21; r<65; r++)
+				for(int r=21; r<66; r++)
 				{	for(int c=12+9*k; c<12+9*(k+1); c++)
 					{
 						const int index = 111*r+c;
