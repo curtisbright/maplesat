@@ -79,7 +79,7 @@ static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhausti
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", -1);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
 //static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
-static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
+static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", false);
 //static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
@@ -441,7 +441,9 @@ int lab[MAXN],ptn[MAXN],orbits[MAXN];
 DEFAULTOPTIONS_GRAPH(options);
 statsblk stats;
 
-long glist[10000];
+#include <unordered_set>
+
+std::unordered_set<long> glist;
 
 //#include <algorithm>
 //#include <utility>
@@ -578,8 +580,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			/*bool found = true;
 			for(int k=0; k<numsols; k++)
-			{	//if(memcmp(&canong, &(glist[k]), sizeof(graph)*MAXN*MAXM)==0)
-				if(hash==glist[k])
+			{	if(hash==glist[k])
 				{	found = false;
 					//printf("Already found!\n");
 					break;
@@ -651,6 +652,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 		}
+
 		//if(!opt_printtags)
 		//	fprintf(exhaustfile, "0\n");
 		//else
@@ -687,7 +689,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		EMPTYGRAPH(g,m,n);
 
-		for(int c=0; c<21; c++)
+		for(int c=0; c<opt_colmax; c++)
 		{	for(int r1=0; r1<66; r1++)
 			{	for(int r2=r1+1; r2<66; r2++)
 				{
@@ -721,19 +723,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		long hash = hashgraph(canong, m, n, 19883109L);
 
-		bool found = true;
-		for(int k=0; k<numsols; k++)
-		{	//if(memcmp(&canong, &(glist[k]), sizeof(graph)*MAXN*MAXM)==0)
-			if(hash==glist[k])
-			{	found = false;
-				//printf("Already found!\n");
-				break;
-			}
-		}
-
-		if(found)
-		{	//memcpy(&(glist[numsols]), &canong, sizeof(graph)*MAXN*MAXM);
-			glist[numsols] = hash;
+		if(glist.find(hash) == glist.end())
+		{
+			glist.insert(hash);
 			numsols++;
 
 			fprintf(exhaustfile, "a ");
