@@ -447,6 +447,7 @@ statsblk stats;
 
 std::unordered_set<long> glist;
 std::set<std::array<int, 36>> blockset;
+std::set<std::array<int, 36>> blockset2;
 
 //#include <algorithm>
 //#include <utility>
@@ -529,7 +530,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				continue;
 
 			if(blockset.find(blockelement) == blockset.end())
-				blockset.insert(blockelement);
+			{	blockset.insert(blockelement);
+				blockset2.insert(blockelement);
+			}
 			else
 				continue;
 
@@ -1941,6 +1944,7 @@ static double luby(double y, int x){
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    blockset.clear();
     model.clear();
     conflict.clear();
     if (!ok) return l_False;
@@ -1979,6 +1983,8 @@ lbool Solver::solve_()
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
+	printf("Blockset size: %d\n", blockset.size());
+	printf("Blockset2 size: %d\n", blockset2.size());
     }
 
     if (status == l_True){
