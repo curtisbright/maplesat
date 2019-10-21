@@ -435,6 +435,8 @@ Lit Solver::pickBranchLit()
 
 long firsthash = 0;
 
+bool startinit = false;
+graph start[MAXN*MAXM];
 graph g[MAXN*MAXM];
 graph canong[MAXN*MAXM];
 int lab[MAXN],ptn[MAXN],orbits[MAXN];
@@ -463,6 +465,36 @@ std::set<std::array<int, 36>> blockset;
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
+
+	const int m = SETWORDSNEEDED(MAXN);
+	const int n = MAXN;
+
+	if(!startinit)
+	{
+		options.writeautoms = FALSE;
+		options.defaultptn = TRUE;
+		options.writemarkers = FALSE;
+		options.getcanon = TRUE;
+		options.outfile=NULL;
+
+		EMPTYGRAPH(start,m,n);
+
+		for(int c=0; c<12; c++)
+		{	for(int r1=0; r1<66; r1++)
+			{	for(int r2=r1+1; r2<66; r2++)
+				{
+					const int index1 = 111*r1+c;
+					const int index2 = 111*r2+c;
+					if(assigns[index1]==l_True && assigns[index2]==l_True)
+					{	ADDONEEDGE(start,r1,r2,m);
+					}
+				}
+			}
+		}
+
+		startinit = true;
+
+	}
 
 	if(opt_transblock)
 	{
@@ -501,23 +533,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			else
 				continue;
 
-			const int m = SETWORDSNEEDED(MAXN);
-			const int n = MAXN;
-
-			EMPTYGRAPH(g,m,n);
-
-			for(int c=0; c<12; c++)
-			{	for(int r1=0; r1<66; r1++)
-				{	for(int r2=r1+1; r2<66; r2++)
-					{
-						const int index1 = 111*r1+c;
-						const int index2 = 111*r2+c;
-						if(assigns[index1]==l_True && assigns[index2]==l_True)
-						{	ADDONEEDGE(g,r1,r2,m);
-						}
-					}
-				}
-			}
+			memcpy(g, start, sizeof(g));
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	for(int r1=0; r1<66; r1++)
@@ -531,12 +547,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 			}
-
-			options.writeautoms = FALSE;
-			options.defaultptn = TRUE;
-			options.writemarkers = FALSE;
-			options.getcanon = TRUE;
-			options.outfile=NULL;
 
 			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
 
@@ -697,12 +707,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		clauses.push(confl_clause);
 		*/
 
-		const int m = SETWORDSNEEDED(MAXN);
-		const int n = MAXN;
+		memcpy(g, start, sizeof(g));
 
-		EMPTYGRAPH(g,m,n);
-
-		for(int c=0; c<opt_colmax; c++)
+		for(int c=12; c<opt_colmax; c++)
 		{	for(int r1=0; r1<66; r1++)
 			{	for(int r2=r1+1; r2<66; r2++)
 				{
@@ -715,24 +722,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 
-		//printf("%d\n", sizeof(graph));
-
-		//putgraph(stdout, g, 0, m, n);
-
-		options.writeautoms = FALSE;
-		options.defaultptn = TRUE;
-		options.writemarkers = FALSE;
-		options.getcanon = TRUE;
-		options.outfile=NULL;
-
-		//nauty_check(WORDSIZE,m,n,NAUTYVERSIONID);
-
 		densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-
-		/*printf("in");
-		putgraph(stdout, g, 0, m, n);
-		printf("out");
-		putgraph(stdout, canong, 0, m, n);*/
 
 		long hash = hashgraph(canong, m, n, 19883109L);
 
