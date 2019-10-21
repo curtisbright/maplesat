@@ -236,6 +236,7 @@ int main(int argc, char** argv)
                        fprintf(outfile, "\n");
                      }*/
                   }
+                  if(ret == l_Undef) break;
                 }
                 else
                 {

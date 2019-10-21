@@ -444,6 +444,7 @@ statsblk stats;
 #include <unordered_set>
 
 std::unordered_set<long> glist;
+std::set<std::array<int, 36>> blockset;
 
 //#include <algorithm>
 //#include <utility>
@@ -467,10 +468,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	{
 		bool block_complete[11];
 
-		for(int k=0; k<2; k++)
+		for(int k=0; k<5; k++)
 		{	
 			if(k==0 && firsthash!=0)
 				continue;
+
+			std::array<int, 36> blockelement;
+			int blockcount = 0;
 
 			block_complete[k] = true;
 			for(int r=21; r<66; r++)
@@ -480,12 +484,21 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					{	block_complete[k] = false;
 						break;
 					}
+					if(k!=0 || r<30)
+					{	if(assigns[index]==l_True)
+							blockelement[blockcount++] = index;
+					}
 				}
 				if(block_complete[k]==false)
 					break;
 			}
 
 			if(block_complete[k]==false)
+				continue;
+
+			if(blockset.find(blockelement) == blockset.end())
+				blockset.insert(blockelement);
+			else
 				continue;
 
 			const int m = SETWORDSNEEDED(MAXN);
