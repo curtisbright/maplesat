@@ -530,8 +530,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				continue;
 
 			if(blockset.find(blockelement) == blockset.end())
-			{	blockset.insert(blockelement);
-				blockset2.insert(blockelement);
+			{	//blockset.insert(blockelement);
+				//blockset2.insert(blockelement);
 			}
 			else
 				continue;
@@ -577,6 +577,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				//return;
 
 			}
+			else
+				blockset.insert(blockelement);
 
 			/*
 			{
@@ -1944,7 +1946,7 @@ static double luby(double y, int x){
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
-    blockset.clear();
+    //blockset.clear();
     model.clear();
     conflict.clear();
     if (!ok) return l_False;
@@ -1984,7 +1986,7 @@ lbool Solver::solve_()
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
 	printf("Blockset size: %d\n", blockset.size());
-	printf("Blockset2 size: %d\n", blockset2.size());
+	//printf("Blockset2 size: %d\n", blockset2.size());
     }
 
     if (status == l_True){
