@@ -87,6 +87,7 @@ static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variab
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
 static BoolOption opt_transblock(_cat, "transblock", "Transitive blocking clauses", false);
+static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conflict to list of clauses", true);
 
 
 //=================================================================================================
@@ -1799,7 +1800,8 @@ lbool Solver::search(int nof_conflicts)
                 }else if (value(p) == l_False){
                     analyzeFinal(~p, conflict);
                     cancelUntil(0);
-                    //addClause_(conflict);
+                    if(opt_addfinalconflict)
+                       addClause_(conflict);
                     nbclausesbeforereduce = firstReduceDB;
                     return l_False;
                 }else{
