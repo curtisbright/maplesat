@@ -700,7 +700,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}*/
 		}
 
-		return;
+		//return;
 	}
 
 	if(exhaustfile==NULL)
@@ -738,6 +738,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 	if(complete)
 	{
+		const int size = out_learnts.size();
 		vec<Lit> clause;
 		out_learnts.push();
 		
@@ -759,7 +760,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			{
 				const int index = 111*r+c;
 				if(assigns[index]==l_True)
-				{	out_learnts[0].push(~mkLit(index));
+				{	out_learnts[size].push(~mkLit(index));
 					//fprintf(exhaustfile, "%d ", index+1);
 				}
 			}
@@ -823,7 +824,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			fprintf(exhaustfile, "a ");
 
 			for(int i=0; i<assumptions.size(); i++)
-			{	out_learnts[0].push(~assumptions[i]);
+			{	out_learnts[size].push(~assumptions[i]);
 				if(sign(assumptions[i]))
 				{	
 					//out_learnts[0].push(mkLit(var(assumptions[i])));
