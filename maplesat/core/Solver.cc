@@ -437,6 +437,7 @@ Lit Solver::pickBranchLit()
 #include <set>
 
 long firsthash = 0;
+int casenumber = -1;
 
 bool startinit = false;
 graph start[MAXN*MAXM];
@@ -564,7 +565,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	{
 		bool block_complete[11];
 
-		for(int k=0; k<5; k++)
+		for(int k=0; k<4; k++)
 		{	
 			if(k==0 && firsthash!=0)
 				continue;
@@ -619,10 +620,17 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			long hash = hashgraph(canong, m, n, 19883109L);
 
 			if(k==0)
-				firsthash = hash;
+			{	firsthash = hash;
+				//if(hashes.find(hash)==hashes.end())
+				//	printf("Can't find hash %ld\n", hash);
+				//else
+				//	printf("Found hash %ld\n", hash);
+				casenumber = hashes.find(hash)->second;
+			}
 
-			if(hash != firsthash)
+			if(hashes[hash] < casenumber)
 			{
+				//printf("Blocking instance of block %d with tag %d, smaller than case %d\n", k, hashes[hash], casenumber);
 				const int size = out_learnts.size();
 				out_learnts.push();
 				
@@ -632,16 +640,29 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						const int index = 111*r+c;
 						if(assigns[index]==l_True)
 						{	out_learnts[size].push(~mkLit(index));
+							if(exhaustfile2 != NULL)
+								fprintf(exhaustfile2, "-%d ", index+1);
+							//printf("1");
 						}
+						//else if(assigns[index]==l_False)
+						//	printf("0");
+						//else if(assigns[index]==l_Undef)
+						//	printf("?");
 					}
+					//printf("\n");
 				}
+
+				if(exhaustfile2 != NULL)
+					fprintf(exhaustfile2, "0\n");
 
 				//printclause(out_learnts[size]);
 				//return;
 
 			}
 			else
+			{	//printf("Not blocking instance of block %d with tag %d, not smaller than case %d\n", k, hashes[hash], casenumber);
 				blockset.insert(blockelement);
+			}
 
 			/*
 			{
