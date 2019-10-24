@@ -1840,26 +1840,40 @@ lbool Solver::search(int nof_conflicts)
                             printf("clause %i not in conflict\n", i), exit(1);
                         else
                             printf("clause %i in conflict\n", i);*/
-                        int level;
-                        learnt_clause.clear();
-                        analyze(callbackLearntClauses[i], learnt_clause, level);
-                        if (level == -1) {
-                            return l_False;
-                        } else if (level < backtrack_level) {
-                            backtrack_level = level;
-                        }
-                        if (learnt_clause.size() == 1) {
-                            units.push(learnt_clause[0]);
-                        } else {
-                            CRef cr = ca.alloc(learnt_clause, true);
-                            learnts.push(cr);
-                            attachClause(cr);
-#if LBD_BASED_CLAUSE_DELETION
-                            Clause& clause = ca[cr];
-                            clause.activity() = lbd(clause);
-#else
-                            claBumpActivity(ca[cr]);
-#endif
+                        if(i==0)
+                        {
+		               int level;
+		               learnt_clause.clear();
+		               analyze(callbackLearntClauses[i], learnt_clause, level);
+		               if (level == -1) {
+		                   return l_False;
+		               } else if (level < backtrack_level) {
+		                   backtrack_level = level;
+		               }
+		               if (learnt_clause.size() == 1) {
+		                   units.push(learnt_clause[0]);
+		               } else {
+		                   CRef cr = ca.alloc(learnt_clause, true);
+		                   learnts.push(cr);
+		                   attachClause(cr);
+	#if LBD_BASED_CLAUSE_DELETION
+		                   Clause& clause = ca[cr];
+		                   clause.activity() = lbd(clause);
+	#else
+		                   claBumpActivity(ca[cr]);
+	#endif
+		               }
+                        } else
+                        {
+		                   CRef cr = ca.alloc(callbackLearntClauses[i], true);
+		                   learnts.push(cr);
+		                   attachClause(cr);
+	#if LBD_BASED_CLAUSE_DELETION
+		                   Clause& clause = ca[cr];
+		                   clause.activity() = lbd(clause);
+	#else
+		                   claBumpActivity(ca[cr]);
+	#endif
                         }
                     }
 
