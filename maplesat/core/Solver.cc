@@ -88,6 +88,7 @@ static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variab
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
 static BoolOption opt_transblock(_cat, "transblock", "Transitive blocking clauses", false);
 static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conflict to list of clauses", true);
+static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
 
 
 //=================================================================================================
@@ -771,14 +772,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		{
 			std::array<std::array<int, 8>, 36> matrix;
 			std::set<std::array<std::array<int, 8>, 36>> matrixset;
-			/*for(int i=0; i<36; i++)
+			for(int i=0; i<36; i++)
 				for(int j=0; j<8; j++)
 					matrix[i][j] = (assigns[111*(i+30)+(j+13)]==l_True?1:0);
-			matrixset.insert(matrix);*/
+			matrixset.insert(matrix);
 
 			for(int k=0; k<768; k++)
 			{
-				//if(k != identity_index)
+				if(k != identity_index)
 				{
 					for(int r=30; r<66; r++)
 					{	for(int c=13; c<21; c++)
@@ -839,9 +840,20 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							clause[max_index] = p;
 						}
 
-						CRef confl_clause = ca.alloc(clause, false);
-						attachClause(confl_clause);
-						clauses.push(confl_clause);
+						CRef cr = ca.alloc(clause, true);
+						attachClause(cr);
+
+						if(opt_addtolearnts)
+						{	learnts.push(cr);
+							#if LBD_BASED_CLAUSE_DELETION
+								Clause& clause = ca[cr];
+								clause.activity() = lbd(clause);
+							#else
+								claBumpActivity(ca[cr]);
+							#endif
+						} else
+						{	clauses.push(cr);
+						}
 					}
 
 					/*
