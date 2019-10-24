@@ -551,10 +551,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			long hash = hashgraph(canong, m, n, 19883109L);
 
-			//numsols++;
 			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
 
-			printf("%ld,", hash);
+			printf("{%ld, %d},\n", hash, numsols);
+			numsols++;
 
 			return;
 		}
