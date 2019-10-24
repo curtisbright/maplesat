@@ -764,7 +764,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 			}
-			fprintf(exhaustfile, "0\n");
+			fprintf(exhaustfile, "0 %.0f\n", stats.grpsize1+0.1);
 		}
 
 		if(opt_isoblock)
