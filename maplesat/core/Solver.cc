@@ -771,14 +771,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		{
 			std::array<std::array<int, 8>, 36> matrix;
 			std::set<std::array<std::array<int, 8>, 36>> matrixset;
-			for(int i=0; i<36; i++)
+			/*for(int i=0; i<36; i++)
 				for(int j=0; j<8; j++)
 					matrix[i][j] = (assigns[111*(i+30)+(j+13)]==l_True?1:0);
-			matrixset.insert(matrix);
+			matrixset.insert(matrix);*/
 
 			for(int k=0; k<768; k++)
 			{
-				if(k != identity_index)
+				//if(k != identity_index)
 				{
 					for(int r=30; r<66; r++)
 					{	for(int c=13; c<21; c++)
@@ -809,16 +809,15 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					//if(k == identity_index)
 					//	printf("error!\n");
 
-					//vec<Lit> clause;
-					const int len = out_learnts.size();
-					out_learnts.push();
+					vec<Lit> clause;
+					//const int len = out_learnts.size();
+					//out_learnts.push();
 
 					for(int i=0; i<36; i++)
 						for(int j=0; j<8; j++)
 							if(matrix[i][j]==1)
-								//clause.push(~mkLit((i+30)*111+(j+13)));
-								out_learnts[len].push(~mkLit((i+30)*111+(j+13)));
-					/*
+								clause.push(~mkLit((i+30)*111+(j+13)));
+								//out_learnts[len].push(~mkLit((i+30)*111+(j+13)));
 					{
 						{
 							int max_index = 0;
@@ -844,7 +843,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						attachClause(confl_clause);
 						clauses.push(confl_clause);
 					}
-					*/
 
 					/*
 					if(exhaustfile2 != NULL && opt_printtags)
@@ -1840,8 +1838,8 @@ lbool Solver::search(int nof_conflicts)
                             printf("clause %i not in conflict\n", i), exit(1);
                         else
                             printf("clause %i in conflict\n", i);*/
-                        if(i==0)
-                        {
+                        //if(i==0)
+                        //{
 		               int level;
 		               learnt_clause.clear();
 		               analyze(callbackLearntClauses[i], learnt_clause, level);
@@ -1863,7 +1861,7 @@ lbool Solver::search(int nof_conflicts)
 		                   claBumpActivity(ca[cr]);
 	#endif
 		               }
-                        } else
+                        /*} else
                         {
 		                   CRef cr = ca.alloc(callbackLearntClauses[i], true);
 		                   learnts.push(cr);
@@ -1874,7 +1872,7 @@ lbool Solver::search(int nof_conflicts)
 	#else
 		                   claBumpActivity(ca[cr]);
 	#endif
-                        }
+                        }*/
                     }
 
                     cancelUntil(backtrack_level);
