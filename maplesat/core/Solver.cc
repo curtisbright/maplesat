@@ -89,6 +89,7 @@ static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism c
 static BoolOption opt_transblock(_cat, "transblock", "Transitive blocking clauses", false);
 static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conflict to list of clauses", true);
 static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
+static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each graph", false);
 
 
 //=================================================================================================
@@ -497,6 +498,66 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		startinit = true;
 
+	}
+
+	if(opt_printhashes)
+	{
+		const int k = 0;
+		bool complete2 = true;
+
+		for(int r=21; r<66; r++)
+		{	for(int c=12+9*k; c<12+9*(k+1); c++)
+			{	const int index = 111*r+c;
+				if(assigns[index]==l_Undef)
+				{	complete2 = false;
+					break;
+				}
+			}
+			if(complete2==false)
+				break;
+		}
+
+		if(complete2)
+		{
+			/*for(int r=0; r<66; r++)
+			{	for(int c=0; c<21; c++)
+				{	const int index = 111*r+c;
+					if(assigns[index]==l_True)
+						printf("1");
+					else if(assigns[index]==l_False)
+						printf("0");
+					else
+						printf("?");
+				}
+				printf("\n");
+			}*/
+
+			memcpy(g, start, sizeof(g));
+
+			for(int c=12+9*k; c<12+9*(k+1); c++)
+			{	for(int r1=0; r1<66; r1++)
+				{	for(int r2=r1+1; r2<66; r2++)
+					{
+						const int index1 = 111*r1+c;
+						const int index2 = 111*r2+c;
+						if(assigns[index1]==l_True && assigns[index2]==l_True)
+						{	ADDONEEDGE(g,r1,r2,m);
+						}
+					}
+				}
+			}
+
+			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+
+			long hash = hashgraph(canong, m, n, 19883109L);
+
+			//numsols++;
+			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
+
+			printf("%ld,", hash);
+
+			return;
+		}
 	}
 
 	if(opt_transblock)
@@ -1824,6 +1885,8 @@ lbool Solver::search(int nof_conflicts)
                 // New variable decision:
                 decisions++;
                 next = pickBranchLit();
+
+                //printf("Branching on variable %d\n", var(next)+1);
 
                 callbackLearntClauses.clear();
                 callbackFunction(next == lit_Undef, callbackLearntClauses);
