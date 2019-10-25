@@ -74,6 +74,9 @@ static void SIGINT_exit(int signum) {
         printf("\n"); printf("*** INTERRUPTED ***\n"); }
     _exit(1); }
 
+int Solver::numclauses()
+{	return clauses.size();
+}
 
 //=================================================================================================
 // Main:
@@ -94,6 +97,7 @@ int main(int argc, char** argv)
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
+        IntOption    to_bound   ("MAIN", "to-bound",   "Bound to stop at", INT32_MAX, IntRange(0, INT32_MAX));
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
         StringOption assumout ("MAIN", "assumout", "Output results of each instance (using assumptions) to a file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
@@ -217,8 +221,10 @@ int main(int argc, char** argv)
                      for( int i = 0; i < dummy.size(); i++)
                        printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
                      printf("0\n");
-                     printf("Bound %d: ", bound);
                   }
+                  printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d\n", bound, S.numsols, S.blockset.size(), S.numclauses());
+                  if(bound > to_bound)
+                     break;
                   ret = S.solveLimited(dummy);
                   bound++;
                   if(S.verbosity > 0)

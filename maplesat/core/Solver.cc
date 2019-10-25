@@ -433,8 +433,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-#include <array>
-#include <set>
 
 long firsthash = 0;
 int casenumber = -1;
@@ -450,8 +448,7 @@ statsblk stats;
 #include <unordered_set>
 
 std::unordered_set<long> glist;
-std::set<std::array<int, 36>> blockset;
-std::set<std::array<int, 36>> blockset2;
+//std::set<std::array<int, 36>> blockset2;
 
 //#include <algorithm>
 //#include <utility>
@@ -565,7 +562,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	{
 		bool block_complete[11];
 
-		for(int k=0; k<4; k++)
+		for(int k=0; k<5; k++)
 		{	
 			if(k==0 && firsthash!=0)
 				continue;

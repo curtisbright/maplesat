@@ -18,6 +18,9 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include <set>
+#include <array>
+
 #ifndef Minisat_Solver_h
 #define Minisat_Solver_h
 
@@ -45,6 +48,7 @@ public:
 
     char unit_clauses[200000];
     bool addunits = false;
+    std::set<std::array<int, 36>> blockset;
 
     // Problem specification:
     //
@@ -173,6 +177,8 @@ public:
 
     vec<long double> total_actual_rewards;
     vec<int> total_actual_count;
+
+    int numclauses();
 
 protected:
 
