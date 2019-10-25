@@ -824,7 +824,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			fprintf(exhaustfile, "a ");
 
 			for(int i=0; i<assumptions.size(); i++)
-			{	out_learnts[size].push(~assumptions[i]);
+			{	//out_learnts[size].push(~assumptions[i]);
 				if(sign(assumptions[i]))
 				{	
 					//out_learnts[0].push(mkLit(var(assumptions[i])));
