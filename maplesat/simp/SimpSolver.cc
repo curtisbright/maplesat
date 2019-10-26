@@ -147,6 +147,12 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
     if (!Solver::addClause_(ps))
         return false;
 
+    if(!parsing && output != NULL) {
+      for (int i = 0; i < ps.size(); i++)
+        fprintf(output, "%i " , (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1) );
+      fprintf(output, "0\n");
+    }
+
     if (use_simplification && clauses.size() == nclauses + 1){
         CRef          cr = clauses.last();
         const Clause& c  = ca[cr];
@@ -197,10 +203,23 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     // if (!find(subsumption_queue, &c))
     subsumption_queue.insert(cr);
 
+    if (output != NULL) {
+      for (int i = 0; i < c.size(); i++)
+        if (c[i] != l) fprintf(output, "%i " , (var(c[i]) + 1) * (-2 * sign(c[i]) + 1) );
+      fprintf(output, "0\n");
+    }
+
     if (c.size() == 2){
         removeClause(cr);
         c.strengthen(l);
     }else{
+        if (output != NULL) {
+          fprintf(output, "d ");
+          for (int i = 0; i < c.size(); i++)
+            fprintf(output, "%i " , (var(c[i]) + 1) * (-2 * sign(c[i]) + 1) );
+          fprintf(output, "0\n");
+        }
+
         detachClause(cr, true);
         c.strengthen(l);
         attachClause(cr);
@@ -507,15 +526,15 @@ bool SimpSolver::eliminateVar(Var v)
         mkElimClause(elimclauses, ~mkLit(v));
     }
 
-    for (int i = 0; i < cls.size(); i++)
-        removeClause(cls[i]); 
-
     // Produce clauses in cross product:
     vec<Lit>& resolvent = add_tmp;
     for (int i = 0; i < pos.size(); i++)
         for (int j = 0; j < neg.size(); j++)
             if (merge(ca[pos[i]], ca[neg[j]], v, resolvent) && !addClause_(resolvent))
                 return false;
+
+    for (int i = 0; i < cls.size(); i++)
+        removeClause(cls[i]);
 
     // Free occurs list for this variable:
     occurs[v].clear(true);
@@ -550,10 +569,10 @@ bool SimpSolver::substitute(Var v, Lit x)
             subst_clause.push(var(p) == v ? x ^ sign(p) : p);
         }
 
-        removeClause(cls[i]);
-
         if (!addClause_(subst_clause))
             return ok = false;
+
+        removeClause(cls[i]);
     }
 
     return true;
