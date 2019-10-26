@@ -529,9 +529,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					matrix[i][j] = (assigns[111*(i+21)+j]==l_True?1:0);
 			matrixset.insert(matrix);
 
-			for(int k=0; k<192; k++)
+			for(int k=0; k<48; k++)
 			{
-				if(row[k]==1 && k!=identity_index)
+				if(k!=identity_index)
 				{
 
 					for(int r=21; r<27; r++)
