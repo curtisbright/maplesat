@@ -1720,6 +1720,11 @@ lbool Solver::search(int nof_conflicts)
                         int level;
                         learnt_clause.clear();
                         analyze(callbackLearntClauses[i], learnt_clause, level);
+
+                        for (int i = 0; i < learnt_clause.size(); i++)
+                            fprintf(output, "%i ", (var(learnt_clause[i]) + 1) * (-2 * sign(learnt_clause[i]) + 1));
+                        fprintf(output, "0\n");
+
                         if (level == -1) {
                             return l_False;
                         } else if (level < backtrack_level) {
