@@ -491,14 +491,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 		}
-
-		for(int i=0; i<out_learnts[0].size(); i++)
-		{	if(exhaustfile2!=NULL)
-				fprintf(exhaustfile2, "%s%d ", sign(out_learnts[0][i]) ? "-" : "", var(out_learnts[0][i])+1);
-		}
-		if(exhaustfile2!=NULL)
-			fprintf(exhaustfile2, "0\n");
-
 		if(!opt_printtags)
 			fprintf(exhaustfile, "0\n");
 		else
