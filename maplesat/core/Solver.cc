@@ -675,23 +675,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						const int index = 111*r+c;
 						if(assigns[index]==l_True)
 						{	out_learnts[size].push(~mkLit(index));
-							if(exhaustfile2 != NULL)
-								fprintf(exhaustfile2, "-%d ", index+1);
-							//printf("1");
 						}
-						//else if(assigns[index]==l_False)
-						//	printf("0");
-						//else if(assigns[index]==l_Undef)
-						//	printf("?");
 					}
-					//printf("\n");
 				}
 
-				if(exhaustfile2 != NULL)
-					fprintf(exhaustfile2, "0\n");
-
-				//printclause(out_learnts[size]);
-				//return;
+				fprintclause(exhaustfile2, out_learnts[size]);
 
 			}
 			else
