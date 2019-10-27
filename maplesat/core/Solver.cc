@@ -38,6 +38,15 @@ using namespace Minisat;
 
 void printclause(vec<Lit>& cl);
 
+void fprintclause(FILE* f, vec<Lit>& cl)
+{ if(f==NULL)
+    return;
+  for(int i=0; i<cl.size(); i++)
+  { fprintf(f, "%s%d ", sign(cl[i]) ? "-" : "", var(cl[i])+1);
+  }
+  fprintf(f, "0\n");
+}
+
 /*#include <set>
 #include <vector>
 std::set<std::vector<int>> transset;*/
@@ -1926,7 +1935,9 @@ lbool Solver::search(int nof_conflicts)
                     analyzeFinal(~p, conflict);
                     cancelUntil(0);
                     if(opt_addfinalconflict)
-                       addClause_(conflict);
+                    {   addClause_(conflict);
+                        fprintclause(output, conflict);
+                    }
                     nbclausesbeforereduce = firstReduceDB;
                     return l_False;
                 }else{
@@ -1972,6 +1983,7 @@ lbool Solver::search(int nof_conflicts)
 		               int level;
 		               learnt_clause.clear();
 		               analyze(callbackLearntClauses[i], learnt_clause, level);
+		               fprintclause(output, learnt_clause);
 		               if (level == -1) {
 		                   return l_False;
 		               } else if (level < backtrack_level) {
