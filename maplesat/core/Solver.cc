@@ -47,6 +47,17 @@ void fprintclause(FILE* f, vec<Lit>& cl)
   fprintf(f, "0\n");
 }
 
+bool equalclause(vec<Lit>& x, vec<Lit>& y)
+{ if(x.size()!=y.size())
+    return false;
+  int const size = x.size();
+  for(int i=0; i<size; i++)
+  {  if(x[i]!=y[i])
+       return false;
+  }
+  return true;
+}
+
 /*#include <set>
 #include <vector>
 std::set<std::vector<int>> transset;*/
@@ -1921,11 +1932,13 @@ lbool Solver::search(int nof_conflicts)
                     newDecisionLevel();
                 }else if (value(p) == l_False){
                     analyzeFinal(~p, conflict);
+                    sort(conflict);
                     cancelUntil(0);
-                    if(opt_addfinalconflict)
+                    if(opt_addfinalconflict && !equalclause(conflict, lastconflict))
                     {   addClause_(conflict);
                         fprintclause(output, conflict);
                     }
+                    conflict.copyTo(lastconflict);
                     nbclausesbeforereduce = firstReduceDB;
                     return l_False;
                 }else{
