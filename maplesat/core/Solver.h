@@ -164,6 +164,7 @@ public:
     const char* exhauststring;
     const char* exhauststring2;
     const char* transstring;
+    const char* savestring;
     vec<uint64_t> lbd_seen;
     vec<uint64_t> picked;
     vec<uint64_t> conflicted;

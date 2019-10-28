@@ -32,6 +32,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 FILE* exhaustfile = NULL;
 FILE* exhaustfile2 = NULL;
+FILE* savefile = NULL;
 //FILE* transfile = NULL;
 
 using namespace Minisat;
@@ -110,6 +111,7 @@ static BoolOption opt_transblock(_cat, "transblock", "Transitive blocking clause
 static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conflict to list of clauses", true);
 static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
 static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each graph", false);
+static StringOption opt_savefile(_cat, "savefile", "File to save clauses in order to resume search later");
 
 
 //=================================================================================================
@@ -166,6 +168,7 @@ Solver::Solver() :
 
   , exhauststring (opt_exhaustive)
   , exhauststring2 (opt_exhaustive2)
+  , savestring (opt_savefile)
   //, transstring (opt_transfile)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
@@ -193,6 +196,9 @@ Solver::Solver() :
     }
     if(exhauststring2 != NULL)
     {   exhaustfile2 = fopen(exhauststring2, "a");
+    }
+    if(savestring != NULL)
+    {   savefile = fopen(savestring, "a");
     }
     /*if(transstring != NULL && opt_transblock)
     {   transfile = fopen(transstring, "a");
@@ -224,6 +230,9 @@ Solver::~Solver()
     }
     if(exhauststring2 != NULL)
     {   fclose(exhaustfile2);
+    }
+    if(savefile != NULL)
+    {   fclose(savefile);
     }
     /*if(transfile != NULL)
     {   fclose(transfile);
@@ -1880,6 +1889,10 @@ lbool Solver::search(int nof_conflicts)
                                   (-2 * sign(learnt_clause[i]) + 1) );
               fprintf(output, "0\n");
             }
+            if(savefile != NULL && learnt_clause.size()==1)
+            {  fprintf(savefile, "%d 0\n", var(learnt_clause[0])+1);
+               fflush(savefile);
+            }
 
 #if BRANCHING_HEURISTIC == VSIDS
             varDecayActivity();
@@ -1937,6 +1950,9 @@ lbool Solver::search(int nof_conflicts)
                     if(opt_addfinalconflict && !equalclause(conflict, lastconflict))
                     {   addClause_(conflict);
                         fprintclause(output, conflict);
+                        fprintclause(savefile, conflict);
+                        fflush(output);
+                        fflush(savefile);
                     }
                     conflict.copyTo(lastconflict);
                     nbclausesbeforereduce = firstReduceDB;

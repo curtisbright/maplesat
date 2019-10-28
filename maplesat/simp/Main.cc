@@ -152,7 +152,7 @@ int main(int argc, char** argv)
             printf("============================[ Problem Statistics ]=============================\n");
             printf("|                                                                             |\n"); }
         
-        S.output = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+        S.output = (argc >= 3) ? fopen(argv[2], "a") : NULL;
         parse_DIMACS(in, S);
         if(lex)
             S.addLexClauses();
@@ -225,7 +225,7 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % 5000 == 0)
-                    printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec\n", bound, S.numsols, S.blockset.size(), S.numclauses(), cpuTime());
+                    printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec\n", bound, numsat, S.blockset.size(), S.numclauses(), cpuTime());
                   if(bound > to_bound)
                      break;
                   ret = S.solveLimited(dummy);
@@ -279,8 +279,8 @@ int main(int argc, char** argv)
                 fprintf(S.output, " 0\n");
             }else if (ret == l_False)
                 fprintf(S.output, "0\n");
-            else
-                fprintf(S.output, "INDET\n");
+            //else
+            //    fprintf(S.output, "INDET\n");
             fclose(S.output);
         }
 
