@@ -98,6 +98,7 @@ int main(int argc, char** argv)
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         IntOption    to_bound   ("MAIN", "to-bound",   "Bound to stop at", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption    from_bound ("MAIN", "from-bound",   "Bound to start at", 0, IntRange(0, INT32_MAX));
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
         StringOption assumout ("MAIN", "assumout", "Output results of each instance (using assumptions) to a file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
@@ -228,6 +229,12 @@ int main(int argc, char** argv)
                     printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec\n", bound, numsat, S.blockset.size(), S.numclauses(), cpuTime());
                   if(bound > to_bound)
                      break;
+                  if(bound < from_bound)
+                  {  bound++;
+                     dummy.clear();
+                     tmp = fscanf(assertion_file, "a ");
+                     continue;
+                  }
                   ret = S.solveLimited(dummy);
                   bound++;
                   if(S.verbosity > 0)
