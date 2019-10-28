@@ -224,7 +224,8 @@ int main(int argc, char** argv)
                        printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
                      printf("0\n");
                   }
-                  printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d\n", bound, S.numsols, S.blockset.size(), S.numclauses());
+                  if(bound % 5000 == 0)
+                    printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d\n", bound, S.numsols, S.blockset.size(), S.numclauses());
                   if(bound > to_bound)
                      break;
                   ret = S.solveLimited(dummy);
