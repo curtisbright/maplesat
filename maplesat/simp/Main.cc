@@ -225,7 +225,7 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % 5000 == 0)
-                    printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d\n", bound, S.numsols, S.blockset.size(), S.numclauses());
+                    printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec\n", bound, S.numsols, S.blockset.size(), S.numclauses(), cpuTime());
                   if(bound > to_bound)
                      break;
                   ret = S.solveLimited(dummy);
