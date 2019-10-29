@@ -81,6 +81,18 @@ int Solver::numclauses()
 //=================================================================================================
 // Main:
 
+int numlines(const char* str)
+{	FILE* fp = fopen(str, "r");
+	if(!fp)
+		printf("Could not read file %s\n"), exit(1);
+	int count = 0;
+	for (char c = getc(fp); c != EOF; c = getc(fp))
+		if (c == '\n') // Increment count if this character is newline
+			count++;
+	fclose(fp);
+	return count;
+}
+
 int main(int argc, char** argv)
 {
     try {
@@ -210,6 +222,7 @@ int main(int argc, char** argv)
         if (assumptions) {
             print_numsols = true;
             const char* file_name = assumptions;
+            int numassums = numlines(assumptions);
             FILE* assertion_file = fopen (file_name, "r");
             if (assertion_file == NULL)
                 printf("ERROR! Could not open file: %s\n", file_name), exit(1);
@@ -226,7 +239,7 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % 5000 == 0)
-                    printf("Bound %d... Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec\n", bound, numsat, S.blockset.size(), S.numclauses(), cpuTime());
+                    printf("Bound %d/%d (%.2f%%) Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec Est: %.2f hrs\n", bound, numassums, 100*bound/(double)numassums, numsat, S.blockset.size(), S.numclauses(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600);
                   if(bound > to_bound)
                      break;
                   if(bound < from_bound)
