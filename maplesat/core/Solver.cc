@@ -604,7 +604,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 
 			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-
 			long hash = hashgraph(canong, m, n, 19883109L);
 
 			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
@@ -648,7 +647,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			if(block_complete[k]==false)
 				continue;
 
-			if(blockset.find(blockelement) == blockset.end())
+			clock_t startt, end;
+			startt = clock();
+			auto it = blockset.find(blockelement);
+			end = clock();
+			lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
+
+			if(it == blockset.end())
 			{	//blockset.insert(blockelement);
 				//blockset2.insert(blockelement);
 			}
@@ -670,9 +675,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 
+			startt = clock();
 			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-
 			long hash = hashgraph(canong, m, n, 19883109L);
+			end = clock();
+			nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
 			if(k==0)
 			{	firsthash = hash;
@@ -704,7 +711,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 			else
 			{	//printf("Not blocking instance of block %d with tag %d, not smaller than case %d\n", k, hashes[hash], casenumber);
+				clock_t start, end;
+				start = clock();
 				blockset.insert(blockelement);
+				end = clock();
+				lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
 			}
 
 			/*

@@ -116,6 +116,7 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         BoolOption   lex    ("MAIN", "lex",    "Use lexicographic constraints.", false);
+        BoolOption   clearset    ("MAIN", "clearset",    "Clear blockset after each bound.", false);
 
         parseOptions(argc, argv, true);
         
@@ -238,8 +239,8 @@ int main(int argc, char** argv)
                        printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
                      printf("0\n");
                   }
-                  if(bound % 5000 == 0)
-                    printf("Bound %d/%d (%.2f%%) Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec Est: %.2f hrs\n", bound, numassums, 100*bound/(double)numassums, numsat, S.blockset.size(), S.numclauses(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600);
+                  if(bound % 1000 == 0)
+                    printf("Bound %d/%d (%.2f%%) Solutions: %d Blockset: %d Clauses: %d Time: %.2f sec Est: %.2f hrs Nauty: %.2f s Lookup: %.2f s\n", bound, numassums, 100*bound/(double)numassums, numsat, S.blockset.size(), S.numclauses(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, S.lookuptime);
                   if(bound > to_bound)
                      break;
                   if(bound < from_bound)
@@ -266,6 +267,8 @@ int main(int argc, char** argv)
                      }*/
                   }
                   if(ret == l_Undef) break;
+                  if(clearset)
+                     S.blockset.clear();
                 }
                 else
                 {
