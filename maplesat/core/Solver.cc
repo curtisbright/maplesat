@@ -498,8 +498,9 @@ long firsthash = 0;
 int casenumber = -1;
 
 bool startinit = false;
-graph start[MAXN*MAXM];
-graph g[MAXN*MAXM];
+sparsegraph start;
+//graph start[MAXN*MAXM];
+//graph g[MAXN*MAXM];
 //graph canong[MAXN*MAXM];
 int lab[MAXN],ptn[MAXN],orbits[MAXN];
 //DEFAULTOPTIONS_GRAPH(options);
@@ -537,41 +538,67 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 	if(!startinit)
 	{
-		/*options.writeautoms = FALSE;
-		options.defaultptn = TRUE;
-		options.writemarkers = FALSE;
-		options.getcanon = TRUE;
-		options.outfile=NULL;
-
-		options_sg.writeautoms = FALSE;
-		options_sg.defaultptn = TRUE;
-		options_sg.writemarkers = FALSE;
-		options_sg.getcanon = TRUE;
-		options_sg.outfile=NULL;*/
-
 		options_traces.writeautoms = FALSE;
 		options_traces.defaultptn = TRUE;
 		options_traces.writeautoms = FALSE;
 		options_traces.getcanon = TRUE;
 		options_traces.outfile=NULL;
 
-		EMPTYGRAPH(start,m,n);
+		SG_INIT(start);
+		//SG_ALLOC(start,87,2*186,"malloc");
+
+		start.nde = 0;
+		start.v = (size_t*)malloc(87*sizeof(size_t));
+		start.d = (int*)malloc(87*sizeof(int));
+		start.e = (int*)malloc(87*11*sizeof(int));
+		start.nv = 87;
+		start.vlen = 87;
+		start.dlen = 87;
+		start.elen = 87*11;
+
+		for(int i=0; i<87; i++)
+			start.v[i] = 11*i;
 
 		for(int c=0; c<12; c++)
-		{	for(int r1=0; r1<66; r1++)
-			{	//for(int r2=r1+1; r2<66; r2++)
+		{	
+			start.d[66+c] = 0;
+			for(int r=0; r<66; r++)
+			{
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
 				{
-					const int index1 = 111*r1+c;
-					//const int index2 = 111*r2+c;
-					if(assigns[index1]==l_True /*&& assigns[index2]==l_True*/)
-					{	//ADDONEEDGE(start,r1,r2,m);
-						ADDONEEDGE(start,r1,66+c,m);
-					}
+					start.e[11*(66+c)+start.d[66+c]] = r;
+					start.d[66+c]++;
+					start.nde++;
 				}
 			}
 		}
 
+		for(int r=0; r<66; r++)
+		{	
+			start.d[r] = 0;
+			for(int c=0; c<12; c++)
+			{
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
+				{
+					start.e[11*r+start.d[r]] = 66+c;
+					start.d[r]++;
+					start.nde++;
+				}
+			}
+		}
+
+		for(int c=0; c<9; c++)
+			start.d[66+12+c] = 0;
+
 		startinit = true;
+
+		/*put_sg(stdout, &start, true, 80);
+		printf("start.vlen %d\n", start.vlen);
+		printf("start.dlen %d\n", start.dlen);
+		printf("start.elen %d\n", start.elen);
+		printf("---\n");*/
 
 	}
 
@@ -607,7 +634,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				printf("\n");
 			}*/
 
-			memcpy(g, start, sizeof(g));
+			/*memcpy(g, start, sizeof(g));
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	for(int r1=0; r1<66; r1++)
@@ -615,13 +642,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					{
 						const int index1 = 111*r1+c;
 						//const int index2 = 111*r2+c;
-						if(assigns[index1]==l_True /*&& assigns[index2]==l_True*/)
+						if(assigns[index1]==l_True && assigns[index2]==l_True)
 						{	//ADDONEEDGE(g,r1,r2,m);
 							ADDONEEDGE(g,r1,66+c-9*k,m);
 						}
 					}
 				}
-			}
+			}*/
 
 			//sparsegraph canong;
 			//SG_INIT(canong);
@@ -686,45 +713,87 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			else
 				continue;
 
-			memcpy(g, start, sizeof(g));
+			//memcpy(g, start, sizeof(g));
+			sparsegraph* sg = copy_sg(&start, NULL);
+			sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
+			sg->elen = 87*11;
+
+			/*
+			sparsegraph g;
+			SG_INIT(g);
+			g.v = (size_t*)malloc(87*sizeof(size_t));
+			g.d = (int*)malloc(87*sizeof(int));
+			g.e = (int*)malloc(87*11*sizeof(int));
+			g.nv = 87;
+			g.vlen = 87;
+			g.dlen = 87;
+			g.elen = 87*11;
+			g.nde = start.nde;
+			memcpy(g.v, start.v, 87*sizeof(size_t));
+			memcpy(g.d, start.d, 87*sizeof(int));
+			memcpy(g.e, start.e, 87*11*sizeof(int));
+			sparsegraph* const sg = &g;*/
+
+			/*put_sg(stdout, sg, true, 80);
+			printf("sg.vlen %d\n", sg->vlen);
+			printf("sg.dlen %d\n", sg->dlen);
+			printf("start.elen %d\n", start.elen);
+			printf("sg.elen %d\n", sg->elen);
+			printf("---\n");*/
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
-			{	for(int r1=0; r1<66; r1++)
-				{	//for(int r2=r1+1; r2<66; r2++)
+			{	
+				for(int r=0; r<66; r++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
 					{
-						const int index1 = 111*r1+c;
-						//const int index2 = 111*r2+c;
-						if(assigns[index1]==l_True /*&& assigns[index2]==l_True*/)
-						{	//ADDONEEDGE(g,r1,r2,m);
-							ADDONEEDGE(g,r1,66+c-9*k,m);
-						}
+						sg->e[11*(66+c-9*k)+sg->d[66+c-9*k]] = r;
+						sg->d[66+c-9*k]++;
+						sg->nde++;
 					}
 				}
 			}
+
+			for(int r=0; r<66; r++)
+			{	
+				for(int c=12+9*k; c<12+9*(k+1); c++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						sg->e[11*r+sg->d[r]] = 66+c-9*k;
+						sg->d[r]++;
+						sg->nde++;
+					}
+				}
+			}
+
+			/*put_sg(stdout, sg, true, 80);
+			printf("sg.vlen %d\n", sg->vlen);
+			printf("sg.dlen %d\n", sg->dlen);
+			printf("sg.elen %d\n", sg->elen);
+			printf("---\n");*/
 
 			//sparse
 
 			sparsegraph canong;
 			SG_INIT(canong);
 
-			sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
+			//sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
 
 			startt = clock();
 			//sparsenauty(sg,lab,ptn,orbits,&options_sg,&stats,&canong);
 			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+
+			/*printf("??\n");
+			put_sg(stdout, &canong, true, 80);*/
+
 			long hash = hashgraph_sg(&canong, 19883109L);
 
 			/*put_sg(stdout, sg, true, 80);
 			put_sg(stdout, &canong, true, 80);
 			exit(1);*/
-
-			// dense
-
-			/*graph canong[MAXN*MAXM];
-
-			startt = clock();
-			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-			long hash = hashgraph(canong, m, n, 19883109L);*/
 
 			end = clock();
 			nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
@@ -901,7 +970,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		clauses.push(confl_clause);
 		*/
 
-		memcpy(g, start, sizeof(g));
+		/*memcpy(g, start, sizeof(g));
 
 		for(int c=12; c<opt_colmax; c++)
 		{	for(int r1=0; r1<66; r1++)
@@ -916,7 +985,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 
-		/*densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+		densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
 
 		long hash = hashgraph(canong, m, n, 19883109L);
 
