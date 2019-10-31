@@ -634,35 +634,47 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				printf("\n");
 			}*/
 
-			/*memcpy(g, start, sizeof(g));
+			sparsegraph* sg = copy_sg(&start, NULL);
+			sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
+			sg->elen = 87*11;
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
-			{	for(int r1=0; r1<66; r1++)
-				{	//for(int r2=r1+1; r2<66; r2++)
+			{	
+				for(int r=0; r<66; r++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
 					{
-						const int index1 = 111*r1+c;
-						//const int index2 = 111*r2+c;
-						if(assigns[index1]==l_True && assigns[index2]==l_True)
-						{	//ADDONEEDGE(g,r1,r2,m);
-							ADDONEEDGE(g,r1,66+c-9*k,m);
-						}
+						sg->e[11*(66+c-9*k)+sg->d[66+c-9*k]] = r;
+						sg->d[66+c-9*k]++;
+						sg->nde++;
 					}
 				}
-			}*/
+			}
 
-			//sparsegraph canong;
-			//SG_INIT(canong);
+			for(int r=0; r<66; r++)
+			{	
+				for(int c=12+9*k; c<12+9*(k+1); c++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						sg->e[11*r+sg->d[r]] = 66+c-9*k;
+						sg->d[r]++;
+						sg->nde++;
+					}
+				}
+			}
 
-			//sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
-			//DEFAULTOPTIONS_SPARSEGRAPH(options_sg);
-
-			//sparsenauty(sg,lab,ptn,orbits,&options_sg,&stats,NULL);
-			//long hash = hashgraph(canong, m, n, 19883109L);
+			sparsegraph canong;
+			SG_INIT(canong);
+			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+			long hash = hashgraph_sg(&canong, 19883109L);
 
 			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
 
-			//printf("{%ld, %d},\n", hash, numsols);
-			//numsols++;
+			printf("{%ld, %d},\n", hash, numsols);
+			numsols++;
 
 			return;
 		}
@@ -712,6 +724,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 			else
 				continue;
+
+			startt = clock();
 
 			//memcpy(g, start, sizeof(g));
 			sparsegraph* sg = copy_sg(&start, NULL);
@@ -782,7 +796,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			//sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
 
-			startt = clock();
 			//sparsenauty(sg,lab,ptn,orbits,&options_sg,&stats,&canong);
 			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
 
@@ -800,15 +813,15 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			if(k==0)
 			{	firsthash = hash;
-				//if(hashes.find(hash)==hashes.end())
-				//	printf("Error: Can't find hash %ld\n", hash), exit(1);
+				if(hashes.find(hash)==hashes.end())
+					printf("Error: Can't find hash %ld\n", hash), exit(1);
 				//else
 				//	printf("Found hash %ld (case %d)\n", hash, hashes.find(hash)->second);
-				//casenumber = hashes.find(hash)->second;
+				casenumber = hashes.find(hash)->second;
 			}
 
-			//if(hashes[hash] < casenumber)
-			if(hash != firsthash)
+			if(hashes[hash] < casenumber)
+			//if(hash != firsthash)
 			{
 				//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, hashes[hash], hash, casenumber);
 				const int size = out_learnts.size();
