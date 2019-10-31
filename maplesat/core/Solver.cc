@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "automorphisms.h"
 
-#define MAXN 87
+#define MAXN 66
 
 //#include "nauty.h"
 #include "naututil.h"
@@ -496,20 +496,11 @@ long firsthash = 0;
 int casenumber = -1;
 
 bool startinit = false;
-
-//graph start[MAXN*MAXM];
-//graph g[MAXN*MAXM];
-//graph canong[MAXN*MAXM];
-sparsegraph start;
-sparsegraph g;
-sparsegraph canong;
-
-//int lab[MAXN],ptn[MAXN],orbits[MAXN];
-DYNALLSTAT(int,lab,lab_sz);
-DYNALLSTAT(int,ptn,ptn_sz);
-DYNALLSTAT(int,orbits,orbits_sz);
-
-DEFAULTOPTIONS_SPARSEGRAPH(options);
+graph start[MAXN*MAXM];
+graph g[MAXN*MAXM];
+graph canong[MAXN*MAXM];
+int lab[MAXN],ptn[MAXN],orbits[MAXN];
+DEFAULTOPTIONS_GRAPH(options);
 statsblk stats;
 
 #include <unordered_set>
@@ -543,68 +534,30 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		options.writeautoms = FALSE;
 		options.defaultptn = TRUE;
 		options.writemarkers = FALSE;
-		options.getcanon = FALSE;
+		options.getcanon = TRUE;
 		options.outfile=NULL;
 
-		SG_INIT(start);
-		SG_INIT(g);
-		SG_INIT(canong);
-
-		SG_ALLOC(start,87,2*186,"malloc");
-		SG_ALLOC(g,87,2*186,"malloc");
-		SG_ALLOC(canong,87,2*186,"malloc");
-
-		DYNALLOC1(int,lab,lab_sz,n,"malloc");
-		DYNALLOC1(int,ptn,ptn_sz,n,"malloc");
-		DYNALLOC1(int,orbits,orbits_sz,n,"malloc");
-
-		start.v = (size_t*)malloc(87*sizeof(size_t));
-		start.d = (int*)malloc(87*sizeof(int));
-		start.e = (int*)malloc(87*11*sizeof(int));
-		start.nv = 87;
-
-		for(int i=0; i<87; i++)
-			start.v[i] = 11*i;
+		EMPTYGRAPH(start,m,n);
 
 		for(int c=0; c<12; c++)
-		{	
-			start.d[66+c] = 0;
-			for(int r=0; r<66; r++)
-			{
-				const int index = 111*r+c;
-				if(assigns[index]==l_True)
+		{	for(int r1=0; r1<66; r1++)
+			{	for(int r2=r1+1; r2<66; r2++)
 				{
-					start.e[11*(66+c)+start.d[66+c]] = r;
-					start.d[66+c]++;
-					start.nde++;
+					const int index1 = 111*r1+c;
+					const int index2 = 111*r2+c;
+					if(assigns[index1]==l_True && assigns[index2]==l_True)
+					{	ADDONEEDGE(start,r1,r2,m);
+					}
 				}
 			}
 		}
-
-		for(int r=0; r<66; r++)
-		{	
-			start.d[r] = 0;
-			for(int c=0; c<12; c++)
-			{
-				const int index = 111*r+c;
-				if(assigns[index]==l_True)
-				{
-					start.e[11*r+start.d[r]] = 66+c;
-					start.d[r]++;
-					start.nde++;
-				}
-			}
-		}
-
-		for(int c=0; c<9; c++)
-			start.d[66+12+c] = 0;
 
 		startinit = true;
 
 	}
 
 	if(opt_printhashes)
-	{	/*
+	{
 		const int k = 0;
 		bool complete2 = true;
 
@@ -622,7 +575,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		if(complete2)
 		{
-			for(int r=0; r<66; r++)
+			/*for(int r=0; r<66; r++)
 			{	for(int c=0; c<21; c++)
 				{	const int index = 111*r+c;
 					if(assigns[index]==l_True)
@@ -633,19 +586,18 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						printf("?");
 				}
 				printf("\n");
-			}
+			}*/
 
 			memcpy(g, start, sizeof(g));
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	for(int r1=0; r1<66; r1++)
-				{	//for(int r2=r1+1; r2<66; r2++)
+				{	for(int r2=r1+1; r2<66; r2++)
 					{
 						const int index1 = 111*r1+c;
-						//const int index2 = 111*r2+c;
+						const int index2 = 111*r2+c;
 						if(assigns[index1]==l_True && assigns[index2]==l_True)
-						{	//ADDONEEDGE(g,r1,r2,m);
-							ADDONEEDGE(g,r1,66+c-9*k,m);
+						{	ADDONEEDGE(g,r1,r2,m);
 						}
 					}
 				}
@@ -661,7 +613,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			return;
 		}
-		*/
 	}
 
 	if(opt_transblock)
@@ -709,54 +660,39 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			else
 				continue;
 
-			//memcpy(g, start, sizeof(g));
-			copy_sg(&start, &g);
+			memcpy(g, start, sizeof(g));
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
-			{	for(int r=0; r<66; r++)
-				{	
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
+			{	for(int r1=0; r1<66; r1++)
+				{	for(int r2=r1+1; r2<66; r2++)
 					{
-						g.e[11*(66+c-9*k)+g.d[66+c-9*k]] = r;
-						g.d[66+c-9*k]++;
-						g.nde++;
-					}
-				}
-			}
-
-			for(int r=0; r<66; r++)
-			{	for(int c=12+9*k; c<12+9*(k+1); c++)
-				{	
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						g.e[11*r+g.d[r]] = 66+c-9*k;
-						g.d[r]++;
-						g.nde++;
+						const int index1 = 111*r1+c;
+						const int index2 = 111*r2+c;
+						if(assigns[index1]==l_True && assigns[index2]==l_True)
+						{	ADDONEEDGE(g,r1,r2,m);
+						}
 					}
 				}
 			}
 
 			startt = clock();
-			sparsenauty(&g,lab,ptn,orbits,&options,&stats,NULL);
-			long hash = hashgraph_sg(&canong, 19883109L);
+			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+			long hash = hashgraph(canong, m, n, 19883109L);
 			end = clock();
 			nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
 			if(k==0)
 			{	firsthash = hash;
 				//if(hashes.find(hash)==hashes.end())
-				//	printf("Error: Can't find hash %ld\n", hash), exit(1);
+				//	printf("Can't find hash %ld\n", hash);
 				//else
-				//	printf("Found hash %ld (case %d)\n", hash, hashes.find(hash)->second);
-				//casenumber = hashes.find(hash)->second;
+				//	printf("Found hash %ld\n", hash);
+				casenumber = hashes.find(hash)->second;
 			}
 
-			//if(hashes[hash] < casenumber)
-			if(hashes[hash] != firsthash)
+			if(hashes[hash] < casenumber)
 			{
-				//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, hashes[hash], hash, casenumber);
+				//printf("Blocking instance of block %d with tag %d, smaller than case %d\n", k, hashes[hash], casenumber);
 				const int size = out_learnts.size();
 				out_learnts.push();
 				
@@ -775,7 +711,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			}
 			else
-			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, hashes[hash], casenumber);
+			{	//printf("Not blocking instance of block %d with tag %d, not smaller than case %d\n", k, hashes[hash], casenumber);
 				clock_t start, end;
 				start = clock();
 				blockset.insert(blockelement);
@@ -916,7 +852,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		clauses.push(confl_clause);
 		*/
 
-		/*
 		memcpy(g, start, sizeof(g));
 
 		for(int c=12; c<opt_colmax; c++)
@@ -970,7 +905,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 			fprintf(exhaustfile, "0 %.0f\n", stats.grpsize1+0.1);
 		}
-		*/
 
 		if(opt_isoblock)
 		{
