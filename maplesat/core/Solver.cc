@@ -22,6 +22,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #define MAXN 87
 
+extern "C" {
+#include "traces.h"
+}
 //#include "nauty.h"
 #include "naututil.h"
 
@@ -491,17 +494,20 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-
 long firsthash = 0;
 int casenumber = -1;
 
 bool startinit = false;
 graph start[MAXN*MAXM];
 graph g[MAXN*MAXM];
-graph canong[MAXN*MAXM];
+//graph canong[MAXN*MAXM];
 int lab[MAXN],ptn[MAXN],orbits[MAXN];
-DEFAULTOPTIONS_GRAPH(options);
-statsblk stats;
+//DEFAULTOPTIONS_GRAPH(options);
+//DEFAULTOPTIONS_SPARSEGRAPH(options_sg);
+//statsblk stats;
+
+DEFAULTOPTIONS_TRACES(options_traces);
+TracesStats stats_traces;
 
 #include <unordered_set>
 
@@ -531,11 +537,23 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 	if(!startinit)
 	{
-		options.writeautoms = FALSE;
+		/*options.writeautoms = FALSE;
 		options.defaultptn = TRUE;
 		options.writemarkers = FALSE;
 		options.getcanon = TRUE;
 		options.outfile=NULL;
+
+		options_sg.writeautoms = FALSE;
+		options_sg.defaultptn = TRUE;
+		options_sg.writemarkers = FALSE;
+		options_sg.getcanon = TRUE;
+		options_sg.outfile=NULL;*/
+
+		options_traces.writeautoms = FALSE;
+		options_traces.defaultptn = TRUE;
+		options_traces.writeautoms = FALSE;
+		options_traces.getcanon = TRUE;
+		options_traces.outfile=NULL;
 
 		EMPTYGRAPH(start,m,n);
 
@@ -605,13 +623,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 
-			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-			long hash = hashgraph(canong, m, n, 19883109L);
+			//sparsegraph canong;
+			//SG_INIT(canong);
+
+			//sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
+			//DEFAULTOPTIONS_SPARSEGRAPH(options_sg);
+
+			//sparsenauty(sg,lab,ptn,orbits,&options_sg,&stats,NULL);
+			//long hash = hashgraph(canong, m, n, 19883109L);
 
 			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
 
-			printf("{%ld, %d},\n", hash, numsols);
-			numsols++;
+			//printf("{%ld, %d},\n", hash, numsols);
+			//numsols++;
 
 			return;
 		}
@@ -678,23 +702,44 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 
+			//sparse
+
+			sparsegraph canong;
+			SG_INIT(canong);
+
+			sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
+
+			startt = clock();
+			//sparsenauty(sg,lab,ptn,orbits,&options_sg,&stats,&canong);
+			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+			long hash = hashgraph_sg(&canong, 19883109L);
+
+			/*put_sg(stdout, sg, true, 80);
+			put_sg(stdout, &canong, true, 80);
+			exit(1);*/
+
+			// dense
+
+			/*graph canong[MAXN*MAXM];
+
 			startt = clock();
 			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-			long hash = hashgraph(canong, m, n, 19883109L);
+			long hash = hashgraph(canong, m, n, 19883109L);*/
+
 			end = clock();
 			nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
 			if(k==0)
 			{	firsthash = hash;
-				if(hashes.find(hash)==hashes.end())
-					printf("Error: Can't find hash %ld\n", hash), exit(1);
+				//if(hashes.find(hash)==hashes.end())
+				//	printf("Error: Can't find hash %ld\n", hash), exit(1);
 				//else
 				//	printf("Found hash %ld (case %d)\n", hash, hashes.find(hash)->second);
-				casenumber = hashes.find(hash)->second;
+				//casenumber = hashes.find(hash)->second;
 			}
 
-			if(hashes[hash] < casenumber)
-			//if(hashes[hash] != firsthash)
+			//if(hashes[hash] < casenumber)
+			if(hash != firsthash)
 			{
 				//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, hashes[hash], hash, casenumber);
 				const int size = out_learnts.size();
@@ -871,13 +916,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 
-		densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+		/*densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
 
 		long hash = hashgraph(canong, m, n, 19883109L);
 
-		if(glist.find(hash) == glist.end())
+		if(glist.find(hash) == glist.end())*/
 		{
-			glist.insert(hash);
+			//glist.insert(hash);
 			numsols++;
 
 			fprintf(exhaustfile, "a ");
@@ -907,7 +952,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 			}
-			fprintf(exhaustfile, "0 %.0f\n", stats.grpsize1+0.1);
+			fprintf(exhaustfile, "0 %.0f\n", stats_traces.grpsize1+0.1);
 		}
 
 		if(opt_isoblock)
