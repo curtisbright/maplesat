@@ -538,11 +538,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 	if(!startinit)
 	{
+		for(int i=0; i<MAXN; i++)
+		{	lab[i] = i;
+			ptn[i] = 1;
+		}
+
+		ptn[65] = 0;
+		ptn[86] = 0;
+
 		options_traces.writeautoms = FALSE;
-		options_traces.defaultptn = TRUE;
+		options_traces.defaultptn = FALSE;
 		options_traces.writeautoms = FALSE;
 		options_traces.getcanon = TRUE;
-		options_traces.outfile=NULL;
+		options_traces.outfile = NULL;
 
 		SG_INIT(start);
 		//SG_ALLOC(start,87,2*186,"malloc");
