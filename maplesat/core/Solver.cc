@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "automorphisms.h"
 
-#define MAXN 66
+#define MAXN 87
 
 //#include "nauty.h"
 #include "naututil.h"
@@ -541,12 +541,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		for(int c=0; c<12; c++)
 		{	for(int r1=0; r1<66; r1++)
-			{	for(int r2=r1+1; r2<66; r2++)
+			{	//for(int r2=r1+1; r2<66; r2++)
 				{
 					const int index1 = 111*r1+c;
-					const int index2 = 111*r2+c;
-					if(assigns[index1]==l_True && assigns[index2]==l_True)
-					{	ADDONEEDGE(start,r1,r2,m);
+					//const int index2 = 111*r2+c;
+					if(assigns[index1]==l_True /*&& assigns[index2]==l_True*/)
+					{	//ADDONEEDGE(start,r1,r2,m);
+						ADDONEEDGE(start,r1,66+c,m);
 					}
 				}
 			}
@@ -592,12 +593,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	for(int r1=0; r1<66; r1++)
-				{	for(int r2=r1+1; r2<66; r2++)
+				{	//for(int r2=r1+1; r2<66; r2++)
 					{
 						const int index1 = 111*r1+c;
-						const int index2 = 111*r2+c;
-						if(assigns[index1]==l_True && assigns[index2]==l_True)
-						{	ADDONEEDGE(g,r1,r2,m);
+						//const int index2 = 111*r2+c;
+						if(assigns[index1]==l_True /*&& assigns[index2]==l_True*/)
+						{	//ADDONEEDGE(g,r1,r2,m);
+							ADDONEEDGE(g,r1,66+c-9*k,m);
 						}
 					}
 				}
@@ -664,12 +666,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	for(int r1=0; r1<66; r1++)
-				{	for(int r2=r1+1; r2<66; r2++)
+				{	//for(int r2=r1+1; r2<66; r2++)
 					{
 						const int index1 = 111*r1+c;
-						const int index2 = 111*r2+c;
-						if(assigns[index1]==l_True && assigns[index2]==l_True)
-						{	ADDONEEDGE(g,r1,r2,m);
+						//const int index2 = 111*r2+c;
+						if(assigns[index1]==l_True /*&& assigns[index2]==l_True*/)
+						{	//ADDONEEDGE(g,r1,r2,m);
+							ADDONEEDGE(g,r1,66+c-9*k,m);
 						}
 					}
 				}
@@ -683,16 +686,17 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			if(k==0)
 			{	firsthash = hash;
-				//if(hashes.find(hash)==hashes.end())
-				//	printf("Can't find hash %ld\n", hash);
+				if(hashes.find(hash)==hashes.end())
+					printf("Error: Can't find hash %ld\n", hash), exit(1);
 				//else
-				//	printf("Found hash %ld\n", hash);
+				//	printf("Found hash %ld (case %d)\n", hash, hashes.find(hash)->second);
 				casenumber = hashes.find(hash)->second;
 			}
 
 			if(hashes[hash] < casenumber)
+			//if(hashes[hash] != firsthash)
 			{
-				//printf("Blocking instance of block %d with tag %d, smaller than case %d\n", k, hashes[hash], casenumber);
+				//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, hashes[hash], hash, casenumber);
 				const int size = out_learnts.size();
 				out_learnts.push();
 				
@@ -711,7 +715,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			}
 			else
-			{	//printf("Not blocking instance of block %d with tag %d, not smaller than case %d\n", k, hashes[hash], casenumber);
+			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, hashes[hash], casenumber);
 				clock_t start, end;
 				start = clock();
 				blockset.insert(blockelement);
