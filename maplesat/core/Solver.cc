@@ -722,11 +722,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			clock_t startt, end;
 			startt = clock();
-			auto it = blockset.find(blockelement);
+			auto it = blockset[k].find(blockelement);
 			end = clock();
 			lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
-			if(it == blockset.end())
+			if(it == blockset[k].end())
 			{	//blockset.insert(blockelement);
 				//blockset2.insert(blockelement);
 			}
@@ -853,7 +853,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, hashes[hash], casenumber);
 				clock_t start, end;
 				start = clock();
-				blockset.insert(blockelement);
+				blockset[k].insert(blockelement);
 				end = clock();
 				lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
 			}
@@ -2308,7 +2308,7 @@ lbool Solver::solve_()
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
-	printf("Blockset size: %d\n", blockset.size());
+	printf("Blockset size: %d\n", blockset[0].size()+blockset[1].size()+blockset[2].size()+blockset[3].size()+blockset[4].size());
 	//printf("Blockset2 size: %d\n", blockset2.size());
     }
 

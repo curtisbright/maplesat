@@ -49,7 +49,7 @@ public:
 
     char unit_clauses[200000];
     bool addunits = false;
-    std::set<std::array<int, 36>> blockset;
+    std::set<std::array<int, 36>> blockset[5];
     double nautytime = 0;
     double lookuptime = 0;
 
