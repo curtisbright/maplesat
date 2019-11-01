@@ -115,6 +115,7 @@ static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conf
 static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
 static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each graph", false);
 static StringOption opt_savefile(_cat, "savefile", "File to save clauses in order to resume search later");
+static BoolOption opt_block2(_cat, "block2", "Store all blocked blocks", false);
 
 
 //=================================================================================================
@@ -510,10 +511,8 @@ int lab[MAXN],ptn[MAXN],orbits[MAXN];
 DEFAULTOPTIONS_TRACES(options_traces);
 TracesStats stats_traces;
 
-#include <unordered_set>
-
-std::unordered_set<long> glist;
-//std::set<std::array<int, 36>> blockset2;
+//#include <unordered_set>
+//std::unordered_set<long> glist;
 
 //#include <algorithm>
 //#include <utility>
@@ -548,7 +547,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		options_traces.writeautoms = FALSE;
 		options_traces.defaultptn = FALSE;
-		options_traces.writeautoms = FALSE;
 		options_traces.getcanon = TRUE;
 		options_traces.outfile = NULL;
 
@@ -726,12 +724,39 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			end = clock();
 			lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
-			if(it == blockset[k].end())
-			{	//blockset.insert(blockelement);
-				//blockset2.insert(blockelement);
-			}
-			else
+			if(it != blockset[k].end())
 				continue;
+
+			if(opt_block2)
+			{
+				clock_t startt, end;
+				startt = clock();
+				auto it2 = blockset2[k].find(blockelement);
+				end = clock();
+				lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
+
+				if(it2 != blockset2[k].end())
+				{
+					//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, hashes[hash], hash, casenumber);
+					const int size = out_learnts.size();
+					out_learnts.push();
+					
+					for(int r=21; r<66; r++)
+					{	for(int c=12+9*k; c<12+9*(k+1); c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+							{	out_learnts[size].push(~mkLit(index));
+							}
+						}
+					}
+
+					fprintclause(exhaustfile2, out_learnts[size]);
+					numblockconflicts++;
+
+					continue;
+				}
+			}
 
 			startt = clock();
 
@@ -848,6 +873,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				fprintclause(exhaustfile2, out_learnts[size]);
 				numblockconflicts++;
 
+				if(opt_block2)
+				{
+					clock_t startt, end;
+					startt = clock();
+					blockset2[k].insert(blockelement);
+					end = clock();
+					lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
+				}
 			}
 			else
 			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, hashes[hash], casenumber);
@@ -2161,7 +2194,7 @@ lbool Solver::search(int nof_conflicts)
 		                   units.push(learnt_clause[0]);
 		               } else {
 		                   CRef cr = ca.alloc(learnt_clause, true);
-		                   learnts.push(cr);
+                                     learnts.push(cr);
 		                   attachClause(cr);
 	#if LBD_BASED_CLAUSE_DELETION
 		                   Clause& clause = ca[cr];

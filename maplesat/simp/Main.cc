@@ -240,7 +240,7 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % 1000 == 0)
-                    printf("Bound %d/%d (%.2f%%) Solutions: %d Blockset: %d Blockconflict: %ld Clauses: %d Time: %.2f sec Est: %.2f hrs Nauty: %.2f s Lookup: %.2f s\n", bound, numassums, 100*bound/(double)numassums, numsat, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, S.lookuptime);
+                    printf("Bound %d/%d (%.2f%%) Solutions: %d Blockset: %d Blockset2: %d Blockconflict: %ld Clauses: %d Time: %.2f sec Est: %.2f hrs Nauty: %.2f s Lookup: %.2f s\n", bound, numassums, 100*bound/(double)numassums, numsat, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.blockset2[0].size()+S.blockset2[1].size()+S.blockset2[2].size()+S.blockset2[3].size()+S.blockset2[4].size(), S.numblockconflicts, S.numclauses(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, S.lookuptime);
                   if(bound > to_bound)
                      break;
                   if(bound < from_bound)
