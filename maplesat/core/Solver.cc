@@ -669,12 +669,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			clock_t startt, end;
 			startt = clock();
-			auto it = blockset[k].find(blockelement);
+			//auto it = blockset[k].find(blockelement);
 			end = clock();
 			lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
-			if(it != blockset[k].end())
-				continue;
+			//if(it != blockset[k].end())
+			//	continue;
 
 			if(opt_block2)
 			{
@@ -879,7 +879,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, lookup_result, casenumber);
 				clock_t start, end;
 				start = clock();
-				blockset[k].insert(blockelement);
+				//blockset[k].insert(blockelement);
 				end = clock();
 				lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
 			}
@@ -1994,6 +1994,12 @@ bool array_contains(const std::array<short, 36>& A, short e)
 	return false;
 }
 
+void print_array(const std::array<short, 36>& A)
+{	for(int i=0; i<36; i++)
+		printf("%d ", A[i]);
+	printf("\n");	
+}
+
 void Solver::minimize_blockset(Lit learnt)
 {	
 	const short learnt_var = var(learnt);
@@ -2100,7 +2106,8 @@ lbool Solver::search(int nof_conflicts)
                fflush(savefile);
             }
             if(learnt_clause.size()==1)
-            {  minimize_blockset(learnt_clause[0]);
+            {  printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
+	       minimize_blockset(learnt_clause[0]);
             }
 
 #if BRANCHING_HEURISTIC == VSIDS
@@ -2217,6 +2224,8 @@ lbool Solver::search(int nof_conflicts)
 		               }
 		               if (learnt_clause.size() == 1) {
 		                   units.push(learnt_clause[0]);
+                                   printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
+	                           minimize_blockset(learnt_clause[0]);
 		               } else {
 		                   CRef cr = ca.alloc(learnt_clause, true);
                                      learnts.push(cr);
