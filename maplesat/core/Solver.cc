@@ -115,6 +115,7 @@ static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conf
 static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
 static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each graph", false);
 static StringOption opt_savefile(_cat, "savefile", "File to save clauses in order to resume search later");
+static BoolOption opt_block1(_cat, "block1", "Store all unblocked blocks", true);
 static BoolOption opt_block2(_cat, "block2", "Store all blocked blocks", false);
 
 
@@ -667,15 +668,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			if(block_complete[k]==false)
 				continue;
 
-			clock_t startt, end;
-			startt = clock();
-			//auto it = blockset[k].find(blockelement);
-			end = clock();
-			lookupticks += end-startt;
-			lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
+			std::set<std::array<short, 36>>::iterator it;
+			if(opt_block1)
+			{
+				clock_t startt, end;
+				startt = clock();
+				it = blockset[k].find(blockelement);
+				end = clock();
+				lookupticks += end-startt;
+				lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
+			}
 
-			//if(it != blockset[k].end())
-			//	continue;
+			if(it != blockset[k].end())
+				continue;
 
 			if(opt_block2)
 			{
@@ -739,7 +744,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				printf("\n");
 			}*/
 
-			startt = clock();
+			clock_t startt = clock();
 
 			graph g[MAXN*MAXM];
 			EMPTYGRAPH(g, m, n);
@@ -802,7 +807,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			put_sg(stdout, &canong, true, 80);
 			exit(1);*/
 
-			end = clock();
+			clock_t end = clock();
 			nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
 			if(k==0)
@@ -877,13 +882,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 				}
 			}
-			else
+			else if(opt_block1)
 			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, lookup_result, casenumber);
 				clock_t start, end;
 				start = clock();
-				//blockset[k].insert(blockelement);
+				blockset[k].insert(blockelement);
 				end = clock();
 				lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
+				lookupticks += (end - start);
 			}
 
 			/*
