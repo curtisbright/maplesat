@@ -2234,6 +2234,10 @@ lbool Solver::search(int nof_conflicts)
 		                   units.push(learnt_clause[0]);
                                    printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
 	                           minimize_blockset(learnt_clause[0]);
+				   if(savefile != NULL)
+                                   {  fprintf(savefile, "%d 0\n", var(learnt_clause[0])+1);
+                                      fflush(savefile);
+                                   }
 		               } else {
 		                   CRef cr = ca.alloc(learnt_clause, true);
                                      learnts.push(cr);
