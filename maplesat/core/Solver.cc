@@ -499,7 +499,7 @@ long firsthash = 0;
 int casenumber = -1;
 
 bool startinit = false;
-sparsegraph start;
+sparsegraph start[5];
 //graph start[MAXN*MAXM];
 //graph g[MAXN*MAXM];
 //graph canong[MAXN*MAXM];
@@ -535,77 +535,98 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	const int m = SETWORDSNEEDED(MAXN);
 	const int n = MAXN;
 
+	const int rows_to_ignore[5][30] = {
+	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29},
+	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29},
+	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 30, 31, 32, 33, 34, 35, 36, 37},
+	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 30, 38, 39, 40, 41, 42, 43, 44},
+	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 23, 31, 38, 45, 46, 47, 48, 49, 50}};
+
 	if(!startinit)
 	{
-		for(int i=0; i<MAXN; i++)
-		{	lab[i] = i;
-			ptn[i] = 1;
-		}
-
-		ptn[65] = 0;
-		ptn[86] = 0;
-
-		options_traces.writeautoms = FALSE;
-		options_traces.defaultptn = FALSE;
-		options_traces.getcanon = TRUE;
-		options_traces.outfile = NULL;
-
-		SG_INIT(start);
-		//SG_ALLOC(start,87,2*186,"malloc");
-
-		start.nde = 0;
-		start.v = (size_t*)malloc(87*sizeof(size_t));
-		start.d = (int*)malloc(87*sizeof(int));
-		start.e = (int*)malloc(87*11*sizeof(int));
-		start.nv = 87;
-		start.vlen = 87;
-		start.dlen = 87;
-		start.elen = 87*11;
-
-		for(int i=0; i<87; i++)
-			start.v[i] = 11*i;
-
-		for(int c=0; c<12; c++)
-		{	
-			start.d[66+c] = 0;
-			for(int r=0; r<66; r++)
-			{
-				const int index = 111*r+c;
-				if(assigns[index]==l_True)
-				{
-					start.e[11*(66+c)+start.d[66+c]] = r;
-					start.d[66+c]++;
-					start.nde++;
-				}
+		for(int k=0; k<5; k++)
+		{
+			for(int i=0; i<MAXN; i++)
+			{	lab[i] = i;
+				ptn[i] = 1;
 			}
-		}
 
-		for(int r=0; r<66; r++)
-		{	
-			start.d[r] = 0;
+			ptn[65] = 0;
+			ptn[86] = 0;
+
+			options_traces.writeautoms = FALSE;
+			options_traces.defaultptn = FALSE;
+			options_traces.getcanon = TRUE;
+			options_traces.outfile = NULL;
+
+			SG_INIT(start[k]);
+			//SG_ALLOC(start,87,2*186,"malloc");
+
+			start[k].nde = 0;
+			start[k].v = (size_t*)malloc(87*sizeof(size_t));
+			start[k].d = (int*)malloc(87*sizeof(int));
+			start[k].e = (int*)malloc(87*11*sizeof(int));
+			start[k].nv = 87;
+			start[k].vlen = 87;
+			start[k].dlen = 87;
+			start[k].elen = 87*11;
+
+			for(int i=0; i<87; i++)
+				start[k].v[i] = 11*i;
+
 			for(int c=0; c<12; c++)
-			{
-				const int index = 111*r+c;
-				if(assigns[index]==l_True)
-				{
-					start.e[11*r+start.d[r]] = 66+c;
-					start.d[r]++;
-					start.nde++;
+			{	
+				start[k].d[66+c] = 0;
+				for(int r=0; r<66; r++)
+				{	bool ignore = false;
+					for(int i=0; i<11; i++)
+						if(r==rows_to_ignore[k][i])
+							ignore = true;
+					if(ignore)
+						continue;
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						start[k].e[11*(66+c)+start[k].d[66+c]] = r;
+						start[k].d[66+c]++;
+						start[k].nde++;
+					}
 				}
 			}
+
+			for(int r=0; r<66; r++)
+			{	
+				start[k].d[r] = 0;
+				bool ignore = false;
+				for(int i=0; i<11; i++)
+					if(r==rows_to_ignore[k][i])
+						ignore = true;
+				if(ignore)
+					continue;
+				for(int c=0; c<12; c++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						start[k].e[11*r+start[k].d[r]] = 66+c;
+						start[k].d[r]++;
+						start[k].nde++;
+					}
+				}
+			}
+
+			for(int c=0; c<9; c++)
+				start[k].d[66+12+c] = 0;
+
+			startinit = true;
+
+			/*put_sg(stdout, &start[k], true, 80);
+			printf("start.vlen %d\n", start[k].vlen);
+			printf("start.dlen %d\n", start[k].dlen);
+			printf("start.elen %d\n", start[k].elen);
+			printf("---\n");*/
+
 		}
-
-		for(int c=0; c<9; c++)
-			start.d[66+12+c] = 0;
-
-		startinit = true;
-
-		/*put_sg(stdout, &start, true, 80);
-		printf("start.vlen %d\n", start.vlen);
-		printf("start.dlen %d\n", start.dlen);
-		printf("start.elen %d\n", start.elen);
-		printf("---\n");*/
-
 	}
 
 	if(opt_printhashes)
@@ -613,7 +634,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		const int k = 0;
 		bool complete2 = true;
 
-		for(int r=21; r<66; r++)
+		for(int r=0; r<66; r++)
 		{	for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	const int index = 111*r+c;
 				if(assigns[index]==l_Undef)
@@ -640,14 +661,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				printf("\n");
 			}*/
 
-			sparsegraph* sg = copy_sg(&start, NULL);
+			sparsegraph* sg = copy_sg(&(start[k]), NULL);
 			sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
 			sg->elen = 87*11;
 
 			for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	
 				for(int r=0; r<66; r++)
-				{
+				{	bool ignore = false;
+					for(int i=0; i<11; i++)
+						if(r==rows_to_ignore[k][i])
+							ignore = true;
+					if(ignore)
+						continue;
 					const int index = 111*r+c;
 					if(assigns[index]==l_True)
 					{
@@ -659,7 +685,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 
 			for(int r=0; r<66; r++)
-			{	
+			{	bool ignore = false;
+				for(int i=0; i<11; i++)
+					if(r==rows_to_ignore[k][i])
+						ignore = true;
+				if(ignore)
+					continue;
 				for(int c=12+9*k; c<12+9*(k+1); c++)
 				{
 					const int index = 111*r+c;
@@ -695,7 +726,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			if(k==0 && firsthash!=0)
 				continue;
 
-			std::array<int, 36> blockelement;
+			std::array<short, 36> blockelement;
 			int blockcount = 0;
 
 			block_complete[k] = true;
@@ -761,7 +792,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			startt = clock();
 
 			//memcpy(g, start, sizeof(g));
-			sparsegraph* sg = copy_sg(&start, NULL);
+			sparsegraph* sg = copy_sg(&(start[k]), NULL);
 			sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
 			sg->elen = 87*11;
 
@@ -791,7 +822,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			for(int c=12+9*k; c<12+9*(k+1); c++)
 			{	
 				for(int r=0; r<66; r++)
-				{
+				{	bool ignore = false;
+					for(int i=0; i<11; i++)
+						if(r==rows_to_ignore[k][i])
+							ignore = true;
+					if(ignore)
+						continue;
 					const int index = 111*r+c;
 					if(assigns[index]==l_True)
 					{
@@ -803,7 +839,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 
 			for(int r=0; r<66; r++)
-			{	
+			{	bool ignore = false;
+				for(int i=0; i<11; i++)
+					if(r==rows_to_ignore[k][i])
+						ignore = true;
+				if(ignore)
+					continue;
 				for(int c=12+9*k; c<12+9*(k+1); c++)
 				{
 					const int index = 111*r+c;
@@ -853,10 +894,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				casenumber = hashes.find(hash)->second;
 			}
 
-			if(hashes[hash] < casenumber)
+			int lookup_result = 999;
+
+			if(hashes.find(hash)==hashes.end())
+			{	//printf("Error: Can't find hash %ld (block %d)\n", hash, k);
+			} else
+			{	//printf("Found hash %ld (block %d), element %d, size %d\n", hash, k, hashes.find(hash)->second, hashes.size());
+				lookup_result = hashes[hash];
+			}
+
+			if(lookup_result < casenumber)
 			//if(hash != firsthash)
 			{
-				//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, hashes[hash], hash, casenumber);
+				//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, lookup_result, hash, casenumber);
 				const int size = out_learnts.size();
 				out_learnts.push();
 				
@@ -873,6 +923,30 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				fprintclause(exhaustfile2, out_learnts[size]);
 				numblockconflicts++;
 
+				/*{
+					int max_index = 0;
+					for(int i=1; i<out_learnts[size].size(); i++)
+						if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
+							max_index = i;
+					Lit p = out_learnts[size][0];
+					out_learnts[size][0] = out_learnts[size][max_index];
+					out_learnts[size][max_index] = p;
+				}
+
+				{
+					int max_index = 1;
+					for(int i=2; i<out_learnts[size].size(); i++)
+						if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
+							max_index = i;
+					Lit p = out_learnts[size][1];
+					out_learnts[size][1] = out_learnts[size][max_index];
+					out_learnts[size][max_index] = p;
+				}
+
+				CRef confl_clause = ca.alloc(out_learnts[size], false);
+				attachClause(confl_clause);
+				clauses.push(confl_clause);*/
+
 				if(opt_block2)
 				{
 					clock_t startt, end;
@@ -883,7 +957,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 			else
-			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, hashes[hash], casenumber);
+			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, lookup_result, casenumber);
 				clock_t start, end;
 				start = clock();
 				blockset[k].insert(blockelement);
