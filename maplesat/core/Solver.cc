@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "automorphisms.h"
 
-#define MAXN 87
+#define MAXN 9
 
 extern "C" {
 #include "traces.h"
@@ -498,18 +498,16 @@ Lit Solver::pickBranchLit()
 long firsthash = 0;
 int casenumber = -1;
 
-bool startinit = false;
-sparsegraph start[5];
 //graph start[MAXN*MAXM];
 //graph g[MAXN*MAXM];
 //graph canong[MAXN*MAXM];
 int lab[MAXN],ptn[MAXN],orbits[MAXN];
-//DEFAULTOPTIONS_GRAPH(options);
+DEFAULTOPTIONS_GRAPH(options);
 //DEFAULTOPTIONS_SPARSEGRAPH(options_sg);
-//statsblk stats;
+statsblk stats;
 
-DEFAULTOPTIONS_TRACES(options_traces);
-TracesStats stats_traces;
+//DEFAULTOPTIONS_TRACES(options_traces);
+//TracesStats stats_traces;
 
 //#include <unordered_set>
 //std::unordered_set<long> glist;
@@ -518,6 +516,9 @@ TracesStats stats_traces;
 //#include <utility>
 
 //vec<Lit> blocking_clause;
+
+const int firsts[66] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 10};
+const int seconds[66] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 3, 4, 5, 6, 7, 8, 9, 10, 11, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 6, 7, 8, 9, 10, 11, 7, 8, 9, 10, 11, 8, 9, 10, 11, 9, 10, 11, 10, 11, 11};
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -535,99 +536,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	const int m = SETWORDSNEEDED(MAXN);
 	const int n = MAXN;
 
-	const int rows_to_ignore[5][30] = {
-	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29},
-	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29},
-	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 30, 31, 32, 33, 34, 35, 36, 37},
-	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 30, 38, 39, 40, 41, 42, 43, 44},
-	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 23, 31, 38, 45, 46, 47, 48, 49, 50}};
-
-	if(!startinit)
-	{
-		for(int k=0; k<5; k++)
-		{
-			for(int i=0; i<MAXN; i++)
-			{	lab[i] = i;
-				ptn[i] = 1;
-			}
-
-			ptn[65] = 0;
-			ptn[86] = 0;
-
-			options_traces.writeautoms = FALSE;
-			options_traces.defaultptn = FALSE;
-			options_traces.getcanon = TRUE;
-			options_traces.outfile = NULL;
-
-			SG_INIT(start[k]);
-			//SG_ALLOC(start,87,2*186,"malloc");
-
-			start[k].nde = 0;
-			start[k].v = (size_t*)malloc(87*sizeof(size_t));
-			start[k].d = (int*)malloc(87*sizeof(int));
-			start[k].e = (int*)malloc(87*11*sizeof(int));
-			start[k].nv = 87;
-			start[k].vlen = 87;
-			start[k].dlen = 87;
-			start[k].elen = 87*11;
-
-			for(int i=0; i<87; i++)
-				start[k].v[i] = 11*i;
-
-			for(int c=0; c<12; c++)
-			{	
-				start[k].d[66+c] = 0;
-				for(int r=0; r<66; r++)
-				{	bool ignore = false;
-					for(int i=0; i<11; i++)
-						if(r==rows_to_ignore[k][i])
-							ignore = true;
-					if(ignore)
-						continue;
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						start[k].e[11*(66+c)+start[k].d[66+c]] = r;
-						start[k].d[66+c]++;
-						start[k].nde++;
-					}
-				}
-			}
-
-			for(int r=0; r<66; r++)
-			{	
-				start[k].d[r] = 0;
-				bool ignore = false;
-				for(int i=0; i<11; i++)
-					if(r==rows_to_ignore[k][i])
-						ignore = true;
-				if(ignore)
-					continue;
-				for(int c=0; c<12; c++)
-				{
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						start[k].e[11*r+start[k].d[r]] = 66+c;
-						start[k].d[r]++;
-						start[k].nde++;
-					}
-				}
-			}
-
-			for(int c=0; c<9; c++)
-				start[k].d[66+12+c] = 0;
-
-			startinit = true;
-
-			/*put_sg(stdout, &start[k], true, 80);
-			printf("start.vlen %d\n", start[k].vlen);
-			printf("start.dlen %d\n", start[k].dlen);
-			printf("start.elen %d\n", start[k].elen);
-			printf("---\n");*/
-
-		}
-	}
+	options.writeautoms = FALSE;
+	options.defaultptn = TRUE;
+	options.getcanon = TRUE;
+	options.outfile = NULL;
 
 	if(opt_printhashes)
 	{
@@ -661,52 +573,58 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				printf("\n");
 			}*/
 
-			sparsegraph* sg = copy_sg(&(start[k]), NULL);
-			sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
-			sg->elen = 87*11;
+			int perm[9][12] = {};
 
-			for(int c=12+9*k; c<12+9*(k+1); c++)
-			{	
-				for(int r=0; r<66; r++)
-				{	bool ignore = false;
-					for(int i=0; i<11; i++)
-						if(r==rows_to_ignore[k][i])
-							ignore = true;
-					if(ignore)
-						continue;
-					const int index = 111*r+c;
+			for(int r=11; r<66; r++)
+			{	for(int c=12+9*k; c<12+9*(k+1); c++)
+				{	const int index = 111*r+c;
 					if(assigns[index]==l_True)
-					{
-						sg->e[11*(66+c-9*k)+sg->d[66+c-9*k]] = r;
-						sg->d[66+c-9*k]++;
-						sg->nde++;
+					{	perm[c-12-9*k][firsts[r]] = seconds[r];
+						perm[c-12-9*k][seconds[r]] = firsts[r];
 					}
 				}
 			}
 
-			for(int r=0; r<66; r++)
-			{	bool ignore = false;
-				for(int i=0; i<11; i++)
-					if(r==rows_to_ignore[k][i])
-						ignore = true;
-				if(ignore)
-					continue;
-				for(int c=12+9*k; c<12+9*(k+1); c++)
+			/*for(int i=0; i<9; i++)
+			{	printf("Perm %d:\t", i);
+				for(int j=0; j<12; j++)
+					printf("%d ", perm[i][j]);
+				printf("\n");
+			}*/
+
+			graph g[MAXN*MAXM];
+			EMPTYGRAPH(g, m, n);
+
+			for(int i=0; i<9; i++)
+			{	for(int j=i+1; j<9; j++)
 				{
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						sg->e[11*r+sg->d[r]] = 66+c-9*k;
-						sg->d[r]++;
-						sg->nde++;
+					int permproduct[12] = {};
+					for(int k=0; k<12; k++)
+						permproduct[k] = perm[j][perm[i][k]];
+
+					/*printf("Perm Product:\t", i);
+					for(int j=0; j<12; j++)
+						printf("%d ", permproduct[j]);
+					printf("\n");
+					
+					printf("permproduct[6] = %d\n", permproduct[6]);
+					printf("permproduct[permproduct[6]] = %d\n", permproduct[permproduct[6]]);
+					printf("permproduct[permproduct[permproduct[6]]] = %d\n", permproduct[permproduct[permproduct[6]]]);*/
+
+					if(permproduct[permproduct[6]]==6 || permproduct[permproduct[permproduct[6]]]==6)
+					{	ADDONEEDGE(g,i,j,m);
+					}
+					else
+					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[6]]]]]!=6)
+							printf("error\n"), exit(1);
 					}
 				}
 			}
 
-			sparsegraph canong;
-			SG_INIT(canong);
-			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-			long hash = hashgraph_sg(&canong, 19883109L);
+			graph canong[MAXN*MAXM];
+
+			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+			long hash = hashgraph(canong, m, n, 19883109L);
 
 			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
 
@@ -789,94 +707,95 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 
+			int perm[9][12] = {};
+
+			/*printf("block %d:\n", k);
+			for(int r=11; r<66; r++)
+			{	for(int c=12+9*k; c<12+9*(k+1); c++)
+				{	const int index = 111*r+c;
+					if(assigns[index]==l_True)
+						printf("1");
+					else if(assigns[index]==l_False)
+						printf("0");
+				}
+				printf("\n");
+			}*/
+
+			for(int r=11; r<66; r++)
+			{	for(int c=12+9*k; c<12+9*(k+1); c++)
+				{	const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{	perm[c-12-9*k][firsts[r]] = seconds[r];
+						perm[c-12-9*k][seconds[r]] = firsts[r];
+					}
+				}
+			}
+
+			/*for(int i=0; i<9; i++)
+			{	printf("Perm %d:\t", i);
+				for(int j=0; j<12; j++)
+					printf("%d ", perm[i][j]);
+				printf("\n");
+			}*/
+
 			startt = clock();
 
-			//memcpy(g, start, sizeof(g));
-			sparsegraph* sg = copy_sg(&(start[k]), NULL);
-			sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
-			sg->elen = 87*11;
+			graph g[MAXN*MAXM];
+			EMPTYGRAPH(g, m, n);
 
-			/*
-			sparsegraph g;
-			SG_INIT(g);
-			g.v = (size_t*)malloc(87*sizeof(size_t));
-			g.d = (int*)malloc(87*sizeof(int));
-			g.e = (int*)malloc(87*11*sizeof(int));
-			g.nv = 87;
-			g.vlen = 87;
-			g.dlen = 87;
-			g.elen = 87*11;
-			g.nde = start.nde;
-			memcpy(g.v, start.v, 87*sizeof(size_t));
-			memcpy(g.d, start.d, 87*sizeof(int));
-			memcpy(g.e, start.e, 87*11*sizeof(int));
-			sparsegraph* const sg = &g;*/
-
-			/*put_sg(stdout, sg, true, 80);
-			printf("sg.vlen %d\n", sg->vlen);
-			printf("sg.dlen %d\n", sg->dlen);
-			printf("start.elen %d\n", start.elen);
-			printf("sg.elen %d\n", sg->elen);
-			printf("---\n");*/
-
-			for(int c=12+9*k; c<12+9*(k+1); c++)
-			{	
-				for(int r=0; r<66; r++)
-				{	bool ignore = false;
-					for(int i=0; i<11; i++)
-						if(r==rows_to_ignore[k][i])
-							ignore = true;
-					if(ignore)
-						continue;
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						sg->e[11*(66+c-9*k)+sg->d[66+c-9*k]] = r;
-						sg->d[66+c-9*k]++;
-						sg->nde++;
-					}
-				}
-			}
-
-			for(int r=0; r<66; r++)
-			{	bool ignore = false;
-				for(int i=0; i<11; i++)
-					if(r==rows_to_ignore[k][i])
-						ignore = true;
-				if(ignore)
-					continue;
-				for(int c=12+9*k; c<12+9*(k+1); c++)
+			for(int i=0; i<9; i++)
+			{	for(int j=i+1; j<9; j++)
 				{
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						sg->e[11*r+sg->d[r]] = 66+c-9*k;
-						sg->d[r]++;
-						sg->nde++;
+					int permproduct[12] = {};
+					for(int k=0; k<12; k++)
+						permproduct[k] = perm[j][perm[i][k]];
+
+					/*printf("Perm Product:\t", i);
+					for(int j=0; j<12; j++)
+						printf("%d ", permproduct[j]);
+					printf("\n");
+					
+					printf("permproduct[6] = %d\n", permproduct[6]);
+					printf("permproduct[permproduct[6]] = %d\n", permproduct[permproduct[6]]);
+					printf("permproduct[permproduct[permproduct[6]]] = %d\n", permproduct[permproduct[permproduct[6]]]);*/
+
+					if(permproduct[permproduct[6]]==6 || permproduct[permproduct[permproduct[6]]]==6)
+					{	ADDONEEDGE(g,i,j,m);
+					}
+					else
+					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[6]]]]]!=6)
+							printf("error\n"), exit(1);
 					}
 				}
 			}
 
-			/*put_sg(stdout, sg, true, 80);
+			/*sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
+			put_sg(stdout, sg, true, 80);
 			printf("sg.vlen %d\n", sg->vlen);
 			printf("sg.dlen %d\n", sg->dlen);
 			printf("sg.elen %d\n", sg->elen);
-			printf("---\n");*/
+			printf("---\n");
+			exit(1);*/
 
 			//sparse
 
-			sparsegraph canong;
-			SG_INIT(canong);
+			//sparsegraph* sg;
+			//sparsegraph canong;
 
 			//sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
 
 			//sparsenauty(sg,lab,ptn,orbits,&options_sg,&stats,&canong);
-			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+			//Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
 
 			/*printf("??\n");
 			put_sg(stdout, &canong, true, 80);*/
 
-			long hash = hashgraph_sg(&canong, 19883109L);
+			//long hash = hashgraph_sg(&canong, 19883109L);
+
+			graph canong[MAXN*MAXM];
+
+			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+			long hash = hashgraph(canong, m, n, 19883109L);
 
 			/*put_sg(stdout, sg, true, 80);
 			put_sg(stdout, &canong, true, 80);
@@ -1149,7 +1068,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 			}
-			fprintf(exhaustfile, "0 %.0f\n", stats_traces.grpsize1+0.1);
+			//fprintf(exhaustfile, "0 %.0f\n", stats_traces.grpsize1+0.1);
 		}
 
 		if(opt_isoblock)
