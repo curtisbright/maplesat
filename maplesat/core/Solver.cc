@@ -671,6 +671,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			startt = clock();
 			//auto it = blockset[k].find(blockelement);
 			end = clock();
+			lookupticks += end-startt;
 			lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
 			//if(it != blockset[k].end())
@@ -872,6 +873,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					startt = clock();
 					blockset2[k].insert(blockelement);
 					end = clock();
+					lookupticks += end-startt;
 					lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 				}
 			}
