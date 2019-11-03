@@ -53,6 +53,7 @@ public:
     std::set<std::array<short, 36>> blockset2[5];
     double nautytime = 0;
     double lookuptime = 0;
+    void minimize_blockset(Lit learnt);
 
     // Problem specification:
     //

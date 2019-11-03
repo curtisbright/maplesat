@@ -1987,6 +1987,35 @@ void printclause(vec<Lit>& cl)
   printf("\n");
 }
 
+bool array_contains(const std::array<short, 36>& A, short e)
+{	for(int i=0; i<36; i++)
+		if(A[i]==e)
+			return true;
+	return false;
+}
+
+void Solver::minimize_blockset(Lit learnt)
+{	
+	const short learnt_var = var(learnt);
+	for(int k=0; k<5; k++)
+	{
+		if(sign(learnt))
+		{
+			for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
+			{	if(array_contains(*it, learnt_var))
+					blockset[k].erase(*it);
+			}
+		}
+		else
+		{
+			for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
+			{	if(!array_contains(*it, learnt_var))
+					blockset[k].erase(*it);
+			}
+		}
+	}
+}
+
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -2069,6 +2098,9 @@ lbool Solver::search(int nof_conflicts)
             if(savefile != NULL && learnt_clause.size()==1)
             {  fprintf(savefile, "%d 0\n", var(learnt_clause[0])+1);
                fflush(savefile);
+            }
+            if(learnt_clause.size()==1)
+            {  minimize_blockset(learnt_clause[0]);
             }
 
 #if BRANCHING_HEURISTIC == VSIDS
