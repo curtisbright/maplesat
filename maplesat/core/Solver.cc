@@ -668,7 +668,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			if(block_complete[k]==false)
 				continue;
 
-			std::set<std::array<short, 36>>::iterator it;
+			std::set<std::array<short, 36>>::iterator it = blockset[k].end();
 			if(opt_block1)
 			{
 				clock_t startt, end;
