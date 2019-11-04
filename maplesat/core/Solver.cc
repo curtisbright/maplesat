@@ -2011,21 +2011,21 @@ void print_array(const std::array<short, 36>& A)
 void Solver::minimize_blockset(Lit learnt)
 {	
 	const short learnt_var = var(learnt);
-	for(int k=0; k<5; k++)
+	const int learnt_col = learnt_var % 111;
+	const int k = (learnt_col-12)/9;
+
+	if(sign(learnt))
 	{
-		if(sign(learnt))
-		{
-			for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
-			{	if(array_contains(*it, learnt_var))
-					blockset[k].erase(*it);
-			}
+		for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
+		{	if(array_contains(*it, learnt_var))
+				blockset[k].erase(*it);
 		}
-		else
-		{
-			for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
-			{	if(!array_contains(*it, learnt_var))
-					blockset[k].erase(*it);
-			}
+	}
+	else
+	{
+		for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
+		{	if(!array_contains(*it, learnt_var))
+				blockset[k].erase(*it);
 		}
 	}
 }
