@@ -78,6 +78,10 @@ int Solver::numclauses()
 {	return clauses.size();
 }
 
+int Solver::numlearnts()
+{	return learnts.size();
+}
+
 //=================================================================================================
 // Main:
 
@@ -241,7 +245,7 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % print_bound == 0)
-                    printf("Bound %d/%d (%.2f%%) BlSet: %d BlConf: %ld Cl: %d Time: %.2f s Est: %.2f h nauty: %.2f s Lookup: %.2f\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, (double)S.lookupticks/CLOCKS_PER_SEC);
+                    printf("Bound %d/%d (%.2f%%) BlSet: %d BlConf: %ld Cl: %d Le: %d Time: %.2f s Est: %.2f h nauty: %.2f s Lookup: %.2f\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, (double)S.lookupticks/CLOCKS_PER_SEC);
                   if(clearset)
                      for(int i=0; i<5; i++)
 			{
@@ -252,6 +256,11 @@ int main(int argc, char** argv)
                      break;
                   if(bound < from_bound)
                   {  bound++;
+			  vec<Lit> clause;
+			  for(int i=0; i<dummy.size(); i++)
+			  {	clause.push(mkLit(var(dummy[i]), sign(dummy[i]) ? false : true));
+			  }
+			  S.addClause(clause);
                      dummy.clear();
                      tmp = fscanf(assertion_file, "a ");
                      continue;

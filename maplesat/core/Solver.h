@@ -190,6 +190,7 @@ public:
     vec<int> total_actual_count;
 
     int numclauses();
+    int numlearnts();
 
 protected:
 
