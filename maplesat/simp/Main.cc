@@ -117,6 +117,7 @@ int main(int argc, char** argv)
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         BoolOption   lex    ("MAIN", "lex",    "Use lexicographic constraints.", false);
         BoolOption   clearset    ("MAIN", "clearset",    "Clear blockset after each bound.", false);
+        IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 1000, IntRange(0, INT32_MAX));
 
         parseOptions(argc, argv, true);
         
@@ -239,7 +240,7 @@ int main(int argc, char** argv)
                        printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
                      printf("0\n");
                   }
-                  if(bound % 1000 == 0)
+                  if(bound % print_bound == 0)
                     printf("Bound %d/%d (%.2f%%) BlSet: %d BlConf: %ld Cl: %d Time: %.2f s Est: %.2f h nauty: %.2f s Lookup: %.2f\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, (double)S.lookupticks/CLOCKS_PER_SEC);
                   if(clearset)
                      for(int i=0; i<5; i++)
