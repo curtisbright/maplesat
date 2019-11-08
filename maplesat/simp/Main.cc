@@ -82,6 +82,13 @@ int Solver::numlearnts()
 {	return learnts.size();
 }
 
+void Solver::clearlearnts()
+{	//return learnts.clear();
+	//if(learnts.size()>0)
+	//	reduceDB();
+	alllearnts = 1;
+}
+
 //=================================================================================================
 // Main:
 
@@ -122,6 +129,8 @@ int main(int argc, char** argv)
         BoolOption   lex    ("MAIN", "lex",    "Use lexicographic constraints.", false);
         BoolOption   clearset    ("MAIN", "clearset",    "Clear blockset after each bound.", false);
         IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 1000, IntRange(0, INT32_MAX));
+        BoolOption   clearlearnts    ("MAIN", "clearlearnts",    "Clear learnts after each bound.", false);
+        BoolOption   freqreduce    ("MAIN", "freqreduce",    "Frequently reduce DB.", false);
 
         parseOptions(argc, argv, true);
         
@@ -245,7 +254,7 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % print_bound == 0)
-                    printf("Bound %d/%d (%.2f%%) BlSet: %d BlConf: %ld Cl: %d Le: %d Time: %.2f s Est: %.2f h nauty: %.2f s Lookup: %.2f\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, (double)S.lookupticks/CLOCKS_PER_SEC);
+                    printf("Bound %d/%d (%.2f%%) BlSet: %d BlConf: %ld Cl: %d Le: %d Time: %.2f s Est: %.2f h nauty: %.2f s Lookup: %.2f Reductions %d\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, (double)S.lookupticks/CLOCKS_PER_SEC, S.reductions);
                   if(clearset)
                      for(int i=0; i<5; i++)
 			{
@@ -264,6 +273,12 @@ int main(int argc, char** argv)
                      dummy.clear();
                      tmp = fscanf(assertion_file, "a ");
                      continue;
+                  }
+                  if(clearlearnts)
+                    S.clearlearnts();
+                  if(freqreduce)
+                  {  S.curRestart = 1;
+                     S.conflictsthisbound = 0;
                   }
                   ret = S.solveLimited(dummy);
                   bound++;

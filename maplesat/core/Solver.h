@@ -46,6 +46,9 @@ public:
     long numsols = 0;
     long numblockconflicts = 0;
     void addLexClauses();
+    uint64_t conflictsthisbound = 0;
+    long curRestart = 1;
+    int reductions = 0;
 
     char unit_clauses[200000];
     bool addunits = false;
@@ -191,6 +194,8 @@ public:
 
     int numclauses();
     int numlearnts();
+    void clearlearnts();
+    int alllearnts = 0;
 
 protected:
 

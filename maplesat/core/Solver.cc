@@ -117,6 +117,8 @@ static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each grap
 static StringOption opt_savefile(_cat, "savefile", "File to save clauses in order to resume search later");
 static BoolOption opt_block1(_cat, "block1", "Store all unblocked blocks", true);
 static BoolOption opt_block2(_cat, "block2", "Store all blocked blocks", false);
+static IntOption opt_lbdbound(_cat, "lbdbound", "LBD removal bound", 2);
+static IntOption opt_sizebound(_cat, "sizebound", "Size removal bound", 2);
 
 
 //=================================================================================================
@@ -1869,7 +1871,6 @@ int min(int a, int b) {
 const int firstReduceDB = 2000;
 const int incReduceDB = 300;
 const int specialIncReduceDB = 1000;
-long curRestart = 1;
 int nbclausesbeforereduce = firstReduceDB;
 
 /*_________________________________________________________________________________________________
@@ -1901,7 +1902,7 @@ void Solver::reduceDB()
 
     int     i, j;
 #if LBD_BASED_CLAUSE_DELETION
-    sort(learnts, reduceDB_lt(ca, activity));
+    //sort(learnts, reduceDB_lt(ca, activity));
 #else
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
     sort(learnts, reduceDB_lt(ca));
@@ -1912,20 +1913,37 @@ void Solver::reduceDB()
   // Useless :-)
   if(ca[learnts.last()].activity()<=5)  {nbclausesbeforereduce +=specialIncReduceDB;}
 
+
+    int limit;
+    if(alllearnts==0)
+      limit=learnts.size() / 2;
+    else
+      limit=learnts.size();
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
 #if LBD_BASED_CLAUSE_DELETION
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
-        if (c.activity() > 2 && !locked(c) && i < learnts.size() / 2)
+        //printf("Learnts %d, activity %d\n", i, c.activity());
+        if (c.activity() > opt_lbdbound && c.size() > opt_sizebound && !locked(c) && i < limit)
 #else
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) && (i < learnts.size() / 2 || c.activity() < extra_lim))
+        if (c.size() > 2 && !locked(c) && (i < limit || c.activity() < extra_lim))
 #endif
-            removeClause(learnts[i]);
+        {    //printf("Removing clause of length %d with LBD %d\n", c.size(), c.activity());
+             removeClause(learnts[i]);
+        }
         else
-            learnts[j++] = learnts[i];
+        {    learnts[j++] = learnts[i];
+             /*if(locked(c))
+             {  //printf("Keeping locked clause of length %d with LBD %d\n", c.size(), c.activity());
+             }
+             else
+             {  printf("Keeping unlocked clause of length %d with LBD %d\n", c.size(), c.activity());
+                printf("%s%d %s%d 0\n", sign(c[0]) ? "-" : "", var(c[0])+1, sign(c[1]) ? "-" : "", var(c[1])+1);
+             }*/
+        }
     }
     learnts.shrink(i - j);
     checkGarbage();
@@ -2073,7 +2091,7 @@ lbool Solver::search(int nof_conflicts)
 #endif
         if (confl != CRef_Undef){
             // CONFLICT
-            conflicts++; conflictC++;
+            conflicts++; conflictC++; conflictsthisbound++;
 #if BRANCHING_HEURISTIC == CHB || BRANCHING_HEURISTIC == LRB
             if (step_size > min_step_size)
                 step_size -= step_size_dec;
@@ -2152,11 +2170,13 @@ lbool Solver::search(int nof_conflicts)
                 return l_False;
 
 	    // Perform clause database reduction !
-	    if(conflicts >=  curRestart * nbclausesbeforereduce )
+	    if(conflictsthisbound >=  curRestart * nbclausesbeforereduce )
 	      {
+		//printf("Reducing DB, conflicts %d curRestart %d nbclausesbeforereduce %d\n", conflictsthisbound, curRestart, nbclausesbeforereduce);
 		assert(learnts.size()>0);
-		curRestart = (conflicts/ nbclausesbeforereduce)+1;
-                reduceDB();
+		curRestart = (conflictsthisbound/ nbclausesbeforereduce)+1;
+		reduceDB();
+		reductions++;
 		nbclausesbeforereduce += incReduceDB;
 	      }
 
@@ -2197,7 +2217,7 @@ lbool Solver::search(int nof_conflicts)
                 callbackLearntClauses.clear();
                 callbackFunction(next == lit_Undef, callbackLearntClauses);
                 if (callbackLearntClauses.size() > 0) {
-                    conflicts++; conflictC++;
+                    conflicts++; conflictC++; conflictsthisbound++;
                     int pending = learnts.size();
                     units.clear();
                     backtrack_level = decisionLevel();
