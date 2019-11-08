@@ -1902,7 +1902,7 @@ void Solver::reduceDB()
 
     int     i, j;
 #if LBD_BASED_CLAUSE_DELETION
-    //sort(learnts, reduceDB_lt(ca, activity));
+    sort(learnts, reduceDB_lt(ca, activity));
 #else
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
     sort(learnts, reduceDB_lt(ca));
@@ -1936,10 +1936,11 @@ void Solver::reduceDB()
         }
         else
         {    learnts[j++] = learnts[i];
-             /*if(locked(c))
+             if(locked(c))
              {  //printf("Keeping locked clause of length %d with LBD %d\n", c.size(), c.activity());
+                keptclauses++;
              }
-             else
+             /*else
              {  printf("Keeping unlocked clause of length %d with LBD %d\n", c.size(), c.activity());
                 printf("%s%d %s%d 0\n", sign(c[0]) ? "-" : "", var(c[0])+1, sign(c[1]) ? "-" : "", var(c[1])+1);
              }*/
@@ -1947,6 +1948,8 @@ void Solver::reduceDB()
     }
     learnts.shrink(i - j);
     checkGarbage();
+    //printf("Reducing DB, kept %d clauses (%d locked)\n", learnts.size(), keptclauses);
+    keptclauses = 0;
 }
 
 

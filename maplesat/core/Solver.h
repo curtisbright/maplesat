@@ -49,6 +49,7 @@ public:
     uint64_t conflictsthisbound = 0;
     long curRestart = 1;
     int reductions = 0;
+    int keptclauses = 0;
 
     char unit_clauses[200000];
     bool addunits = false;
