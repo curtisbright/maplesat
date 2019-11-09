@@ -933,7 +933,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 
 				fprintclause(exhaustfile2, out_learnts[size]);
-				numblockconflicts++;
+				//numblockconflicts++;
 
 				/*{
 					int max_index = 0;
