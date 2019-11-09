@@ -1542,400 +1542,400 @@ const int identity_index = 759;
 
 std::map<long, int> hashes
 {
-{900988255, 0},
-{14252306, 1},
-{420385640, 2},
-{413287515, 3},
-{76601888, 4},
-{1413658135, 5},
-{1951327740, 6},
-{1030664519, 7},
-{1773513030, 8},
-{536825879, 9},
-{155533309, 10},
-{815430975, 11},
-{1398602553, 12},
-{1705561706, 13},
-{1147527714, 14},
-{611893525, 15},
-{629895746, 16},
-{2031113251, 17},
-{86376253, 18},
-{812636444, 19},
-{1081035138, 20},
-{1345201414, 21},
-{13864720, 22},
-{1414862860, 23},
-{1915962144, 24},
-{1494640765, 25},
-{339643939, 26},
-{620704319, 27},
-{1686189326, 28},
-{1622369812, 29},
-{1685097003, 30},
-{1152374816, 31},
-{1680772112, 32},
-{1962878039, 33},
-{1958355217, 34},
-{1565491218, 35},
-{346035736, 36},
-{360704340, 37},
-{297155348, 38},
-{1147124248, 39},
-{812572693, 40},
-{361951042, 41},
-{68059651, 42},
-{951738653, 43},
-{1076717332, 44},
-{84680034, 45},
-{1359771723, 46},
-{1697457440, 47},
-{1152391712, 48},
-{344974632, 49},
-{1619053865, 50},
-{290475608, 51},
-{1953700876, 52},
-{898660691, 53},
-{276160794, 54},
-{344604690, 55},
-{1359771723, 56},
-{1154480162, 57},
-{340655631, 58},
-{816908568, 59},
-{1756400151, 60},
-{1964197936, 61},
-{1955636567, 62},
-{884092931, 63},
-{1766857310, 64},
-{1220582185, 65},
-{1431300446, 66},
-{814813464, 67},
-{1951647784, 68},
-{1545494054, 69},
-{876474388, 70},
-{1083178263, 71},
-{424684581, 72},
-{69611031, 73},
-{1873439247, 74},
-{1951577607, 75},
-{65339433, 76},
-{1153691019, 77},
-{1148106878, 78},
-{544137253, 79},
-{1347633944, 80},
-{613553689, 81},
-{1432312916, 82},
-{15873295, 83},
-{360771416, 84},
-{1683923325, 85},
-{1680738327, 86},
-{1949373957, 87},
-{1962829421, 88},
-{1424093827, 89},
-{1957578325, 90},
-{544130815, 91},
-{1076717332, 92},
-{1805402661, 93},
-{1427910971, 94},
-{1613657350, 95},
-{1955246603, 96},
-{74887945, 97},
-{87372115, 98},
-{342814724, 99},
-{1152689495, 100},
-{359585311, 101},
-{69122320, 102},
-{744428833, 103},
-{1299969305, 104},
-{1156275994, 105},
-{1361980987, 106},
-{1613567760, 107},
-{1426931023, 108},
-{1950656529, 109},
-{80907780, 110},
-{1689277201, 111},
-{881872404, 112},
-{366733668, 113},
-{1079801108, 114},
-{1695474013, 115},
-{1693098302, 116},
-{1962200872, 117},
-{275796996, 118},
-{814732380, 119},
-{10426992, 120},
-{9736216, 121},
-{353278490, 122},
-{1682879363, 123},
-{1758775851, 124},
-{69031448, 125},
-{1008687662, 126},
-{1300113169, 127},
-{687640407, 128},
-{1421165312, 129},
-{278205444, 130},
-{1760612343, 131},
-{1689280552, 132},
-{1954286892, 133},
-{622093408, 134},
-{1349542166, 135},
-{835769182, 136},
-{1951577607, 137},
-{90435683, 138},
-{881907548, 139},
-{743431709, 140},
-{1412467988, 141},
-{1895074856, 142},
-{544354070, 143},
-{92434255, 144},
-{1415518292, 145},
-{1507093082, 146},
-{1496290908, 147},
-{344170801, 148},
-{150752597, 149},
-{1085352216, 150},
-{634613312, 151},
-{1345201414, 152},
-{278032167, 153},
-{1164986973, 154},
-{609546584, 155},
-{1676604432, 156},
-{1615935770, 157},
-{206977030, 158},
-{555508816, 159},
-{1139756096, 160},
-{628154712, 161},
-{1426931023, 162},
-{1905323607, 163},
-{814763284, 164},
-{1426880843, 165},
-{340519978, 166},
-{1433426258, 167},
-{1884246812, 168},
-{1616029486, 169},
-{1490298906, 170},
-{1436181609, 171},
-{1683044891, 172},
-{1630787685, 173},
-{1949190668, 174},
-{1704542305, 175},
-{1414862860, 176},
-{623054402, 177},
-{17603666, 178},
-{692933152, 179},
-{87037262, 180},
-{19849319, 181},
-{1973413901, 182},
-{11560723, 183},
-{909284625, 184},
-{275728127, 185},
-{1139750423, 186},
-{1565491218, 187},
-{1687327755, 188},
-{1368366340, 189},
-{544126207, 190},
-{362039622, 191},
-{812669196, 192},
-{1009656853, 193},
-{833829487, 194},
-{78861843, 195},
-{1345245443, 196},
-{542418962, 197},
-{1088538944, 198},
-{609127932, 199},
-{74208034, 200},
-{1962161495, 201},
-{1968408944, 202},
-{94648441, 203},
-{1550858826, 204},
-{275685142, 205},
-{1505503066, 206},
-{1947284508, 207},
-{1153194843, 208},
-{2096278066, 209},
-{901471567, 210},
-{1148231953, 211},
-{1884211496, 212},
-{93605718, 213},
-{1756400155, 214},
-{804049195, 215},
-{1169389419, 216},
-{555508816, 217},
-{65353061, 218},
-{1016196633, 219},
-{1948180509, 220},
-{821316428, 221},
-{821316428, 222},
-{80617048, 223},
-{85974272, 224},
-{609528081, 225},
-{2099019038, 226},
-{1420842518, 227},
-{1083178263, 228},
-{1100116596, 229},
-{1972345455, 230},
-{1680114469, 231},
-{1950226940, 232},
-{1633575999, 233},
-{1436181609, 234},
-{546959662, 235},
-{139492126, 236},
-{13761799, 237},
-{839915025, 238},
-{1085270304, 239},
-{814775575, 240},
-{808273684, 241},
-{1083221063, 242},
-{1621365514, 243},
-{2113189940, 244},
-{95444563, 245},
-{1162703698, 246},
-{897095778, 247},
-{1703992155, 248},
-{78680088, 249},
-{1816550703, 250},
-{343203093, 251},
-{301294426, 252},
-{1092576854, 253},
-{609528081, 254},
-{1016792093, 255},
-{1085352216, 256},
-{1973024071, 257},
-{1419899411, 258},
-{544124965, 259},
-{2092027209, 260},
-{366202448, 261},
-{1414589988, 262},
-{342836860, 263},
-{1972435803, 264},
-{1885250816, 265},
-{1359771723, 266},
-{811858711, 267},
-{874539807, 268},
-{282217472, 269},
-{882011929, 270},
-{1697964387, 271},
-{875435792, 272},
-{1152461336, 273},
-{1613657350, 274},
-{1368366340, 275},
-{11560723, 276},
-{1148103298, 277},
-{8555282, 278},
-{1888488727, 279},
-{68958233, 280},
-{622613328, 281},
-{1426935628, 282},
-{1143960846, 283},
-{65339433, 284},
-{881858396, 285},
-{11191590, 286},
-{1757159967, 287},
-{1972516191, 288},
-{1020641325, 289},
-{1840550228, 290},
-{964831872, 291},
-{1947159893, 292},
-{1083227415, 293},
-{876526864, 294},
-{1286811222, 295},
-{1641773825, 296},
-{898660691, 297},
-{1739536231, 298},
-{1012126290, 299},
-{157153115, 300},
-{617673506, 301},
-{1960933755, 302},
-{1156200311, 303},
-{433061482, 304},
-{1540045598, 305},
-{1425173348, 306},
-{284167436, 307},
-{1680697367, 308},
-{592243224, 309},
-{1359809612, 310},
-{812848424, 311},
-{30467615, 312},
-{1947114493, 313},
-{873226776, 314},
-{541937936, 315},
-{1395602442, 316},
-{1880044332, 317},
-{1353700646, 318},
-{74275352, 319},
-{1147572764, 320},
-{873894396, 321},
-{1680676881, 322},
-{72714776, 323},
-{1150341140, 324},
-{297392983, 325},
-{1353733398, 326},
-{877979921, 327},
-{1410260484, 328},
-{1680676881, 329},
-{879844392, 330},
-{1442539618, 331},
-{1672653446, 332},
-{7643161, 333},
-{812572693, 334},
-{882537498, 335},
-{1415448591, 336},
-{1155620191, 337},
-{346002984, 338},
-{1950194188, 339},
-{342814724, 340},
-{1706742398, 341},
-{1438752087, 342},
-{541937936, 343},
-{278876968, 344},
-{1697441631, 345},
-{1672653446, 346},
-{1425173348, 347},
-{831557207, 348},
-{1624589593, 349},
-{1167160152, 350},
-{1613566735, 351},
-{1953319960, 352},
-{1689353243, 353},
-{1892766812, 354},
-{1962070864, 355},
-{1155620191, 356},
-{1708908651, 357},
-{278876968, 358},
-{1395602442, 359},
-{1286937134, 360},
-{1683933184, 361},
-{336411663, 362},
-{1886986508, 363},
-{7166232, 364},
-{1155139075, 365},
-{542153987, 366},
-{609577488, 367},
-{1678566741, 368},
-{2069205283, 369},
-{609577488, 370},
-{1678566741, 371},
-{814699628, 372},
-{619919386, 373},
-{827460708, 374},
-{1028379, 375},
-{1947114493, 376},
-{619919386, 377},
-{1371180381, 378},
-{417206281, 379},
-{885709644, 380},
-{76586266, 381},
-{59814198, 382},
-{1678566741, 383},
-{359978518, 384},
-{827460708, 385},
-{204073010, 386},
-{827460708, 387},
-{1674402429, 388},
-{1357481824, 389},
-{59814198, 390},
-{1957992976, 391},
-{146500727, 392},
-{1879874317, 393},
-{1674402429, 394},
-{2096779645, 395}
+{8555282, 0}, // automorphism group size 2
+{9736216, 1}, // automorphism group size 2
+{10426992, 2}, // automorphism group size 2
+{11191590, 3}, // automorphism group size 2
+{11560723, 4}, // automorphism group size 2
+{11560723, 5}, // automorphism group size 2
+{13761799, 6}, // automorphism group size 2
+{13864720, 7}, // automorphism group size 2
+{14252306, 8}, // automorphism group size 2
+{15873295, 9}, // automorphism group size 2
+{17603666, 10}, // automorphism group size 2
+{19849319, 11}, // automorphism group size 2
+{65339433, 12}, // automorphism group size 2
+{65339433, 13}, // automorphism group size 2
+{65353061, 14}, // automorphism group size 2
+{68059651, 15}, // automorphism group size 2
+{68958233, 16}, // automorphism group size 2
+{69031448, 17}, // automorphism group size 2
+{69122320, 18}, // automorphism group size 2
+{69611031, 19}, // automorphism group size 2
+{74208034, 20}, // automorphism group size 2
+{74887945, 21}, // automorphism group size 2
+{76601888, 22}, // automorphism group size 2
+{78680088, 23}, // automorphism group size 2
+{78861843, 24}, // automorphism group size 2
+{80617048, 25}, // automorphism group size 2
+{80907780, 26}, // automorphism group size 2
+{84680034, 27}, // automorphism group size 2
+{85974272, 28}, // automorphism group size 2
+{86376253, 29}, // automorphism group size 2
+{87037262, 30}, // automorphism group size 2
+{87372115, 31}, // automorphism group size 2
+{90435683, 32}, // automorphism group size 2
+{92434255, 33}, // automorphism group size 2
+{93605718, 34}, // automorphism group size 2
+{94648441, 35}, // automorphism group size 2
+{95444563, 36}, // automorphism group size 2
+{139492126, 37}, // automorphism group size 2
+{150752597, 38}, // automorphism group size 2
+{155533309, 39}, // automorphism group size 2
+{206977030, 40}, // automorphism group size 2
+{275685142, 41}, // automorphism group size 2
+{275728127, 42}, // automorphism group size 2
+{275796996, 43}, // automorphism group size 2
+{276160794, 44}, // automorphism group size 2
+{278032167, 45}, // automorphism group size 2
+{278205444, 46}, // automorphism group size 2
+{282217472, 47}, // automorphism group size 2
+{290475608, 48}, // automorphism group size 2
+{297155348, 49}, // automorphism group size 2
+{301294426, 50}, // automorphism group size 2
+{339643939, 51}, // automorphism group size 2
+{340519978, 52}, // automorphism group size 2
+{340655631, 53}, // automorphism group size 2
+{342814724, 54}, // automorphism group size 2
+{342836860, 55}, // automorphism group size 2
+{343203093, 56}, // automorphism group size 2
+{344170801, 57}, // automorphism group size 2
+{344604690, 58}, // automorphism group size 2
+{344974632, 59}, // automorphism group size 2
+{346035736, 60}, // automorphism group size 2
+{353278490, 61}, // automorphism group size 2
+{359585311, 62}, // automorphism group size 2
+{360704340, 63}, // automorphism group size 2
+{360771416, 64}, // automorphism group size 2
+{361951042, 65}, // automorphism group size 2
+{362039622, 66}, // automorphism group size 2
+{366202448, 67}, // automorphism group size 2
+{366733668, 68}, // automorphism group size 2
+{413287515, 69}, // automorphism group size 2
+{420385640, 70}, // automorphism group size 2
+{424684581, 71}, // automorphism group size 2
+{536825879, 72}, // automorphism group size 2
+{542418962, 73}, // automorphism group size 2
+{544124965, 74}, // automorphism group size 2
+{544126207, 75}, // automorphism group size 2
+{544130815, 76}, // automorphism group size 2
+{544137253, 77}, // automorphism group size 2
+{544354070, 78}, // automorphism group size 2
+{546959662, 79}, // automorphism group size 2
+{555508816, 80}, // automorphism group size 2
+{555508816, 81}, // automorphism group size 2
+{609127932, 82}, // automorphism group size 2
+{609528081, 83}, // automorphism group size 2
+{609528081, 84}, // automorphism group size 2
+{609546584, 85}, // automorphism group size 2
+{611893525, 86}, // automorphism group size 2
+{613553689, 87}, // automorphism group size 2
+{620704319, 88}, // automorphism group size 2
+{622093408, 89}, // automorphism group size 2
+{622613328, 90}, // automorphism group size 2
+{623054402, 91}, // automorphism group size 2
+{628154712, 92}, // automorphism group size 2
+{629895746, 93}, // automorphism group size 2
+{634613312, 94}, // automorphism group size 2
+{687640407, 95}, // automorphism group size 2
+{692933152, 96}, // automorphism group size 2
+{743431709, 97}, // automorphism group size 2
+{744428833, 98}, // automorphism group size 2
+{804049195, 99}, // automorphism group size 2
+{808273684, 100}, // automorphism group size 2
+{811858711, 101}, // automorphism group size 2
+{812572693, 102}, // automorphism group size 2
+{812636444, 103}, // automorphism group size 2
+{812669196, 104}, // automorphism group size 2
+{814732380, 105}, // automorphism group size 2
+{814763284, 106}, // automorphism group size 2
+{814775575, 107}, // automorphism group size 2
+{814813464, 108}, // automorphism group size 2
+{815430975, 109}, // automorphism group size 2
+{816908568, 110}, // automorphism group size 2
+{821316428, 111}, // automorphism group size 2
+{821316428, 112}, // automorphism group size 2
+{833829487, 113}, // automorphism group size 2
+{835769182, 114}, // automorphism group size 2
+{839915025, 115}, // automorphism group size 2
+{874539807, 116}, // automorphism group size 2
+{875435792, 117}, // automorphism group size 2
+{876474388, 118}, // automorphism group size 2
+{876526864, 119}, // automorphism group size 2
+{881858396, 120}, // automorphism group size 2
+{881872404, 121}, // automorphism group size 2
+{881907548, 122}, // automorphism group size 2
+{882011929, 123}, // automorphism group size 2
+{884092931, 124}, // automorphism group size 2
+{897095778, 125}, // automorphism group size 2
+{898660691, 126}, // automorphism group size 2
+{898660691, 127}, // automorphism group size 2
+{900988255, 128}, // automorphism group size 2
+{901471567, 129}, // automorphism group size 2
+{909284625, 130}, // automorphism group size 2
+{951738653, 131}, // automorphism group size 2
+{964831872, 132}, // automorphism group size 2
+{1008687662, 133}, // automorphism group size 2
+{1009656853, 134}, // automorphism group size 2
+{1016196633, 135}, // automorphism group size 2
+{1016792093, 136}, // automorphism group size 2
+{1020641325, 137}, // automorphism group size 2
+{1030664519, 138}, // automorphism group size 2
+{1076717332, 139}, // automorphism group size 2
+{1076717332, 140}, // automorphism group size 2
+{1079801108, 141}, // automorphism group size 2
+{1081035138, 142}, // automorphism group size 2
+{1083178263, 143}, // automorphism group size 2
+{1083178263, 144}, // automorphism group size 2
+{1083221063, 145}, // automorphism group size 2
+{1083227415, 146}, // automorphism group size 2
+{1085270304, 147}, // automorphism group size 2
+{1085352216, 148}, // automorphism group size 2
+{1085352216, 149}, // automorphism group size 2
+{1088538944, 150}, // automorphism group size 2
+{1092576854, 151}, // automorphism group size 2
+{1100116596, 152}, // automorphism group size 2
+{1139750423, 153}, // automorphism group size 2
+{1139756096, 154}, // automorphism group size 2
+{1143960846, 155}, // automorphism group size 2
+{1147124248, 156}, // automorphism group size 2
+{1147527714, 157}, // automorphism group size 2
+{1148103298, 158}, // automorphism group size 2
+{1148106878, 159}, // automorphism group size 2
+{1148231953, 160}, // automorphism group size 2
+{1152374816, 161}, // automorphism group size 2
+{1152391712, 162}, // automorphism group size 2
+{1152461336, 163}, // automorphism group size 2
+{1152689495, 164}, // automorphism group size 2
+{1153194843, 165}, // automorphism group size 2
+{1153691019, 166}, // automorphism group size 2
+{1154480162, 167}, // automorphism group size 2
+{1156275994, 168}, // automorphism group size 2
+{1162703698, 169}, // automorphism group size 2
+{1164986973, 170}, // automorphism group size 2
+{1169389419, 171}, // automorphism group size 2
+{1220582185, 172}, // automorphism group size 2
+{1286811222, 173}, // automorphism group size 2
+{1299969305, 174}, // automorphism group size 2
+{1300113169, 175}, // automorphism group size 2
+{1345201414, 176}, // automorphism group size 2
+{1345201414, 177}, // automorphism group size 2
+{1345245443, 178}, // automorphism group size 2
+{1347633944, 179}, // automorphism group size 2
+{1349542166, 180}, // automorphism group size 2
+{1359771723, 181}, // automorphism group size 2
+{1359771723, 182}, // automorphism group size 2
+{1359771723, 183}, // automorphism group size 2
+{1361980987, 184}, // automorphism group size 2
+{1368366340, 185}, // automorphism group size 2
+{1368366340, 186}, // automorphism group size 2
+{1398602553, 187}, // automorphism group size 2
+{1412467988, 188}, // automorphism group size 2
+{1413658135, 189}, // automorphism group size 2
+{1414589988, 190}, // automorphism group size 2
+{1414862860, 191}, // automorphism group size 2
+{1414862860, 192}, // automorphism group size 2
+{1415518292, 193}, // automorphism group size 2
+{1419899411, 194}, // automorphism group size 2
+{1420842518, 195}, // automorphism group size 2
+{1421165312, 196}, // automorphism group size 2
+{1424093827, 197}, // automorphism group size 2
+{1426880843, 198}, // automorphism group size 2
+{1426931023, 199}, // automorphism group size 2
+{1426931023, 200}, // automorphism group size 2
+{1426935628, 201}, // automorphism group size 2
+{1427910971, 202}, // automorphism group size 2
+{1431300446, 203}, // automorphism group size 2
+{1432312916, 204}, // automorphism group size 2
+{1433426258, 205}, // automorphism group size 2
+{1436181609, 206}, // automorphism group size 2
+{1436181609, 207}, // automorphism group size 2
+{1490298906, 208}, // automorphism group size 2
+{1494640765, 209}, // automorphism group size 2
+{1496290908, 210}, // automorphism group size 2
+{1505503066, 211}, // automorphism group size 2
+{1507093082, 212}, // automorphism group size 2
+{1545494054, 213}, // automorphism group size 2
+{1550858826, 214}, // automorphism group size 2
+{1565491218, 215}, // automorphism group size 2
+{1565491218, 216}, // automorphism group size 2
+{1613567760, 217}, // automorphism group size 2
+{1613657350, 218}, // automorphism group size 2
+{1613657350, 219}, // automorphism group size 2
+{1615935770, 220}, // automorphism group size 2
+{1616029486, 221}, // automorphism group size 2
+{1619053865, 222}, // automorphism group size 2
+{1621365514, 223}, // automorphism group size 2
+{1622369812, 224}, // automorphism group size 2
+{1630787685, 225}, // automorphism group size 2
+{1633575999, 226}, // automorphism group size 2
+{1641773825, 227}, // automorphism group size 2
+{1676604432, 228}, // automorphism group size 2
+{1680114469, 229}, // automorphism group size 2
+{1680738327, 230}, // automorphism group size 2
+{1680772112, 231}, // automorphism group size 2
+{1682879363, 232}, // automorphism group size 2
+{1683044891, 233}, // automorphism group size 2
+{1683923325, 234}, // automorphism group size 2
+{1685097003, 235}, // automorphism group size 2
+{1686189326, 236}, // automorphism group size 2
+{1687327755, 237}, // automorphism group size 2
+{1689277201, 238}, // automorphism group size 2
+{1689280552, 239}, // automorphism group size 2
+{1693098302, 240}, // automorphism group size 2
+{1695474013, 241}, // automorphism group size 2
+{1697457440, 242}, // automorphism group size 2
+{1697964387, 243}, // automorphism group size 2
+{1703992155, 244}, // automorphism group size 2
+{1704542305, 245}, // automorphism group size 2
+{1705561706, 246}, // automorphism group size 2
+{1756400151, 247}, // automorphism group size 2
+{1756400155, 248}, // automorphism group size 2
+{1757159967, 249}, // automorphism group size 2
+{1758775851, 250}, // automorphism group size 2
+{1760612343, 251}, // automorphism group size 2
+{1766857310, 252}, // automorphism group size 2
+{1773513030, 253}, // automorphism group size 2
+{1805402661, 254}, // automorphism group size 2
+{1816550703, 255}, // automorphism group size 2
+{1840550228, 256}, // automorphism group size 2
+{1873439247, 257}, // automorphism group size 2
+{1884211496, 258}, // automorphism group size 2
+{1884246812, 259}, // automorphism group size 2
+{1885250816, 260}, // automorphism group size 2
+{1888488727, 261}, // automorphism group size 2
+{1895074856, 262}, // automorphism group size 2
+{1905323607, 263}, // automorphism group size 2
+{1915962144, 264}, // automorphism group size 2
+{1947159893, 265}, // automorphism group size 2
+{1947284508, 266}, // automorphism group size 2
+{1948180509, 267}, // automorphism group size 2
+{1949190668, 268}, // automorphism group size 2
+{1949373957, 269}, // automorphism group size 2
+{1950226940, 270}, // automorphism group size 2
+{1950656529, 271}, // automorphism group size 2
+{1951327740, 272}, // automorphism group size 2
+{1951577607, 273}, // automorphism group size 2
+{1951577607, 274}, // automorphism group size 2
+{1951647784, 275}, // automorphism group size 2
+{1953700876, 276}, // automorphism group size 2
+{1954286892, 277}, // automorphism group size 2
+{1955246603, 278}, // automorphism group size 2
+{1955636567, 279}, // automorphism group size 2
+{1957578325, 280}, // automorphism group size 2
+{1958355217, 281}, // automorphism group size 2
+{1962161495, 282}, // automorphism group size 2
+{1962200872, 283}, // automorphism group size 2
+{1962829421, 284}, // automorphism group size 2
+{1962878039, 285}, // automorphism group size 2
+{1964197936, 286}, // automorphism group size 2
+{1968408944, 287}, // automorphism group size 2
+{1972345455, 288}, // automorphism group size 2
+{1972435803, 289}, // automorphism group size 2
+{1972516191, 290}, // automorphism group size 2
+{1973024071, 291}, // automorphism group size 2
+{1973413901, 292}, // automorphism group size 2
+{2031113251, 293}, // automorphism group size 2
+{2092027209, 294}, // automorphism group size 2
+{2096278066, 295}, // automorphism group size 2
+{2099019038, 296}, // automorphism group size 2
+{2113189940, 297}, // automorphism group size 2
+{7166232, 298}, // automorphism group size 4
+{7643161, 299}, // automorphism group size 4
+{30467615, 300}, // automorphism group size 4
+{72714776, 301}, // automorphism group size 4
+{74275352, 302}, // automorphism group size 4
+{157153115, 303}, // automorphism group size 4
+{278876968, 304}, // automorphism group size 4
+{278876968, 305}, // automorphism group size 4
+{284167436, 306}, // automorphism group size 4
+{297392983, 307}, // automorphism group size 4
+{336411663, 308}, // automorphism group size 4
+{342814724, 309}, // automorphism group size 4
+{346002984, 310}, // automorphism group size 4
+{433061482, 311}, // automorphism group size 4
+{541937936, 312}, // automorphism group size 4
+{541937936, 313}, // automorphism group size 4
+{542153987, 314}, // automorphism group size 4
+{592243224, 315}, // automorphism group size 4
+{617673506, 316}, // automorphism group size 4
+{812572693, 317}, // automorphism group size 4
+{812848424, 318}, // automorphism group size 4
+{831557207, 319}, // automorphism group size 4
+{873226776, 320}, // automorphism group size 4
+{873894396, 321}, // automorphism group size 4
+{877979921, 322}, // automorphism group size 4
+{879844392, 323}, // automorphism group size 4
+{882537498, 324}, // automorphism group size 4
+{1012126290, 325}, // automorphism group size 4
+{1147572764, 326}, // automorphism group size 4
+{1150341140, 327}, // automorphism group size 4
+{1155139075, 328}, // automorphism group size 4
+{1155620191, 329}, // automorphism group size 4
+{1155620191, 330}, // automorphism group size 4
+{1156200311, 331}, // automorphism group size 4
+{1167160152, 332}, // automorphism group size 4
+{1286937134, 333}, // automorphism group size 4
+{1353700646, 334}, // automorphism group size 4
+{1353733398, 335}, // automorphism group size 4
+{1359809612, 336}, // automorphism group size 4
+{1395602442, 337}, // automorphism group size 4
+{1395602442, 338}, // automorphism group size 4
+{1410260484, 339}, // automorphism group size 4
+{1415448591, 340}, // automorphism group size 4
+{1425173348, 341}, // automorphism group size 4
+{1425173348, 342}, // automorphism group size 4
+{1438752087, 343}, // automorphism group size 4
+{1442539618, 344}, // automorphism group size 4
+{1540045598, 345}, // automorphism group size 4
+{1613566735, 346}, // automorphism group size 4
+{1624589593, 347}, // automorphism group size 4
+{1672653446, 348}, // automorphism group size 4
+{1672653446, 349}, // automorphism group size 4
+{1680676881, 350}, // automorphism group size 4
+{1680676881, 351}, // automorphism group size 4
+{1680697367, 352}, // automorphism group size 4
+{1683933184, 353}, // automorphism group size 4
+{1689353243, 354}, // automorphism group size 4
+{1697441631, 355}, // automorphism group size 4
+{1706742398, 356}, // automorphism group size 4
+{1708908651, 357}, // automorphism group size 4
+{1739536231, 358}, // automorphism group size 4
+{1880044332, 359}, // automorphism group size 4
+{1886986508, 360}, // automorphism group size 4
+{1892766812, 361}, // automorphism group size 4
+{1947114493, 362}, // automorphism group size 4
+{1950194188, 363}, // automorphism group size 4
+{1953319960, 364}, // automorphism group size 4
+{1960933755, 365}, // automorphism group size 4
+{1962070864, 366}, // automorphism group size 4
+{609577488, 367}, // automorphism group size 6
+{609577488, 368}, // automorphism group size 6
+{1678566741, 369}, // automorphism group size 6
+{1678566741, 370}, // automorphism group size 6
+{2069205283, 371}, // automorphism group size 6
+{1028379, 372}, // automorphism group size 8
+{619919386, 373}, // automorphism group size 8
+{619919386, 374}, // automorphism group size 8
+{814699628, 375}, // automorphism group size 8
+{827460708, 376}, // automorphism group size 8
+{1371180381, 377}, // automorphism group size 8
+{1947114493, 378}, // automorphism group size 8
+{59814198, 379}, // automorphism group size 12
+{76586266, 380}, // automorphism group size 12
+{359978518, 381}, // automorphism group size 12
+{417206281, 382}, // automorphism group size 12
+{885709644, 383}, // automorphism group size 12
+{1678566741, 384}, // automorphism group size 12
+{204073010, 385}, // automorphism group size 16
+{827460708, 386}, // automorphism group size 16
+{827460708, 387}, // automorphism group size 16
+{1674402429, 388}, // automorphism group size 18
+{59814198, 389}, // automorphism group size 24
+{1357481824, 390}, // automorphism group size 24
+{1957992976, 391}, // automorphism group size 32
+{146500727, 392}, // automorphism group size 36
+{1879874317, 393}, // automorphism group size 80
+{1674402429, 394}, // automorphism group size 108
+{2096779645, 395} // automorphism group size 864
 };
