@@ -504,10 +504,14 @@ int casenumber = -1;
 //graph start[MAXN*MAXM];
 //graph g[MAXN*MAXM];
 //graph canong[MAXN*MAXM];
-int lab[MAXN],ptn[MAXN],orbits[MAXN];
-DEFAULTOPTIONS_GRAPH(options);
+int lab[87],ptn[87],orbits[87];
 //DEFAULTOPTIONS_SPARSEGRAPH(options_sg);
 statsblk stats;
+
+sparsegraph gg;
+
+DEFAULTOPTIONS_GRAPH(options);
+DEFAULTOPTIONS_SPARSEGRAPH(options_sparse);
 
 //DEFAULTOPTIONS_TRACES(options_traces);
 //TracesStats stats_traces;
@@ -544,6 +548,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	options.getcanon = TRUE;
 	options.outfile = NULL;
 
+	options_sparse.writeautoms = FALSE;
+	options_sparse.defaultptn = TRUE;
+	options_sparse.writemarkers = FALSE;
+	options_sparse.getcanon = FALSE;
+	options_sparse.outfile=NULL;
+
 	if(opt_printhashes)
 	{
 		const int k = 0;
@@ -561,20 +571,65 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				break;
 		}
 
+		SG_INIT(gg);
+		SG_ALLOC(gg, 87, 2*186, "malloc");
+
+		gg.v = (size_t*)malloc(87*sizeof(size_t));
+		gg.d = (int*)malloc(87*sizeof(int));
+		gg.e = (int*)malloc(87*11*sizeof(int));
+		gg.nv = 87;
+
+		for(int i=0; i<87; i++)
+			gg.v[i] = 11*i;
+
 		if(complete2)
 		{
-			/*for(int r=0; r<66; r++)
+			/*int count = 0;
+			for(int r=0; r<66; r++)
 			{	for(int c=0; c<21; c++)
 				{	const int index = 111*r+c;
 					if(assigns[index]==l_True)
-						printf("1");
+					{	printf("1");
+						count++;
+					}
 					else if(assigns[index]==l_False)
 						printf("0");
 					else
 						printf("?");
 				}
 				printf("\n");
-			}*/
+			}
+			printf("count %d\n", count);*/
+
+			for(int r=0; r<66; r++)
+			{	gg.d[r] = 0;
+				for(int c=0; c<21; c++)
+				{	
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						gg.e[11*r+gg.d[r]] = 66+c;
+						gg.d[r]++;
+						gg.nde++;
+					}
+				}
+			}
+
+			for(int c=0; c<21; c++)
+			{	gg.d[66+c] = 0;
+				for(int r=0; r<66; r++)
+				{	
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						gg.e[11*(66+c)+gg.d[66+c]] = r;
+						gg.d[66+c]++;
+						gg.nde++;
+					}
+				}
+			}
+
+			//put_sg(stdout, &gg, true, 80);
 
 			int perm[9][12] = {};
 
@@ -627,11 +682,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			graph canong[MAXN*MAXM];
 
 			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
+			sparsenauty(&gg,lab,ptn,orbits,&options_sparse,&stats,NULL);
+
 			long hash = hashgraph(canong, m, n, 19883109L);
 
 			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
+			//printf("{%ld, %d},\n", hash, numsols);
 
-			printf("{%ld, %d},\n", hash, numsols);
+			printf("{%ld, %d}, // automorphism group size %.0f\n", hash, numsols, stats.grpsize1+0.1);
 			numsols++;
 
 			return;
