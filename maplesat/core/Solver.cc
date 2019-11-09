@@ -95,30 +95,42 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
+#if 0
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
+#endif
 static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
 //static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
+#if 0
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", -1);
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", -1);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", -1);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
+#endif
 //static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
+#if 0
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", false);
+#endif
 //static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
+#if 0
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
-static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
+#endif
+static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", true);
 //static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
+#if 0
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
 static BoolOption opt_transblock(_cat, "transblock", "Transitive blocking clauses", false);
 static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conflict to list of clauses", true);
 static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
 static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each graph", false);
+#endif
 static StringOption opt_savefile(_cat, "savefile", "File to save clauses in order to resume search later");
+#if 0
 static BoolOption opt_block1(_cat, "block1", "Store all unblocked blocks", true);
 static BoolOption opt_block2(_cat, "block2", "Store all blocked blocks", false);
 static IntOption opt_lbdbound(_cat, "lbdbound", "LBD removal bound", 2);
 static IntOption opt_sizebound(_cat, "sizebound", "Size removal bound", 2);
+#endif
 
 
 //=================================================================================================
@@ -172,8 +184,9 @@ Solver::Solver() :
   , reward_multiplier(opt_reward_multiplier)
 #endif
   , addunits           (opt_addunits)
-
+#if 0
   , exhauststring (opt_exhaustive)
+#endif
   , exhauststring2 (opt_exhaustive2)
   , savestring (opt_savefile)
   //, transstring (opt_transfile)
@@ -198,9 +211,11 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
+#if 0
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
     }
+#endif
     if(exhauststring2 != NULL)
     {   exhaustfile2 = fopen(exhauststring2, "a");
     }
@@ -232,9 +247,11 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
+#if 0
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
     }
+#endif
     if(exhauststring2 != NULL)
     {   fclose(exhaustfile2);
     }
@@ -250,6 +267,7 @@ Solver::~Solver()
 //=================================================================================================
 // Minor methods:
 
+#if 0
 void Solver::addLexClauses()
 {
 	for(int k=1; k<768; k++)
@@ -279,6 +297,7 @@ void Solver::addLexClauses()
 		}
 	}
 }
+#endif
 
 
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
@@ -554,6 +573,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	options_sparse.getcanon = FALSE;
 	options_sparse.outfile=NULL;
 
+#if 0
 	if(opt_printhashes)
 	{
 		const int k = 0;
@@ -695,8 +715,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			return;
 		}
 	}
+#endif
 
+#if 0
 	if(opt_transblock)
+#endif
 	{
 		bool block_complete[11];
 
@@ -729,19 +752,22 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				continue;
 
 			std::set<std::array<short, 36>>::iterator it = blockset[k].end();
+#if 0
 			if(opt_block1)
+#endif
 			{
-				clock_t startt, end;
-				startt = clock();
+				//clock_t startt, end;
+				//startt = clock();
 				it = blockset[k].find(blockelement);
-				end = clock();
-				lookupticks += end-startt;
-				lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
+				//end = clock();
+				//lookupticks += end-startt;
+				//lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 			}
 
 			if(it != blockset[k].end())
 				continue;
 
+#if 0
 			if(opt_block2)
 			{
 				clock_t startt, end;
@@ -772,6 +798,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					continue;
 				}
 			}
+#endif
 
 			int perm[9][12] = {};
 
@@ -804,7 +831,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				printf("\n");
 			}*/
 
-			clock_t startt = clock();
+			//clock_t startt = clock();
 
 			graph g[MAXN*MAXM];
 			EMPTYGRAPH(g, m, n);
@@ -867,8 +894,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			put_sg(stdout, &canong, true, 80);
 			exit(1);*/
 
-			clock_t end = clock();
-			nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
+			//clock_t end = clock();
+			//nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
 			if(k==0)
 			{	firsthash = hash;
@@ -932,6 +959,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				attachClause(confl_clause);
 				clauses.push(confl_clause);*/
 
+#if 0
 				if(opt_block2)
 				{
 					clock_t startt, end;
@@ -941,15 +969,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					lookupticks += end-startt;
 					lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 				}
+#endif
 			}
-			else if(opt_block1)
+			else //if(opt_block1)
 			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, lookup_result, casenumber);
-				clock_t start, end;
-				start = clock();
+				//clock_t start, end;
+				//start = clock();
 				blockset[k].insert(blockelement);
-				end = clock();
-				lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
-				lookupticks += (end - start);
+				//end = clock();
+				//lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
+				//lookupticks += (end - start);
 			}
 
 			/*
@@ -991,6 +1020,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		//return;
 	}
 
+#if 0
 	if(exhaustfile==NULL)
 		return;
 
@@ -1437,6 +1467,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}*/
 	}
+#endif
 
 }
 
@@ -1972,18 +2003,18 @@ void Solver::reduceDB()
   if(ca[learnts.last()].activity()<=5)  {nbclausesbeforereduce +=specialIncReduceDB;}
 
 
-    int limit;
-    if(alllearnts==0)
-      limit=learnts.size() / 2;
-    else
-      limit=learnts.size();
+    const int limit=learnts.size() / 2;
+    //if(alllearnts==0)
+    //  limit=learnts.size() / 2;
+    //else
+    //  limit=learnts.size();
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
 #if LBD_BASED_CLAUSE_DELETION
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
         //printf("Learnts %d, activity %d\n", i, c.activity());
-        if (c.activity() > opt_lbdbound && c.size() > opt_sizebound && !locked(c) && i < limit)
+        if (/*c.activity() > opt_lbdbound && c.size() > opt_sizebound &&*/ !locked(c) && i < limit)
 #else
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
@@ -1994,9 +2025,9 @@ void Solver::reduceDB()
         }
         else
         {    learnts[j++] = learnts[i];
-             if(locked(c))
+             //if(locked(c))
              {  //printf("Keeping locked clause of length %d with LBD %d\n", c.size(), c.activity());
-                keptclauses++;
+                //keptclauses++;
              }
              /*else
              {  printf("Keeping unlocked clause of length %d with LBD %d\n", c.size(), c.activity());
@@ -2007,7 +2038,7 @@ void Solver::reduceDB()
     learnts.shrink(i - j);
     checkGarbage();
     //printf("Reducing DB, kept %d clauses (%d locked)\n", learnts.size(), keptclauses);
-    keptclauses = 0;
+    //keptclauses = 0;
 }
 
 
@@ -2152,7 +2183,7 @@ lbool Solver::search(int nof_conflicts)
 #endif
         if (confl != CRef_Undef){
             // CONFLICT
-            conflicts++; conflictC++; conflictsthisbound++;
+            conflicts++; conflictC++; //conflictsthisbound++;
 #if BRANCHING_HEURISTIC == CHB || BRANCHING_HEURISTIC == LRB
             if (step_size > min_step_size)
                 step_size -= step_size_dec;
@@ -2231,11 +2262,11 @@ lbool Solver::search(int nof_conflicts)
                 return l_False;
 
 	    // Perform clause database reduction !
-	    if(conflictsthisbound >=  curRestart * nbclausesbeforereduce )
+	    if(conflicts >=  curRestart * nbclausesbeforereduce )
 	      {
-		//printf("Reducing DB, conflicts %d curRestart %d nbclausesbeforereduce %d\n", conflictsthisbound, curRestart, nbclausesbeforereduce);
+		//printf("Reducing DB, conflicts %d curRestart %d nbclausesbeforereduce %d\n", conflicts, curRestart, nbclausesbeforereduce);
 		assert(learnts.size()>0);
-		curRestart = (conflictsthisbound/ nbclausesbeforereduce)+1;
+		curRestart = (conflicts/ nbclausesbeforereduce)+1;
 		reduceDB();
 		reductions++;
 		nbclausesbeforereduce += incReduceDB;
@@ -2252,7 +2283,7 @@ lbool Solver::search(int nof_conflicts)
                     analyzeFinal(~p, conflict);
                     sort(conflict);
                     cancelUntil(0);
-                    if(opt_addfinalconflict && !equalclause(conflict, lastconflict))
+                    if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict))
                     {   addClause_(conflict);
                         fprintclause(output, conflict);
                         fprintclause(savefile, conflict);
@@ -2278,7 +2309,7 @@ lbool Solver::search(int nof_conflicts)
                 callbackLearntClauses.clear();
                 callbackFunction(next == lit_Undef, callbackLearntClauses);
                 if (callbackLearntClauses.size() > 0) {
-                    conflicts++; conflictC++; conflictsthisbound++;
+                    conflicts++; conflictC++; //conflictsthisbound++;
                     int pending = learnts.size();
                     units.clear();
                     backtrack_level = decisionLevel();

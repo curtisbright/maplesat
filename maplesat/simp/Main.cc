@@ -123,14 +123,20 @@ int main(int argc, char** argv)
         IntOption    to_bound   ("MAIN", "to-bound",   "Bound to stop at", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    from_bound ("MAIN", "from-bound",   "Bound to start at", 0, IntRange(0, INT32_MAX));
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
+#if 0
         StringOption assumout ("MAIN", "assumout", "Output results of each instance (using assumptions) to a file.");
+#endif
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+#if 0
         BoolOption   lex    ("MAIN", "lex",    "Use lexicographic constraints.", false);
         BoolOption   clearset    ("MAIN", "clearset",    "Clear blockset after each bound.", false);
+#endif
         IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 1000, IntRange(0, INT32_MAX));
+#if 0
         BoolOption   clearlearnts    ("MAIN", "clearlearnts",    "Clear learnts after each bound.", false);
         BoolOption   freqreduce    ("MAIN", "freqreduce",    "Frequently reduce DB.", false);
+#endif
 
         parseOptions(argc, argv, true);
         
@@ -182,8 +188,10 @@ int main(int argc, char** argv)
         
         S.output = (argc >= 3) ? fopen(argv[2], "a") : NULL;
         parse_DIMACS(in, S);
+#if 0
         if(lex)
             S.addLexClauses();
+#endif
         gzclose(in);
 
         if (S.verbosity > 0){
@@ -227,11 +235,13 @@ int main(int argc, char** argv)
         }
 
 	int numsat = 0;
+#if 0
         FILE* outfile;
         if(assumout)
         { const char* file_name = assumout;
           outfile = fopen(file_name, "w");
         }
+#endif
         lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
@@ -254,13 +264,15 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % print_bound == 0)
-                    printf("Bound %d/%d (%.2f%%) BlSet: %d BlConf: %ld Cl: %d Le: %d Time: %.2f s Est: %.2f h nauty: %.2f s Lookup: %.2f Reductions %d\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.nautytime, (double)S.lookupticks/CLOCKS_PER_SEC, S.reductions);
+                    printf("Bound %d/%d (%.2f%%) BlSet: %d BlConf: %ld Cl: %d Le: %d Time: %.2f s Est: %.2f h Reducts: %d\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numblockconflicts, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.reductions);
+#if 0
                   if(clearset)
                      for(int i=0; i<5; i++)
 			{
 				S.blockset[i].clear();
 				S.blockset2[i].clear();
 			}
+#endif
                   if(bound > to_bound)
                      break;
                   if(bound < from_bound)
@@ -274,12 +286,14 @@ int main(int argc, char** argv)
                      tmp = fscanf(assertion_file, "a ");
                      continue;
                   }
+#if 0
                   if(clearlearnts)
                     S.clearlearnts();
                   if(freqreduce)
                   {  S.curRestart = 1;
                      S.conflictsthisbound = 0;
                   }
+#endif
                   ret = S.solveLimited(dummy);
                   bound++;
                   if(S.verbosity > 0)
@@ -288,6 +302,7 @@ int main(int argc, char** argv)
                   tmp = fscanf(assertion_file, "a ");
                   if(ret==l_True)
                     numsat++;
+#if 0
                   if(assumout)
                   {  fprintf(outfile, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
                      /*if(ret == l_True)
@@ -297,6 +312,7 @@ int main(int argc, char** argv)
                        fprintf(outfile, "\n");
                      }*/
                   }
+#endif
                   if(ret == l_Undef) break;
 
                 }
@@ -312,8 +328,10 @@ int main(int argc, char** argv)
         else
         	ret = S.solveLimited(dummy);
 
+#if 0
         if(assumout)
           fclose(outfile);
+#endif
 
         /*if (S.verbosity > 0)*/{
             if(assumptions)

@@ -45,19 +45,19 @@ public:
     virtual ~Solver();
     long numsols = 0;
     long numblockconflicts = 0;
-    void addLexClauses();
-    uint64_t conflictsthisbound = 0;
+    //void addLexClauses();
+    //uint64_t conflictsthisbound = 0;
     long curRestart = 1;
     int reductions = 0;
-    int keptclauses = 0;
+    //int keptclauses = 0;
 
     char unit_clauses[200000];
     bool addunits = false;
     std::set<std::array<short, 36>> blockset[5];
-    std::set<std::array<short, 36>> blockset2[5];
-    double nautytime = 0;
-    double lookuptime = 0;
-    long lookupticks = 0;
+    //std::set<std::array<short, 36>> blockset2[5];
+    //double nautytime = 0;
+    //double lookuptime = 0;
+    //long lookupticks = 0;
     void minimize_blockset(Lit learnt);
 
     // Problem specification:
