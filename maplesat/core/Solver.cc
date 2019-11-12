@@ -2115,7 +2115,7 @@ bool array_contains(const std::array<short, 36>& A, short e)
 
 void print_array(const std::array<short, 36>& A)
 {	for(int i=0; i<36; i++)
-		printf("%d ", A[i]);
+		printf("%d ", A[i]+1);
 	printf("\n");	
 }
 
@@ -2125,20 +2125,40 @@ void Solver::minimize_blockset(Lit learnt)
 	const int learnt_col = learnt_var % 111;
 	const int k = (learnt_col-12)/9;
 
+	//printf("Minimizing blockset %d (size %d), literal %s%d:\n", k, blockset[k].size(), sign(learnt) ? "-" : "", learnt_var+1);
+
 	if(sign(learnt))
 	{
-		for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
+		for(auto it = blockset[k].begin(); it != blockset[k].end();)
 		{	if(array_contains(*it, learnt_var))
-				blockset[k].erase(*it);
+			{	//printf("Removing ");
+				//print_array(*it);
+				it = blockset[k].erase(it);
+			}
+			else
+			{	//printf("Keeping ");
+				//print_array(*it);
+				++it;
+			}
 		}
 	}
 	else
 	{
-		for(auto it = blockset[k].begin(); it != blockset[k].end(); ++it)
+		for(auto it = blockset[k].begin(); it != blockset[k].end();)
 		{	if(!array_contains(*it, learnt_var))
-				blockset[k].erase(*it);
+			{	//printf("Removing ");
+				//print_array(*it);
+				it = blockset[k].erase(it);
+			}
+			else
+			{	//printf("Keeping ");
+				//print_array(*it);
+				++it;
+			}
 		}
 	}
+
+	//printf("Minimized blockset %d (size %d), literal %s%d.\n", k, blockset[k].size(), sign(learnt) ? "-" : "", learnt_var+1);
 }
 
 /*_________________________________________________________________________________________________
