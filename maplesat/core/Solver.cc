@@ -18,6 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define TRANSBLOCK 1
+
 #include "automorphisms.h"
 
 #define MAXN 9
@@ -116,11 +118,12 @@ static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", fal
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 #endif
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", true);
-//static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
+#ifdef TRANSBLOCK
+static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", true);
+#endif
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
 #if 0
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
-static BoolOption opt_transblock(_cat, "transblock", "Transitive blocking clauses", false);
 static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conflict to list of clauses", true);
 static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
 static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each graph", false);
@@ -718,7 +721,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 #endif
 
-#if 0
+#if TRANSBLOCK
 	if(opt_transblock)
 #endif
 	{
