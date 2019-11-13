@@ -264,7 +264,7 @@ int main(int argc, char** argv)
                      printf("0\n");
                   }
                   if(bound % print_bound == 0)
-                    printf("Bound %d/%d (%.2f%%) BlSet: %d Cl: %d Le: %d Time: %.2f s Est: %.2f h Reducts: %d\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.reductions);
+                    printf("Bound %d/%d (%.2f%%) BlSet: %d Cl: %d Le: %d Time: %.2f s Est: %.2f h Reducts: %d Sols: %d\n", bound, numassums, 100*bound/(double)numassums, S.blockset[0].size()+S.blockset[1].size()+S.blockset[2].size()+S.blockset[3].size()+S.blockset[4].size(), S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.reductions, S.numsols);
 #if 0
                   if(clearset)
                      for(int i=0; i<5; i++)
