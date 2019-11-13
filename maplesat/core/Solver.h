@@ -51,7 +51,7 @@ public:
     int reductions = 0;
     //int keptclauses = 0;
 
-    char unit_clauses[200000];
+    char unit_clauses[100000] = {};
     bool addunits = false;
     std::set<std::array<short, 36>> blockset[5];
     //std::set<std::array<short, 36>> blockset2[5];

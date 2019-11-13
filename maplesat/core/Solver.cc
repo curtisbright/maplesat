@@ -98,9 +98,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, 10, true));
-#if 0
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
-#endif
 static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
 //static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
 #if 0
@@ -188,9 +186,7 @@ Solver::Solver() :
   , reward_multiplier(opt_reward_multiplier)
 #endif
   , addunits           (opt_addunits)
-#if 0
   , exhauststring (opt_exhaustive)
-#endif
   , exhauststring2 (opt_exhaustive2)
   , savestring (opt_savefile)
   //, transstring (opt_transfile)
@@ -215,11 +211,9 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-#if 0
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
     }
-#endif
     if(exhauststring2 != NULL)
     {   exhaustfile2 = fopen(exhauststring2, "a");
     }
@@ -251,11 +245,9 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-#if 0
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
     }
-#endif
     if(exhauststring2 != NULL)
     {   fclose(exhaustfile2);
     }
@@ -1024,455 +1016,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		//return;
 	}
 
-#if 0
-	if(exhaustfile==NULL)
-		return;
-
-	/*bool all_assigned = true;
-	for(int i=0; i<assigns.size(); i++)
-	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
-		if(assigns[i]==l_Undef)
-		{	all_assigned = false;
-			break;
-		}
-	}
-	//printf("\n");*/
-
-	if(opt_eager && opt_rowmin != -1 && opt_rowmax != -1 && opt_colmin != -1 && opt_colmax != -1)
-	{	
-		for(int r=opt_rowmin; r<opt_rowmax; r++)
-		{	for(int c=opt_colmin; c<opt_colmax; c++)
-			{	const int index = 111*r+c;
-				if(assigns[index]==l_Undef)
-					return;
-			}
-		}
-		/*if(!complete)
-		{	printf("The following variables were not set: ");
-			for(int i=0; i<assigns.size(); i++)
-				if(assigns[i]==l_Undef)
-					printf("%d ", i);
-			printf("\n");
-			exit(1);
-		}*/
-		complete = true;
-	}
-
-	if(complete)
+	if(complete && out_learnts.size()==0)
 	{
-		const int size = out_learnts.size();
-		vec<Lit> clause;
-		out_learnts.push();
-		
-		/*fprintf(exhaustfile, "a ");
-		for(int i=0; i<assigns.size(); i++)
-		{	
-			int r = (i/111);
-			int c = (i%111);
-			if(assigns[i]==l_True && r >= opt_rowmin && r < opt_rowmax && c >= opt_colmin && c < opt_colmax)
-			{	clause.push(mkLit(i, assigns[i]==l_True));
-				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
-				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
-			}
-		}
-		fprintf(exhaustfile, "0\n");*/
+		numsols++;
 
-		for(int r=opt_rowmin; r<opt_rowmax; r++)
-		{	for(int c=opt_colmin; c<opt_colmax; c++)
-			{
-				const int index = 111*r+c;
-				if(assigns[index]==l_True)
-				{	out_learnts[size].push(~mkLit(index));
-					//fprintf(exhaustfile, "%d ", index+1);
+		if(exhaustfile!=NULL)
+		{
+			out_learnts.push();
+
+			for(int i=0; i<nVars(); i++)
+			{	if(assigns[i]==l_True && !unit_clauses[i])
+				{	out_learnts[0].push(~mkLit(i));
 				}
 			}
-		}
-
-		//if(!opt_printtags)
-		//	fprintf(exhaustfile, "0\n");
-		//else
-		//	fprintf(exhaustfile, "0 %d\n", numsols+1);
-
-		/*
-		{
-			int max_index = 0;
-			for(int i=1; i<out_learnts[0].size(); i++)
-				if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
-					max_index = i;
-			Lit p = out_learnts[0][0];
-			out_learnts[0][0] = out_learnts[0][max_index];
-			out_learnts[0][max_index] = p;
-		}
-
-		{
-			int max_index = 1;
-			for(int i=2; i<out_learnts[0].size(); i++)
-				if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
-					max_index = i;
-			Lit p = out_learnts[0][1];
-			out_learnts[0][1] = out_learnts[0][max_index];
-			out_learnts[0][max_index] = p;
-		}
-
-		CRef confl_clause = ca.alloc(out_learnts[0], false);
-		attachClause(confl_clause);
-		clauses.push(confl_clause);
-		*/
-
-		/*memcpy(g, start, sizeof(g));
-
-		for(int c=12; c<opt_colmax; c++)
-		{	for(int r1=0; r1<66; r1++)
-			{	for(int r2=r1+1; r2<66; r2++)
-				{
-					const int index1 = 111*r1+c;
-					const int index2 = 111*r2+c;
-					if(assigns[index1]==l_True && assigns[index2]==l_True)
-					{	ADDONEEDGE(g,r1,r2,m);
-					}
-				}
-			}
-		}
-
-		densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-
-		long hash = hashgraph(canong, m, n, 19883109L);
-
-		if(glist.find(hash) == glist.end())*/
-		{
-			//glist.insert(hash);
-			numsols++;
 
 			fprintf(exhaustfile, "a ");
-
-			for(int i=0; i<assumptions.size(); i++)
-			{	//out_learnts[size].push(~assumptions[i]);
-				if(sign(assumptions[i]))
-				{	
-					//out_learnts[0].push(mkLit(var(assumptions[i])));
-					//if(opt_printneg)
-					fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
-				}
-				else
-				{	
-					//out_learnts[0].push(~mkLit(var(assumptions[i])));
-					fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
-				}
-			}
-
-			for(int r=opt_rowmin; r<opt_rowmax; r++)
-			{	for(int c=opt_colmin; c<opt_colmax; c++)
-				{
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{	
-						fprintf(exhaustfile, "%d ", index+1);
-					}
-				}
-			}
-			//fprintf(exhaustfile, "0 %.0f\n", stats_traces.grpsize1+0.1);
+			fprintclause(exhaustfile, out_learnts[0]);
 		}
-
-		if(opt_isoblock)
-		{
-			std::array<std::array<int, 8>, 36> matrix;
-			std::set<std::array<std::array<int, 8>, 36>> matrixset;
-			for(int i=0; i<36; i++)
-				for(int j=0; j<8; j++)
-					matrix[i][j] = (assigns[111*(i+30)+(j+13)]==l_True?1:0);
-			matrixset.insert(matrix);
-
-			for(int k=0; k<768; k++)
-			{
-				if(k != identity_index)
-				{
-					for(int r=30; r<66; r++)
-					{	for(int c=13; c<21; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[row[k][r]-30][col[k][c]-13] = 1;
-							else
-								matrix[row[k][r]-30][col[k][c]-13] = 0;
-							
-						}
-					}
-
-					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-					/*for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}*/
-
-					if(matrixset.count(matrix)>0)
-						continue;
-
-					matrixset.insert(matrix);
-
-					//if(k == identity_index)
-					//	printf("error!\n");
-
-					vec<Lit> clause;
-					//const int len = out_learnts.size();
-					//out_learnts.push();
-
-					for(int i=0; i<36; i++)
-						for(int j=0; j<8; j++)
-							if(matrix[i][j]==1)
-								clause.push(~mkLit((i+30)*111+(j+13)));
-								//out_learnts[len].push(~mkLit((i+30)*111+(j+13)));
-					{
-						{
-							int max_index = 0;
-							for(int i=1; i<clause.size(); i++)
-								if(level(var(clause[i])) > level(var(clause[max_index])))
-									max_index = i;
-							Lit p = clause[0];
-							clause[0] = clause[max_index];
-							clause[max_index] = p;
-						}
-
-						{
-							int max_index = 1;
-							for(int i=2; i<clause.size(); i++)
-								if(level(var(clause[i])) > level(var(clause[max_index])))
-									max_index = i;
-							Lit p = clause[1];
-							clause[1] = clause[max_index];
-							clause[max_index] = p;
-						}
-
-						CRef cr = ca.alloc(clause, true);
-						attachClause(cr);
-
-						if(opt_addtolearnts)
-						{	learnts.push(cr);
-							#if LBD_BASED_CLAUSE_DELETION
-								Clause& clause = ca[cr];
-								clause.activity() = lbd(clause);
-							#else
-								claBumpActivity(ca[cr]);
-							#endif
-						} else
-						{	clauses.push(cr);
-						}
-					}
-
-					/*
-					if(exhaustfile2 != NULL && opt_printtags)
-					{	fprintf(exhaustfile2, "a ");
-						for(int r=0; r<66; r++)
-						{	for(int c=0; c<21; c++)
-							{	if(c>=12 && r>= 30)
-									continue;
-								const int index = 111*r+c;
-								if(assigns[index]==l_True)
-								{	fprintf(exhaustfile2, "%d ", index+1);
-								}
-							}
-						}
-					}
-
-					for(int i=0; i<36; i++)
-					{	
-						for(int j=0; j<9; j++)
-						{	if(matrix[i][j]==1)
-							{	
-								if(exhaustfile2 != NULL)
-								{	if(opt_printtags)
-									{	fprintf(exhaustfile2, "%d ", (i+30)*111+(j+12)+1);
-									}
-									else
-									{	fprintf(exhaustfile2, "-%d ", (i+30)*111+(j+12)+1);
-									}
-								}
-							}
-						}
-					}
-					if(exhaustfile2 != NULL)
-					{	fprintf(exhaustfile2, "0\n");
-					}*/
-
-				}
-			}
-		}
-
-		/*if(opt_isoblock2)
-		{
-
-			for(int k=0; k<16; k++)
-			{
-				std::array<std::array<int, 75>, 6> matrix;
-				std::array<std::array<int, 75>, 6> matrix2;
-
-				if(row2[k]==1)
-				{
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-21][col2[k][c]] = 1;
-							else
-								matrix[r-21][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					for(int r=27; r<33; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix2[r-27][col2[k][c]] = 1;
-							else
-								matrix2[r-27][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix2[j][15+6+i]==1)
-								swap(matrix2[i], matrix2[j]);
-						}
-
-					}
-
-					vec<Lit> clause;
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
-						{	if(matrix[i][j]==1)
-							{	clause.push(~mkLit((i+21)*111+j));
-							}
-							if(matrix2[i][j]==1)
-							{	clause.push(~mkLit((i+27)*111+j));
-							}
-						}
-					}
-
-					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
-
-				}
-				if(row2[k]==10)
-				{
-					for(int r=27; r<33; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-27][col2[k][c]] = 1;
-							else
-								matrix[r-27][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+6+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix2[r-21][col2[k][c]] = 1;
-							else
-								matrix2[r-21][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix2[j][15+i]==1)
-								swap(matrix2[i], matrix2[j]);
-						}
-
-					}
-
-					vec<Lit> clause;
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
-						{	if(matrix[i][j]==1)
-							{	clause.push(~mkLit((i+21)*111+j));
-							}
-							if(matrix2[i][j]==1)
-							{	clause.push(~mkLit((i+27)*111+j));
-							}
-						}
-					}
-
-					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
-
-				}
-			}
-		}*/
 	}
-#endif
-
 }
 
 bool Solver::assertingClause(CRef confl) {

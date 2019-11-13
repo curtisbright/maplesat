@@ -70,7 +70,10 @@ static void parse_DIMACS_main(B& in, Solver& S) {
         else{
             cnt++;
             readClause(in, S, lits);
-            S.addClause_(lits); }
+            S.addClause_(lits);
+            if(lits.size()==1)
+              S.unit_clauses[var(lits[0])] = 1;
+        }
     }
     if (vars != S.nVars())
         fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
@@ -80,7 +83,9 @@ static void parse_DIMACS_main(B& in, Solver& S) {
     for(int i=0; i<100000 && i<S.nVars(); i++)
       if(!var_used[i])
       {  if(S.addunits)
-	   S.addClause(mkLit(i, true));
+         {  S.addClause(mkLit(i, true));
+            S.unit_clauses[i] = 1;
+         }
          addedunits++;
       }
     if(S.addunits)
