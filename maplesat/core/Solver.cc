@@ -928,6 +928,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 
+				if (output != NULL) {
+					fprintf(output, "c ");
+					fprintclause(output, out_learnts[size]);
+				}
 				fprintclause(exhaustfile2, out_learnts[size]);
 				//numblockconflicts++;
 
@@ -1024,14 +1028,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		{
 			out_learnts.push();
 
+			fprintf(exhaustfile, "a ");
+
 			for(int i=0; i<nVars(); i++)
 			{	if(assigns[i]==l_True && !unit_clauses[i])
 				{	out_learnts[0].push(~mkLit(i));
+					fprintf(exhaustfile, "%d ", i+1);
 				}
 			}
 
-			fprintf(exhaustfile, "a ");
-			fprintclause(exhaustfile, out_learnts[0]);
+			fprintf(exhaustfile, "0\n");
 		}
 	}
 }
@@ -1922,6 +1928,10 @@ lbool Solver::search(int nof_conflicts)
 		               learnt_clause.clear();
 		               analyze(callbackLearntClauses[i], learnt_clause, level);
 		               fprintclause(output, learnt_clause);
+                               /*if (output != NULL) {
+                                  fprintf(output, "d ");
+                                  fprintclause(output, callbackLearntClauses[i]);
+                               }*/
 		               if (level == -1) {
 		                   return l_False;
 		               } else if (level < backtrack_level) {
@@ -1945,6 +1955,7 @@ lbool Solver::search(int nof_conflicts)
 	#else
 		                   claBumpActivity(ca[cr]);
 	#endif
+
 		               }
                         /*} else
                         {
