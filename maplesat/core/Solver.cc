@@ -1811,7 +1811,7 @@ lbool Solver::search(int nof_conflicts)
               fprintf(output, "0\n");
             }
             if(savefile != NULL && learnt_clause.size()==1)
-            {  fprintf(savefile, "%d 0\n", var(learnt_clause[0])+1);
+            {  fprintf(savefile, "%d 0\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
                fflush(savefile);
             }
             if(learnt_clause.size()==1)
@@ -1938,13 +1938,13 @@ lbool Solver::search(int nof_conflicts)
 		                   backtrack_level = level;
 		               }
 		               if (learnt_clause.size() == 1) {
-		                   units.push(learnt_clause[0]);
+		                 units.push(learnt_clause[0]);
                                    printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
-	                           minimize_blockset(learnt_clause[0]);
-				   if(savefile != NULL)
-                                   {  fprintf(savefile, "%d 0\n", var(learnt_clause[0])+1);
-                                      fflush(savefile);
-                                   }
+		                 minimize_blockset(learnt_clause[0]);
+		                 if(savefile != NULL)
+		                 {  fprintf(savefile, "%d 0\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
+		                    fflush(savefile);
+		                 }
 		               } else {
 		                   CRef cr = ca.alloc(learnt_clause, true);
                                      learnts.push(cr);
