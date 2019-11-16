@@ -1928,10 +1928,10 @@ lbool Solver::search(int nof_conflicts)
 		               learnt_clause.clear();
 		               analyze(callbackLearntClauses[i], learnt_clause, level);
 		               fprintclause(output, learnt_clause);
-                               /*if (output != NULL) {
+                               if (output != NULL) {
                                   fprintf(output, "d ");
                                   fprintclause(output, callbackLearntClauses[i]);
-                               }*/
+                               }
 		               if (level == -1) {
 		                   return l_False;
 		               } else if (level < backtrack_level) {
