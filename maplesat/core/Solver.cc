@@ -330,6 +330,40 @@ Var Solver::newVar(bool sign, bool dvar)
     return v;
 }
 
+int numdigits(Var n)
+{	if(n < 9)
+		return 1;
+	if(n < 99)
+		return 2;
+	if(n < 999)
+		return 3;
+	if(n < 9999)
+		return 4;
+	if(n < 99999)
+		return 5;
+}
+
+int clausestrlen(const vec<Lit>& clause)
+{	const int size = clause.size();
+	int res = 2+size;
+	for(int i=0; i<size; i++)
+	{	if(sign(clause[i]))
+			res++;
+		res += numdigits(var(clause[i]));
+	}
+	return res;
+}
+
+int clausestrlen(const Clause& clause)
+{	const int size = clause.size();
+	int res = 2+size;
+	for(int i=0; i<size; i++)
+	{	if(sign(clause[i]))
+			res++;
+		res += numdigits(var(clause[i]));
+	}
+	return res;
+}
 
 bool Solver::addClause_(vec<Lit>& ps)
 {
@@ -365,6 +399,11 @@ bool Solver::addClause_(vec<Lit>& ps)
       for (i = j = 0, p = lit_Undef; i < oc.size(); i++)
         fprintf(output, "%i ", (var(oc[i]) + 1) * (-2 * sign(oc[i]) + 1));
       fprintf(output, "0\n");
+    }
+
+    if(flag) {
+      proofsize += clausestrlen(ps);
+      proofsize += 2+clausestrlen(oc);
     }
 
     if (ps.size() == 0)
@@ -417,6 +456,8 @@ void Solver::removeClause(CRef cr) {
         fprintf(output, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
       fprintf(output, "0\n");
     }
+
+    proofsize += 2+clausestrlen(c);
 
     detachClause(cr);
     // Don't leave pointers to free'd memory!
@@ -933,6 +974,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					fprintclause(output, out_learnts[size]);
 				}
 				fprintclause(exhaustfile2, out_learnts[size]);
+				proofsize += 2+clausestrlen(out_learnts[size]);
 				//numblockconflicts++;
 
 				/*{
@@ -1810,6 +1852,7 @@ lbool Solver::search(int nof_conflicts)
                                   (-2 * sign(learnt_clause[i]) + 1) );
               fprintf(output, "0\n");
             }
+            proofsize += clausestrlen(learnt_clause);
             if(savefile != NULL && learnt_clause.size()==1)
             {  fprintf(savefile, "%d 0\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
                fflush(savefile);
@@ -1880,6 +1923,7 @@ lbool Solver::search(int nof_conflicts)
                         fprintclause(savefile, conflict);
                         fflush(output);
                         fflush(savefile);
+                        proofsize += clausestrlen(conflict);
                     }
                     conflict.copyTo(lastconflict);
                     nbclausesbeforereduce = firstReduceDB;
@@ -1932,6 +1976,8 @@ lbool Solver::search(int nof_conflicts)
                                   fprintf(output, "d ");
                                   fprintclause(output, callbackLearntClauses[i]);
                                }
+                                 proofsize += clausestrlen(learnt_clause);
+                                 proofsize += 2+clausestrlen(callbackLearntClauses[i]);
 		               if (level == -1) {
 		                   return l_False;
 		               } else if (level < backtrack_level) {
@@ -2095,8 +2141,8 @@ lbool Solver::solve_()
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
-	printf("Blockset size: %d\n", blockset[0].size()+blockset[1].size()+blockset[2].size()+blockset[3].size()+blockset[4].size());
-	//printf("Blockset2 size: %d\n", blockset2.size());
+        printf("Blockset size: %d\n", blockset[0].size()+blockset[1].size()+blockset[2].size()+blockset[3].size()+blockset[4].size());
+        //printf("Blockset2 size: %d\n", blockset2.size());
     }
 
     if (status == l_True){

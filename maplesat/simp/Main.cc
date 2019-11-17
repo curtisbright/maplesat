@@ -336,6 +336,7 @@ int main(int argc, char** argv)
         /*if (S.verbosity > 0)*/{
             if(assumptions)
 	      printf("Number of satisfiable bounds: %d\n", numsat);        
+            printf("Proof size: %ld\n", S.proofsize+2);
             printStats(S);
             printf("\n");
             printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
