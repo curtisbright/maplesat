@@ -51,7 +51,6 @@ public:
     int reductions = 0;
     //int keptclauses = 0;
     long proofsize = 0;
-    long outputsize = 0;
 
     char unit_clauses[100000] = {};
     bool addunits = false;

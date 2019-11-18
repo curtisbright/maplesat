@@ -1080,6 +1080,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 
 			fprintf(exhaustfile, "0\n");
+			fflush(exhaustfile);
 		}
 	}
 }
@@ -1920,9 +1921,8 @@ lbool Solver::search(int nof_conflicts)
                     if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict))
                     {   addClause_(conflict);
                         fprintclause(output, conflict);
-                        //fprintclause(savefile, conflict);
-                        //fflush(output);
-                        //fflush(savefile);
+                        fprintclause(savefile, conflict);
+                        fflush(savefile);
                         proofsize += clausestrlen(conflict);
                     }
                     conflict.copyTo(lastconflict);
