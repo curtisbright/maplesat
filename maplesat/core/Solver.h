@@ -54,12 +54,14 @@ public:
 
     char unit_clauses[100000] = {};
     bool addunits = false;
+#ifdef BLOCKSET
     std::set<std::array<short, 36>> blockset[5];
     //std::set<std::array<short, 36>> blockset2[5];
     //double nautytime = 0;
     //double lookuptime = 0;
     //long lookupticks = 0;
     void minimize_blockset(Lit learnt);
+#endif
 
     // Problem specification:
     //

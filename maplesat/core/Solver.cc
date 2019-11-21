@@ -474,6 +474,8 @@ bool Solver::satisfied(const Clause& c) const {
     return false; }
 
 
+bool untouched[5] = {false, false, false, false, false};
+
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
 void Solver::cancelUntil(int level) {
@@ -505,6 +507,18 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
+            const int xc = x % 111;
+            const int xb = (xc-12)/9;
+            if(xb > 0 && xb < 5)
+              untouched[xb] = false;
+            /*if(xc >= 21 && xc < 30)
+              untouched[1] = false;
+            if(xc >= 30 && xc < 39)
+              untouched[2] = false;
+            if(xc >= 39 && xc < 48)
+              untouched[3] = false;
+            if(xc >= 48 && xc < 57)
+              untouched[4] = false;*/
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -764,6 +778,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		{	
 			if(k==0 && firsthash!=0)
 				continue;
+			if(untouched[k])
+			{	//skips++;
+				continue;
+			}
 
 			std::array<short, 36> blockelement;
 			int blockcount = 0;
@@ -788,6 +806,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			if(block_complete[k]==false)
 				continue;
 
+			untouched[k] = true;
+
+#ifdef BLOCKSET
 			std::set<std::array<short, 36>>::iterator it = blockset[k].end();
 #if 0
 			if(opt_block1)
@@ -802,7 +823,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 
 			if(it != blockset[k].end())
+			{	//skips++;
 				continue;
+			}
+#endif
 
 #if 0
 			if(opt_block2)
@@ -1013,6 +1037,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 #endif
 			}
+#ifdef BLOCKSET
 			else //if(opt_block1)
 			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, lookup_result, casenumber);
 				//clock_t start, end;
@@ -1022,6 +1047,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				//lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
 				//lookupticks += (end - start);
 			}
+#endif
 
 			/*
 			{
@@ -1732,6 +1758,7 @@ void print_array(const std::array<short, 36>& A)
 	printf("\n");	
 }
 
+#ifdef BLOCKSET
 void Solver::minimize_blockset(Lit learnt)
 {	
 	const short learnt_var = var(learnt);
@@ -1773,6 +1800,7 @@ void Solver::minimize_blockset(Lit learnt)
 
 	//printf("Minimized blockset %d (size %d), literal %s%d.\n", k, blockset[k].size(), sign(learnt) ? "-" : "", learnt_var+1);
 }
+#endif
 
 /*_________________________________________________________________________________________________
 |
@@ -1860,7 +1888,9 @@ lbool Solver::search(int nof_conflicts)
             }
             if(learnt_clause.size()==1)
             {  printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
+#ifdef BLOCKSET
 	       minimize_blockset(learnt_clause[0]);
+#endif
             }
 
 #if BRANCHING_HEURISTIC == VSIDS
@@ -1986,7 +2016,9 @@ lbool Solver::search(int nof_conflicts)
 		               if (learnt_clause.size() == 1) {
 		                 units.push(learnt_clause[0]);
                                    printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
+#ifdef BLOCKSET
 		                 minimize_blockset(learnt_clause[0]);
+#endif
 		                 if(savefile != NULL)
 		                 {  fprintf(savefile, "%d 0\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
 		                    fflush(savefile);
