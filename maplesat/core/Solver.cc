@@ -2173,7 +2173,9 @@ lbool Solver::solve_()
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
+#ifdef BLOCKSET
         printf("Blockset size: %d\n", blockset[0].size()+blockset[1].size()+blockset[2].size()+blockset[3].size()+blockset[4].size());
+#endif
         //printf("Blockset2 size: %d\n", blockset2.size());
     }
 
