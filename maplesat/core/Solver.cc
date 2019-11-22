@@ -1620,7 +1620,12 @@ struct reduceDB_lt {
 #endif
     bool operator () (CRef x, CRef y) { 
 #if LBD_BASED_CLAUSE_DELETION
-        return ca[x].activity() > ca[y].activity();
+    //if(ca[x].activity() == ca[y].activity())
+    //  return ca[x].size() > ca[y].size();
+    //return ca[x].activity() > ca[y].activity();
+    if(ca[x].size() == ca[y].size())
+      return ca[x].activity() > ca[y].activity();
+    return ca[x].size() > ca[y].size();
     }
 #else
         return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()); } 
@@ -1632,6 +1637,10 @@ void Solver::reduceDB()
     int     i, j;
 #if LBD_BASED_CLAUSE_DELETION
     sort(learnts, reduceDB_lt(ca, activity));
+    //for(int i=0; i<learnts.size(); i++)
+    //{  Clause& c = ca[learnts[i]];
+    //   printf("%d %d %d\n", i, c.activity(), c.size());
+    //}
 #else
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
     sort(learnts, reduceDB_lt(ca));
