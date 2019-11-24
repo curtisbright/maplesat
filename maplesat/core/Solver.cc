@@ -97,7 +97,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
-static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, 10, true));
+static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, HUGE_VAL, true));
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
 //static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
@@ -474,7 +474,7 @@ bool Solver::satisfied(const Clause& c) const {
     return false; }
 
 
-bool untouched[5] = {false, false, false, false, false};
+bool untouched[6] = {false, false, false, false, false, false};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -509,7 +509,7 @@ void Solver::cancelUntil(int level) {
             assigns [x] = l_Undef;
             const int xc = x % 111;
             const int xb = (xc-12)/9;
-            if(xb > 0 && xb < 5)
+            if(xb > 1 && xb < 6)
               untouched[xb] = false;
             /*if(xc >= 21 && xc < 30)
               untouched[1] = false;
@@ -772,38 +772,29 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(opt_transblock)
 #endif
 	{
-		bool block_complete[11];
-
-		for(int k=0; k<5; k++)
+		for(int k=1; k<6; k++)
 		{	
-			if(k==0 && firsthash!=0)
+			if(k==1 && firsthash!=0)
 				continue;
+
 			if(untouched[k])
 			{	//skips++;
 				continue;
 			}
 
-			std::array<short, 36> blockelement;
-			int blockcount = 0;
-
-			block_complete[k] = true;
+			bool block_complete = true;
 			for(int r=21; r<66; r++)
 			{	for(int c=12+9*k; c<12+9*(k+1); c++)
 				{	const int index = 111*r+c;
 					if(assigns[index]==l_Undef)
-					{	block_complete[k] = false;
+					{	block_complete = false;
 						break;
 					}
-					if(k!=0 || r<30)
-					{	if(assigns[index]==l_True)
-							blockelement[blockcount++] = index;
-					}
 				}
-				if(block_complete[k]==false)
+				if(block_complete==false)
 					break;
 			}
-
-			if(block_complete[k]==false)
+			if(block_complete==false)
 				continue;
 
 			untouched[k] = true;
@@ -909,15 +900,15 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						printf("%d ", permproduct[j]);
 					printf("\n");
 					
-					printf("permproduct[6] = %d\n", permproduct[6]);
-					printf("permproduct[permproduct[6]] = %d\n", permproduct[permproduct[6]]);
-					printf("permproduct[permproduct[permproduct[6]]] = %d\n", permproduct[permproduct[permproduct[6]]]);*/
+					printf("permproduct[1] = %d\n", permproduct[1]);
+					printf("permproduct[permproduct[1]] = %d\n", permproduct[permproduct[1]]);
+					printf("permproduct[permproduct[permproduct[1]]] = %d\n", permproduct[permproduct[permproduct[1]]]);*/
 
-					if(permproduct[permproduct[6]]==6 || permproduct[permproduct[permproduct[6]]]==6)
+					if(permproduct[permproduct[1]]==1 || permproduct[permproduct[permproduct[1]]]==1)
 					{	ADDONEEDGE(g,i,j,m);
 					}
 					else
-					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[6]]]]]!=6)
+					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[1]]]]]!=1)
 							printf("error\n"), exit(1);
 					}
 				}
@@ -958,12 +949,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			//clock_t end = clock();
 			//nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
 
-			if(k==0)
+			if(k==1)
 			{	firsthash = hash;
 				if(hashes.find(hash)==hashes.end())
 					printf("Error: Can't find hash %ld\n", hash), exit(1);
-				//else
-				//	printf("Found hash %ld (case %d)\n", hash, hashes.find(hash)->second);
+				else
+					//printf("Found hash %ld (case %d)\n", hash, hashes.find(hash)->second);
+					printf("Solving case %d\n", hashes.find(hash)->second);
 				casenumber = hashes.find(hash)->second;
 			}
 
@@ -1628,7 +1620,11 @@ struct reduceDB_lt {
     return ca[x].size() > ca[y].size();
     }
 #else
-        return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()); } 
+    if(ca[x].size() == ca[y].size())
+      return ca[x].activity() < ca[y].activity();
+    return ca[x].size() > ca[y].size();
+    //    return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()); 
+} 
 #endif
 };
 void Solver::reduceDB()
@@ -1637,6 +1633,7 @@ void Solver::reduceDB()
     int     i, j;
 #if LBD_BASED_CLAUSE_DELETION
     sort(learnts, reduceDB_lt(ca, activity));
+    //printf("%d\n", ca[learnts[learnts.size()/opt_reducefrac]].activity());
     //for(int i=0; i<learnts.size(); i++)
     //{  Clause& c = ca[learnts[i]];
     //   printf("%d %d %d\n", i, c.activity(), c.size());
@@ -1644,6 +1641,7 @@ void Solver::reduceDB()
 #else
     double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
     sort(learnts, reduceDB_lt(ca));
+    //printf("%.2f\n", ca[learnts[learnts.size()/opt_reducefrac]].activity());
 #endif
 
   // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
@@ -1653,6 +1651,9 @@ void Solver::reduceDB()
 
 
     const int limit=learnts.size() / opt_reducefrac;
+
+    //if(ca[learnts[limit]].size()==2)
+    //  printf("Keeping some binary clauses in reduction procedure\n");
     //if(alllearnts==0)
     //  limit=learnts.size() / 2;
     //else
