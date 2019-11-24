@@ -24,10 +24,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #define MAXN 9
 
-extern "C" {
-#include "traces.h"
-}
-//#include "nauty.h"
+//extern "C" {
+//#include "traces.h"
+//}
+#include "nauty.h"
 #include "naututil.h"
 
 #include <math.h>
@@ -124,6 +124,8 @@ static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", 
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
 static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add final conflict to list of clauses", true);
 static BoolOption opt_addtolearnts(_cat, "addtolearnts", "Add programmatic clauses to learnts vector", true);
+#endif
+#ifdef PRINTHASHES
 static BoolOption opt_printhashes(_cat, "printhashes", "Print hash for each graph", false);
 #endif
 static StringOption opt_savefile(_cat, "savefile", "File to save clauses in order to resume search later");
@@ -624,11 +626,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	options_sparse.getcanon = FALSE;
 	options_sparse.outfile=NULL;
 
-#if 0
-	if(opt_printhashes)
+#ifdef PRINTHASHES
+	if(opt_printhashes && complete)
 	{
-		const int k = 0;
-		bool complete2 = true;
+		const int k = 1;
+		/*bool complete2 = true;
 
 		for(int r=0; r<66; r++)
 		{	for(int c=12+9*k; c<12+9*(k+1); c++)
@@ -640,7 +642,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 			if(complete2==false)
 				break;
-		}
+		}*/
 
 		SG_INIT(gg);
 		SG_ALLOC(gg, 87, 2*186, "malloc");
@@ -653,7 +655,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		for(int i=0; i<87; i++)
 			gg.v[i] = 11*i;
 
-		if(complete2)
+		//if(complete2)
 		{
 			/*int count = 0;
 			for(int r=0; r<66; r++)
@@ -674,7 +676,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			for(int r=0; r<66; r++)
 			{	gg.d[r] = 0;
-				for(int c=0; c<21; c++)
+				for(int c=0; c<12; c++)
 				{	
 					const int index = 111*r+c;
 					if(assigns[index]==l_True)
@@ -684,9 +686,20 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						gg.nde++;
 					}
 				}
+				for(int c=21; c<30; c++)
+				{	
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						gg.e[11*r+gg.d[r]] = 66+c-9;
+						gg.d[r]++;
+						gg.nde++;
+					}
+				}
+
 			}
 
-			for(int c=0; c<21; c++)
+			for(int c=0; c<12; c++)
 			{	gg.d[66+c] = 0;
 				for(int r=0; r<66; r++)
 				{	
@@ -699,6 +712,21 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 			}
+			for(int c=21; c<30; c++)
+			{	gg.d[66+c-9] = 0;
+				for(int r=0; r<66; r++)
+				{	
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						gg.e[11*(66+c-9)+gg.d[66+c-9]] = r;
+						gg.d[66+c-9]++;
+						gg.nde++;
+					}
+				}
+			}
+
+
 
 			//put_sg(stdout, &gg, true, 80);
 
@@ -736,15 +764,15 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						printf("%d ", permproduct[j]);
 					printf("\n");
 					
-					printf("permproduct[6] = %d\n", permproduct[6]);
-					printf("permproduct[permproduct[6]] = %d\n", permproduct[permproduct[6]]);
-					printf("permproduct[permproduct[permproduct[6]]] = %d\n", permproduct[permproduct[permproduct[6]]]);*/
+					printf("permproduct[1] = %d\n", permproduct[1]);
+					printf("permproduct[permproduct[1]] = %d\n", permproduct[permproduct[1]]);
+					printf("permproduct[permproduct[permproduct[1]]] = %d\n", permproduct[permproduct[permproduct[1]]]);*/
 
-					if(permproduct[permproduct[6]]==6 || permproduct[permproduct[permproduct[6]]]==6)
+					if(permproduct[permproduct[1]]==1 || permproduct[permproduct[permproduct[1]]]==1)
 					{	ADDONEEDGE(g,i,j,m);
 					}
 					else
-					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[6]]]]]!=6)
+					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[1]]]]]!=1)
 							printf("error\n"), exit(1);
 					}
 				}
@@ -762,10 +790,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			printf("{%ld, %d}, // automorphism group size %.0f\n", hash, numsols, stats.grpsize1+0.1);
 			numsols++;
-
-			return;
 		}
 	}
+
+	if(opt_printhashes)
+		return;
 #endif
 
 #if TRANSBLOCK
