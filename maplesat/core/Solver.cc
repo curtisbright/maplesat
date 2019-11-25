@@ -1015,7 +1015,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 
 				if (output != NULL) {
-					fprintf(output, "c ");
+					fprintf(output, "i ");
 					fprintclause(output, out_learnts[size]);
 				}
 				fprintclause(exhaustfile2, out_learnts[size]);
