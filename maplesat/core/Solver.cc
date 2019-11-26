@@ -36,7 +36,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Solver.h"
 
 FILE* exhaustfile = NULL;
-FILE* exhaustfile2 = NULL;
+//FILE* exhaustfile2 = NULL;
 FILE* savefile = NULL;
 //FILE* transfile = NULL;
 
@@ -99,7 +99,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, HUGE_VAL, true));
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
-static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
+//static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
 //static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
 #if 0
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", -1);
@@ -189,7 +189,7 @@ Solver::Solver() :
 #endif
   , addunits           (opt_addunits)
   , exhauststring (opt_exhaustive)
-  , exhauststring2 (opt_exhaustive2)
+  //, exhauststring2 (opt_exhaustive2)
   , savestring (opt_savefile)
   //, transstring (opt_transfile)
   , ok                 (true)
@@ -216,9 +216,9 @@ Solver::Solver() :
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
     }
-    if(exhauststring2 != NULL)
-    {   exhaustfile2 = fopen(exhauststring2, "a");
-    }
+    //if(exhauststring2 != NULL)
+    //{   exhaustfile2 = fopen(exhauststring2, "a");
+    //}
     if(savestring != NULL)
     {   savefile = fopen(savestring, "a");
     }
@@ -250,9 +250,9 @@ Solver::~Solver()
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
     }
-    if(exhauststring2 != NULL)
-    {   fclose(exhaustfile2);
-    }
+    //if(exhauststring2 != NULL)
+    //{   fclose(exhaustfile2);
+    //}
     if(savefile != NULL)
     {   fclose(savefile);
     }
@@ -1014,12 +1014,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 
-				if (output != NULL) {
-					fprintf(output, "i ");
-					fprintclause(output, out_learnts[size]);
-				}
-				fprintclause(exhaustfile2, out_learnts[size]);
-				proofsize += 2+clausestrlen(out_learnts[size]);
+				//if (output != NULL) {
+				//	fprintf(output, "i ");
+				//	fprintclause(output, out_learnts[size]);
+				//}
+				//fprintclause(exhaustfile2, out_learnts[size]);
+				//proofsize += 2+clausestrlen(out_learnts[size]);
 				//numblockconflicts++;
 
 				/*{
@@ -2040,23 +2040,31 @@ lbool Solver::search(int nof_conflicts)
 		               int level;
 		               learnt_clause.clear();
 		               analyze(callbackLearntClauses[i], learnt_clause, level);
-		               fprintclause(output, learnt_clause);
-                               if (output != NULL) {
-                                  fprintf(output, "d ");
+                               if(output != NULL)
+                               {
+                                  fprintf(output, "i ");
                                   fprintclause(output, callbackLearntClauses[i]);
+                                  if(level!=-1)
+                                  {  fprintclause(output, learnt_clause);
+                                     fprintf(output, "d ");
+                                     fprintclause(output, callbackLearntClauses[i]);
+                                  }
                                }
-                                 proofsize += clausestrlen(learnt_clause);
-                                 proofsize += 2+clausestrlen(callbackLearntClauses[i]);
+                               proofsize += 2+clausestrlen(callbackLearntClauses[i]);
+                               if(level!=-1)
+                               {  proofsize += clausestrlen(learnt_clause);
+                                  proofsize += 2+clausestrlen(callbackLearntClauses[i]);
+                               }
 		               if (level == -1) {
 		                   return l_False;
 		               } else if (level < backtrack_level) {
 		                   backtrack_level = level;
 		               }
 		               if (learnt_clause.size() == 1) {
-		                 units.push(learnt_clause[0]);
+                                   units.push(learnt_clause[0]);
                                    printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
 #ifdef BLOCKSET
-		                 minimize_blockset(learnt_clause[0]);
+                                   minimize_blockset(learnt_clause[0]);
 #endif
 		                 if(savefile != NULL)
 		                 {  fprintf(savefile, "%d 0\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
@@ -2064,7 +2072,7 @@ lbool Solver::search(int nof_conflicts)
 		                 }
 		               } else {
 		                   CRef cr = ca.alloc(learnt_clause, true);
-                                     learnts.push(cr);
+		                   learnts.push(cr);
 		                   attachClause(cr);
 	#if LBD_BASED_CLAUSE_DELETION
 		                   Clause& clause = ca[cr];
