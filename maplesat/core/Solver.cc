@@ -1015,7 +1015,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 
 				//if (output != NULL) {
-				//	fprintf(output, "i ");
+				//	fprintf(output, "t ");
 				//	fprintclause(output, out_learnts[size]);
 				//}
 				//fprintclause(exhaustfile2, out_learnts[size]);
@@ -2042,7 +2042,7 @@ lbool Solver::search(int nof_conflicts)
 		               analyze(callbackLearntClauses[i], learnt_clause, level);
                                if(output != NULL)
                                {
-                                  fprintf(output, "i ");
+                                  fprintf(output, "t ");
                                   fprintclause(output, callbackLearntClauses[i]);
                                   if(level!=-1)
                                   {  fprintclause(output, learnt_clause);
