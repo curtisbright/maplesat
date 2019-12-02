@@ -476,7 +476,7 @@ bool Solver::satisfied(const Clause& c) const {
     return false; }
 
 
-bool untouched[6] = {false, false, false, false, false, false};
+bool untouched[11] = {false, false, false, false, false, false, false, false, false, false, false};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -511,16 +511,8 @@ void Solver::cancelUntil(int level) {
             assigns [x] = l_Undef;
             const int xc = x % 111;
             const int xb = (xc-12)/9;
-            if(xb > 1 && xb < 6)
+            if(xb >= 0)
               untouched[xb] = false;
-            /*if(xc >= 21 && xc < 30)
-              untouched[1] = false;
-            if(xc >= 30 && xc < 39)
-              untouched[2] = false;
-            if(xc >= 39 && xc < 48)
-              untouched[3] = false;
-            if(xc >= 48 && xc < 57)
-              untouched[4] = false;*/
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -801,7 +793,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(opt_transblock)
 #endif
 	{
-		for(int k=1; k<6; k++)
+		for(int k=1; k<11; k++)
 		{	
 			if(k==1 && firsthash!=0)
 				continue;
@@ -917,6 +909,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			graph g[MAXN*MAXM];
 			EMPTYGRAPH(g, m, n);
 
+			bool tocontinue = false;
+
 			for(int i=0; i<9; i++)
 			{	for(int j=i+1; j<9; j++)
 				{
@@ -938,9 +932,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 					else
 					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[1]]]]]!=1)
-							printf("error\n"), exit(1);
+						{	//printf("error\n"), exit(1);
+							tocontinue = true;
+						}
 					}
 				}
+			}
+
+			if(tocontinue)
+			{	printf("Ignoring block %d\n", k);
+				continue;
 			}
 
 			/*sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
