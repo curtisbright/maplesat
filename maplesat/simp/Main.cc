@@ -242,6 +242,9 @@ int main(int argc, char** argv)
           outfile = fopen(file_name, "w");
         }
 #endif
+
+        S.addAssumClauses();
+
         lbool ret;
         vec<Lit> dummy;
         if (assumptions) {

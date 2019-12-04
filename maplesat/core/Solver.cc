@@ -99,6 +99,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, HUGE_VAL, true));
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
+static StringOption  opt_assums            (_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 //static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
 //static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
 #if 0
@@ -264,6 +265,27 @@ Solver::~Solver()
 
 //=================================================================================================
 // Minor methods:
+
+void Solver::addAssumClauses()
+{
+	if (opt_assums)
+	{
+		const char* the_assums = opt_assums;
+		char* tmp = (char*)the_assums;
+		int i = 0;
+		while (sscanf(tmp, "%d", &i) == 1)
+		{
+			Var v = abs(i) - 1;
+			Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+			//printf("Adding assumption %d\n", var(l)+1);
+			addClause(l);
+			while(*tmp != ',' && *tmp != '\0')
+				tmp++;
+			if(*tmp == ',')
+				tmp++;
+		}
+	}
+}
 
 #if 0
 void Solver::addLexClauses()

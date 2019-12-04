@@ -45,6 +45,7 @@ public:
     virtual ~Solver();
     long numsols = 0;
     //long numblockconflicts = 0;
+    void addAssumClauses();
     //void addLexClauses();
     //uint64_t conflictsthisbound = 0;
     long curRestart = 1;
