@@ -266,6 +266,7 @@ Solver::~Solver()
 //=================================================================================================
 // Minor methods:
 
+int numdigits(Var n);
 void Solver::addAssumClauses()
 {
 	if (opt_assums)
@@ -279,6 +280,17 @@ void Solver::addAssumClauses()
 			Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
 			//printf("Adding assumption %d\n", var(l)+1);
 			addClause(l);
+
+			if(output != NULL)
+			{	if(sign(l))
+					fprintf(output, "t -%d 0\n", var(l)+1);
+				else
+					fprintf(output, "t %d 0\n", var(l)+1);
+			}
+			proofsize += 5+numdigits(var(l));
+			if(sign(l))
+				proofsize++;
+
 			while(*tmp != ',' && *tmp != '\0')
 				tmp++;
 			if(*tmp == ',')
