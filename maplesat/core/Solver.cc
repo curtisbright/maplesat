@@ -1876,6 +1876,8 @@ void Solver::minimize_blockset(Lit learnt)
 }
 #endif
 
+Lit lastlearnt = lit_Undef;
+
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1962,6 +1964,7 @@ lbool Solver::search(int nof_conflicts)
             }
             if(learnt_clause.size()==1)
             {  printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
+               lastlearnt=learnt_clause[0];
 #ifdef BLOCKSET
 	       minimize_blockset(learnt_clause[0]);
 #endif
@@ -2022,7 +2025,7 @@ lbool Solver::search(int nof_conflicts)
                     analyzeFinal(~p, conflict);
                     sort(conflict);
                     cancelUntil(0);
-                    if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict))
+                    if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict) && !(conflict.size()==1 && conflict[0]==lastlearnt))
                     {   addClause_(conflict);
                         fprintclause(output, conflict);
                         fprintclause(savefile, conflict);
@@ -2098,6 +2101,7 @@ lbool Solver::search(int nof_conflicts)
 		               if (learnt_clause.size() == 1) {
                                    units.push(learnt_clause[0]);
                                    printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
+                                   lastlearnt=learnt_clause[0];
 #ifdef BLOCKSET
                                    minimize_blockset(learnt_clause[0]);
 #endif
