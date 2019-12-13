@@ -18,8 +18,6 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#define TRANSBLOCK 1
-
 #include "automorphisms.h"
 
 #define MAXN 9
@@ -117,9 +115,7 @@ static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", fal
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 #endif
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", true);
-#ifdef TRANSBLOCK
-static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", true);
-#endif
+static IntOption opt_transblock(_cat, "transblock", "Learn blocking clauses for any block less than given case", -1);
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
 #if 0
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
@@ -223,26 +219,6 @@ Solver::Solver() :
     if(savestring != NULL)
     {   savefile = fopen(savestring, "a");
     }
-    /*if(transstring != NULL && opt_transblock)
-    {   transfile = fopen(transstring, "a");
-    }*/
-	/*if(transstring != NULL && opt_transread)
-	{	transfile = fopen(transstring, "r");
-		std::vector<int> clause;
-		int i;
-		fscanf(transfile, "%d", &i);    
-		while(!feof(transfile))
-	    	{	if(i!=0)
-			{	clause.push_back(abs(i)-1);
-			}
-			else
-			{	transset.insert(clause);
-				clause.clear();
-			}
-			fscanf(transfile, "%d", &i);      
-		}
-		fclose(transfile);
-	}*/
 }
 
 
@@ -257,9 +233,6 @@ Solver::~Solver()
     if(savefile != NULL)
     {   fclose(savefile);
     }
-    /*if(transfile != NULL)
-    {   fclose(transfile);
-    }*/
 }
 
 
@@ -510,7 +483,7 @@ bool Solver::satisfied(const Clause& c) const {
     return false; }
 
 
-bool untouched[11] = {false, false, false, false, false, false, false, false, false, false, false};
+bool untouched[8] = {false, false, false, false, false, false, false, false};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -544,7 +517,7 @@ void Solver::cancelUntil(int level) {
 #endif
             assigns [x] = l_Undef;
             const int xc = x % 111;
-            const int xb = (xc-12)/9;
+            const int xb = (xc-18)/6;
             if(xb >= 0)
               untouched[xb] = false;
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
@@ -596,34 +569,8 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-long firsthash = 0;
-int casenumber = -1;
-
-//graph start[MAXN*MAXM];
-//graph g[MAXN*MAXM];
-//graph canong[MAXN*MAXM];
-int lab[87],ptn[87],orbits[87];
-//DEFAULTOPTIONS_SPARSEGRAPH(options_sg);
-statsblk stats;
-
-sparsegraph gg;
-
-DEFAULTOPTIONS_GRAPH(options);
-DEFAULTOPTIONS_SPARSEGRAPH(options_sparse);
-
-//DEFAULTOPTIONS_TRACES(options_traces);
-//TracesStats stats_traces;
-
-//#include <unordered_set>
-//std::unordered_set<long> glist;
-
-//#include <algorithm>
-//#include <utility>
-
-//vec<Lit> blocking_clause;
-
-const int firsts[66] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 10};
-const int seconds[66] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 3, 4, 5, 6, 7, 8, 9, 10, 11, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 6, 7, 8, 9, 10, 11, 7, 8, 9, 10, 11, 8, 9, 10, 11, 9, 10, 11, 10, 11, 11};
+//const int firsts[80] = {-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11};
+//const int seconds[80] = {-1, -1, -1, -1, -1, -1, -1, -1, 5, 6, 7, 9, 10, 11, 13, 14, 15, 4, 6, 7, 8, 10, 11, 12, 14, 15, 4, 5, 7, 8, 9, 11, 12, 13, 15, 4, 5, 6, 8, 9, 10, 12, 13, 14, 9, 10, 11, 13, 14, 15, 8, 10, 11, 12, 14, 15, 8, 9, 11, 12, 13, 15, 8, 9, 10, 12, 13, 14, 13, 14, 15, 12, 14, 15, 12, 13, 15, 12, 13, 14};
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -638,213 +585,26 @@ const int seconds[66] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7, 8,
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
-	const int m = SETWORDSNEEDED(MAXN);
-	const int n = MAXN;
-
-	options.writeautoms = FALSE;
-	options.defaultptn = TRUE;
-	options.getcanon = TRUE;
-	options.outfile = NULL;
-
-	options_sparse.writeautoms = FALSE;
-	options_sparse.defaultptn = TRUE;
-	options_sparse.writemarkers = FALSE;
-	options_sparse.getcanon = FALSE;
-	options_sparse.outfile=NULL;
-
-#ifdef PRINTHASHES
-	if(opt_printhashes && complete)
+	if(opt_transblock != -1)
 	{
-		const int k = 1;
-		/*bool complete2 = true;
-
-		for(int r=0; r<66; r++)
-		{	for(int c=12+9*k; c<12+9*(k+1); c++)
-			{	const int index = 111*r+c;
-				if(assigns[index]==l_Undef)
-				{	complete2 = false;
-					break;
-				}
-			}
-			if(complete2==false)
-				break;
-		}*/
-
-		SG_INIT(gg);
-		SG_ALLOC(gg, 87, 2*186, "malloc");
-
-		gg.v = (size_t*)malloc(87*sizeof(size_t));
-		gg.d = (int*)malloc(87*sizeof(int));
-		gg.e = (int*)malloc(87*11*sizeof(int));
-		gg.nv = 87;
-
-		for(int i=0; i<87; i++)
-			gg.v[i] = 11*i;
-
-		//if(complete2)
-		{
-			/*int count = 0;
-			for(int r=0; r<66; r++)
-			{	for(int c=0; c<21; c++)
-				{	const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{	printf("1");
-						count++;
-					}
-					else if(assigns[index]==l_False)
-						printf("0");
-					else
-						printf("?");
-				}
-				printf("\n");
-			}
-			printf("count %d\n", count);*/
-
-			for(int r=0; r<66; r++)
-			{	gg.d[r] = 0;
-				for(int c=0; c<12; c++)
-				{	
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						gg.e[11*r+gg.d[r]] = 66+c;
-						gg.d[r]++;
-						gg.nde++;
-					}
-				}
-				for(int c=21; c<30; c++)
-				{	
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						gg.e[11*r+gg.d[r]] = 66+c-9;
-						gg.d[r]++;
-						gg.nde++;
-					}
-				}
-
-			}
-
-			for(int c=0; c<12; c++)
-			{	gg.d[66+c] = 0;
-				for(int r=0; r<66; r++)
-				{	
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						gg.e[11*(66+c)+gg.d[66+c]] = r;
-						gg.d[66+c]++;
-						gg.nde++;
-					}
-				}
-			}
-			for(int c=21; c<30; c++)
-			{	gg.d[66+c-9] = 0;
-				for(int r=0; r<66; r++)
-				{	
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{
-						gg.e[11*(66+c-9)+gg.d[66+c-9]] = r;
-						gg.d[66+c-9]++;
-						gg.nde++;
-					}
-				}
-			}
-
-
-
-			//put_sg(stdout, &gg, true, 80);
-
-			int perm[9][12] = {};
-
-			for(int r=11; r<66; r++)
-			{	for(int c=12+9*k; c<12+9*(k+1); c++)
-				{	const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{	perm[c-12-9*k][firsts[r]] = seconds[r];
-						perm[c-12-9*k][seconds[r]] = firsts[r];
-					}
-				}
-			}
-
-			/*for(int i=0; i<9; i++)
-			{	printf("Perm %d:\t", i);
-				for(int j=0; j<12; j++)
-					printf("%d ", perm[i][j]);
-				printf("\n");
-			}*/
-
-			graph g[MAXN*MAXM];
-			EMPTYGRAPH(g, m, n);
-
-			for(int i=0; i<9; i++)
-			{	for(int j=i+1; j<9; j++)
-				{
-					int permproduct[12] = {};
-					for(int k=0; k<12; k++)
-						permproduct[k] = perm[j][perm[i][k]];
-
-					/*printf("Perm Product:\t", i);
-					for(int j=0; j<12; j++)
-						printf("%d ", permproduct[j]);
-					printf("\n");
-					
-					printf("permproduct[1] = %d\n", permproduct[1]);
-					printf("permproduct[permproduct[1]] = %d\n", permproduct[permproduct[1]]);
-					printf("permproduct[permproduct[permproduct[1]]] = %d\n", permproduct[permproduct[permproduct[1]]]);*/
-
-					if(permproduct[permproduct[1]]==1 || permproduct[permproduct[permproduct[1]]]==1)
-					{	ADDONEEDGE(g,i,j,m);
-					}
-					else
-					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[1]]]]]!=1)
-							printf("error\n"), exit(1);
-					}
-				}
-			}
-
-			graph canong[MAXN*MAXM];
-
-			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-			sparsenauty(&gg,lab,ptn,orbits,&options_sparse,&stats,NULL);
-
-			long hash = hashgraph(canong, m, n, 19883109L);
-
-			//printf("%d %ld %.0f\n", numsols, hash, stats.grpsize1+0.1);
-			//printf("{%ld, %d},\n", hash, numsols);
-
-			printf("{%ld, %d}, // automorphism group size %.0f\n", hash, numsols, stats.grpsize1+0.1);
-			numsols++;
-		}
-	}
-
-	if(opt_printhashes)
-		return;
-#endif
-
-#if TRANSBLOCK
-	if(opt_transblock)
-#endif
-	{
-		for(int k=1; k<11; k++)
+		for(int k=1; k<8; k++)
 		{	
-			if(k==1 && firsthash!=0)
+			if(untouched[k])
 				continue;
 
-			if(untouched[k])
-			{	//skips++;
-				continue;
-			}
+			std::array<short, 36> blockarray;
+			int bi = 0;
 
 			bool block_complete = true;
-			for(int r=21; r<66; r++)
-			{	for(int c=12+9*k; c<12+9*(k+1); c++)
+			for(int r=8; r<80; r++)
+			{	for(int c=18+6*k; c<18+6*(k+1); c++)
 				{	const int index = 111*r+c;
 					if(assigns[index]==l_Undef)
 					{	block_complete = false;
 						break;
 					}
+					else if(assigns[index]==l_True)
+						blockarray[bi++] = index;
 				}
 				if(block_complete==false)
 					break;
@@ -854,294 +614,32 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			untouched[k] = true;
 
-#ifdef BLOCKSET
-			std::set<std::array<short, 36>>::iterator it = blockset[k].end();
-#if 0
-			if(opt_block1)
-#endif
+			//std::map<std::array<short, 36>, short>::iterator it = blockmap.end();
+			//const short caseno = blockmap.find(blockarray)->second;
+
+			std::map<std::array<short, 36>, short>::iterator it = blockmap.find(blockarray);
+
+			if(it == blockmap.end())
+				printf("Can't find block %d\n", k), exit(1);
+
+			const short caseno = it->second;
+
+			if(caseno < opt_transblock)
 			{
-				//clock_t startt, end;
-				//startt = clock();
-				it = blockset[k].find(blockelement);
-				//end = clock();
-				//lookupticks += end-startt;
-				//lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
-			}
-
-			if(it != blockset[k].end())
-			{	//skips++;
-				continue;
-			}
-#endif
-
-#if 0
-			if(opt_block2)
-			{
-				clock_t startt, end;
-				startt = clock();
-				auto it2 = blockset2[k].find(blockelement);
-				end = clock();
-				lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
-
-				if(it2 != blockset2[k].end())
-				{
-					//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, hashes[hash], hash, casenumber);
-					const int size = out_learnts.size();
-					out_learnts.push();
-					
-					for(int r=21; r<66; r++)
-					{	for(int c=12+9*k; c<12+9*(k+1); c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-							{	out_learnts[size].push(~mkLit(index));
-							}
-						}
-					}
-
-					fprintclause(exhaustfile2, out_learnts[size]);
-					numblockconflicts++;
-
-					continue;
-				}
-			}
-#endif
-
-			int perm[9][12] = {};
-
-			/*printf("block %d:\n", k);
-			for(int r=11; r<66; r++)
-			{	for(int c=12+9*k; c<12+9*(k+1); c++)
-				{	const int index = 111*r+c;
-					if(assigns[index]==l_True)
-						printf("1");
-					else if(assigns[index]==l_False)
-						printf("0");
-				}
-				printf("\n");
-			}*/
-
-			for(int r=11; r<66; r++)
-			{	for(int c=12+9*k; c<12+9*(k+1); c++)
-				{	const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{	perm[c-12-9*k][firsts[r]] = seconds[r];
-						perm[c-12-9*k][seconds[r]] = firsts[r];
-					}
-				}
-			}
-
-			/*for(int i=0; i<9; i++)
-			{	printf("Perm %d:\t", i);
-				for(int j=0; j<12; j++)
-					printf("%d ", perm[i][j]);
-				printf("\n");
-			}*/
-
-			//clock_t startt = clock();
-
-			graph g[MAXN*MAXM];
-			EMPTYGRAPH(g, m, n);
-
-			bool tocontinue = false;
-
-			for(int i=0; i<9; i++)
-			{	for(int j=i+1; j<9; j++)
-				{
-					int permproduct[12] = {};
-					for(int k=0; k<12; k++)
-						permproduct[k] = perm[j][perm[i][k]];
-
-					/*printf("Perm Product:\t", i);
-					for(int j=0; j<12; j++)
-						printf("%d ", permproduct[j]);
-					printf("\n");
-					
-					printf("permproduct[1] = %d\n", permproduct[1]);
-					printf("permproduct[permproduct[1]] = %d\n", permproduct[permproduct[1]]);
-					printf("permproduct[permproduct[permproduct[1]]] = %d\n", permproduct[permproduct[permproduct[1]]]);*/
-
-					if(permproduct[permproduct[1]]==1 || permproduct[permproduct[permproduct[1]]]==1)
-					{	ADDONEEDGE(g,i,j,m);
-					}
-					else
-					{	if(permproduct[permproduct[permproduct[permproduct[permproduct[1]]]]]!=1)
-						{	//printf("error\n"), exit(1);
-							tocontinue = true;
-						}
-					}
-				}
-			}
-
-			if(tocontinue)
-			{	printf("Ignoring block %d\n", k);
-				continue;
-			}
-
-			/*sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
-			put_sg(stdout, sg, true, 80);
-			printf("sg.vlen %d\n", sg->vlen);
-			printf("sg.dlen %d\n", sg->dlen);
-			printf("sg.elen %d\n", sg->elen);
-			printf("---\n");
-			exit(1);*/
-
-			//sparse
-
-			//sparsegraph* sg;
-			//sparsegraph canong;
-
-			//sparsegraph* sg = nauty_to_sg(g, NULL, m, n);
-
-			//sparsenauty(sg,lab,ptn,orbits,&options_sg,&stats,&canong);
-			//Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-
-			/*printf("??\n");
-			put_sg(stdout, &canong, true, 80);*/
-
-			//long hash = hashgraph_sg(&canong, 19883109L);
-
-			graph canong[MAXN*MAXM];
-
-			densenauty(g,lab,ptn,orbits,&options,&stats,m,n,canong);
-			long hash = hashgraph(canong, m, n, 19883109L);
-
-			/*put_sg(stdout, sg, true, 80);
-			put_sg(stdout, &canong, true, 80);
-			exit(1);*/
-
-			//clock_t end = clock();
-			//nautytime += ((double) (end - startt)) / CLOCKS_PER_SEC;
-
-			if(k==1)
-			{	firsthash = hash;
-				if(hashes.find(hash)==hashes.end())
-					printf("Error: Can't find hash %ld\n", hash), exit(1);
-				else
-					//printf("Found hash %ld (case %d)\n", hash, hashes.find(hash)->second);
-					printf("Solving case %d\n", hashes.find(hash)->second);
-				casenumber = hashes.find(hash)->second;
-			}
-
-			int lookup_result = 999;
-
-			if(hashes.find(hash)==hashes.end())
-			{	//printf("Error: Can't find hash %ld (block %d)\n", hash, k);
-			} else
-			{	//printf("Found hash %ld (block %d), element %d, size %d\n", hash, k, hashes.find(hash)->second, hashes.size());
-				lookup_result = hashes[hash];
-			}
-
-			if(lookup_result < casenumber)
-			//if(hash != firsthash)
-			{
-				//printf("Blocking instance of block %d with tag %d (hash %ld), smaller than tag %d\n", k, lookup_result, hash, casenumber);
+				//printf("Block %d: Blocking case %d\n", k, caseno);
 				const int size = out_learnts.size();
 				out_learnts.push();
 				
-				for(int r=21; r<66; r++)
-				{	for(int c=12+9*k; c<12+9*(k+1); c++)
-					{
-						const int index = 111*r+c;
+				for(int r=8; r<80; r++)
+				{	for(int c=18+6*k; c<18+6*(k+1); c++)
+					{	const int index = 111*r+c;
 						if(assigns[index]==l_True)
 						{	out_learnts[size].push(~mkLit(index));
 						}
 					}
 				}
-
-				//if (output != NULL) {
-				//	fprintf(output, "t ");
-				//	fprintclause(output, out_learnts[size]);
-				//}
-				//fprintclause(exhaustfile2, out_learnts[size]);
-				//proofsize += 2+clausestrlen(out_learnts[size]);
-				//numblockconflicts++;
-
-				/*{
-					int max_index = 0;
-					for(int i=1; i<out_learnts[size].size(); i++)
-						if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
-							max_index = i;
-					Lit p = out_learnts[size][0];
-					out_learnts[size][0] = out_learnts[size][max_index];
-					out_learnts[size][max_index] = p;
-				}
-
-				{
-					int max_index = 1;
-					for(int i=2; i<out_learnts[size].size(); i++)
-						if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
-							max_index = i;
-					Lit p = out_learnts[size][1];
-					out_learnts[size][1] = out_learnts[size][max_index];
-					out_learnts[size][max_index] = p;
-				}
-
-				CRef confl_clause = ca.alloc(out_learnts[size], false);
-				attachClause(confl_clause);
-				clauses.push(confl_clause);*/
-
-#if 0
-				if(opt_block2)
-				{
-					clock_t startt, end;
-					startt = clock();
-					blockset2[k].insert(blockelement);
-					end = clock();
-					lookupticks += end-startt;
-					lookuptime += ((double) (end - startt)) / CLOCKS_PER_SEC;
-				}
-#endif
 			}
-#ifdef BLOCKSET
-			else //if(opt_block1)
-			{	//printf("Not blocking instance of block %d with tag %d, not smaller than tag %d\n", k, lookup_result, casenumber);
-				//clock_t start, end;
-				//start = clock();
-				blockset[k].insert(blockelement);
-				//end = clock();
-				//lookuptime += ((double) (end - start)) / CLOCKS_PER_SEC;
-				//lookupticks += (end - start);
-			}
-#endif
-
-			/*
-			{
-				int max_index = 0;
-				for(int i=1; i<clause.size(); i++)
-					if(level(var(clause[i])) > level(var(clause[max_index])))
-						max_index = i;
-				Lit p = clause[0];
-				clause[0] = clause[max_index];
-				clause[max_index] = p;
-			}
-
-			{
-				int max_index = 1;
-				for(int i=2; i<clause.size(); i++)
-					if(level(var(clause[i])) > level(var(clause[max_index])))
-						max_index = i;
-				Lit p = clause[1];
-				clause[1] = clause[max_index];
-				clause[max_index] = p;
-			}
-
-			CRef confl_clause = ca.alloc(clause, false);
-			attachClause(confl_clause);
-			clauses.push(confl_clause);
-			*/
-
-			/*bool found = true;
-			for(int k=0; k<numsols; k++)
-			{	if(hash==glist[k])
-				{	found = false;
-					//printf("Already found!\n");
-					break;
-				}
-			}*/
 		}
-
-		//return;
 	}
 
 	if(complete && out_learnts.size()==0)
