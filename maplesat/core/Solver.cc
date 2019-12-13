@@ -639,7 +639,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				const int size = out_learnts.size();
 				out_learnts.push();
 				
-				for(int r=8; r<80; r++)
+				int rstart = 17;
+				if(k==4)
+					rstart = 26;
+
+				for(int r=rstart; r<80; r++)
 				{	for(int c=18+6*k; c<18+6*(k+1); c++)
 					{	const int index = 111*r+c;
 						if(assigns[index]==l_True)
