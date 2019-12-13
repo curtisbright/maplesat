@@ -20,14 +20,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "automorphisms.h"
 
-#define MAXN 9
-
-//extern "C" {
-//#include "traces.h"
-//}
-#include "nauty.h"
-#include "naututil.h"
-
 #include <math.h>
 
 #include "mtl/Sort.h"
