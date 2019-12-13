@@ -612,7 +612,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			std::map<std::array<short, 36>, short>::iterator it = blockmap.find(blockarray);
 
 			if(it == blockmap.end())
-				printf("Can't find block %d\n", k), exit(1);
+			{	printf("Can't find block %d\n", k);
+				
+				for(int r=0; r<80; r++)
+				{	for(int c=0; c<71; c++)
+					{	const int index = 111*r+c;
+						if(assigns[index]==l_True)
+							printf("1");
+						else if(assigns[index]==l_False)
+							printf("0");
+						else
+							printf("?");
+					}
+					printf("\n");
+				}
+				printf("\n");
+
+				exit(1);
+			}
 
 			const short caseno = it->second;
 
