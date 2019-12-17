@@ -35,6 +35,47 @@ d:	$(EXEC)_debug
 r:	$(EXEC)_release
 rs:	$(EXEC)_static
 
+maplesat_static_1a: CFLAGS += -DCASE1A
+maplesat_static_1b: CFLAGS += -DCASE1B
+maplesat_static_1c: CFLAGS += -DCASE1C
+maplesat_static_2: CFLAGS += -DCASE2
+maplesat_static_3: CFLAGS += -DCASE3
+maplesat_static_4: CFLAGS += -DCASE4
+maplesat_static_5: CFLAGS += -DCASE5
+maplesat_static_6a: CFLAGS += -DCASE6A
+maplesat_static_6b: CFLAGS += -DCASE6B
+maplesat_static_6c: CFLAGS += -DCASE6C
+
+maplesat_static_1a: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_1a
+
+maplesat_static_1b: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_1b
+
+maplesat_static_1c: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_1c
+
+maplesat_static_2: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_2
+
+maplesat_static_3: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_3
+
+maplesat_static_4: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_4
+
+maplesat_static_5: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_5
+
+maplesat_static_6a: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_6a
+
+maplesat_static_6b: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_6b
+
+maplesat_static_6c: $(EXEC)_static
+	mv $(EXEC)_static maplesat_static_6c
+
 libs:	lib$(LIB)_standard.a
 libp:	lib$(LIB)_profile.a
 libd:	lib$(LIB)_debug.a

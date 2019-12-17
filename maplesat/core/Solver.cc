@@ -99,15 +99,16 @@ static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive 
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
 #endif
 //static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
-#if 0
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", false);
-#endif
+static IntOption  opt_caseno(_cat, "caseno", "Case no.", -1);
 //static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
 #if 0
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 #endif
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", true);
+#ifdef TRANSBLOCK
 static IntOption opt_transblock(_cat, "transblock", "Learn blocking clauses for any block less than given case", -1);
+#endif
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
 #if 0
 static BoolOption opt_printtags(_cat, "printtags", "Print tags for isomorphism classes", false);
@@ -561,8 +562,7 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-//const int firsts[80] = {-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11};
-//const int seconds[80] = {-1, -1, -1, -1, -1, -1, -1, -1, 5, 6, 7, 9, 10, 11, 13, 14, 15, 4, 6, 7, 8, 10, 11, 12, 14, 15, 4, 5, 7, 8, 9, 11, 12, 13, 15, 4, 5, 6, 8, 9, 10, 12, 13, 14, 9, 10, 11, 13, 14, 15, 8, 10, 11, 12, 14, 15, 8, 9, 11, 12, 13, 15, 8, 9, 10, 12, 13, 14, 13, 14, 15, 12, 14, 15, 12, 13, 15, 12, 13, 14};
+#include <algorithm>
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -577,6 +577,7 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
+#ifdef TRANSBLOCK
 	if(opt_transblock != -1)
 	{
 		for(int k=1; k<8; k++)
@@ -654,6 +655,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 	}
+#endif
 
 	if(complete && out_learnts.size()==0)
 	{
@@ -674,6 +676,206 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			fprintf(exhaustfile, "0\n");
 			fflush(exhaustfile);
+
+			{
+				int max_index = 0;
+				for(int i=1; i<out_learnts[0].size(); i++)
+					if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+						max_index = i;
+				Lit p = out_learnts[0][0];
+				out_learnts[0][0] = out_learnts[0][max_index];
+				out_learnts[0][max_index] = p;
+			}
+
+			{
+				int max_index = 1;
+				for(int i=2; i<out_learnts[0].size(); i++)
+					if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+						max_index = i;
+				Lit p = out_learnts[0][1];
+				out_learnts[0][1] = out_learnts[0][max_index];
+				out_learnts[0][max_index] = p;
+			}
+
+			CRef confl_clause = ca.alloc(out_learnts[0], false);
+			attachClause(confl_clause);
+			clauses.push(confl_clause);
+
+			if(opt_isoblock)
+			{
+
+				#ifdef CASE1A
+					#define ROW row_1a
+					#define COL col_1a
+					#define IDENTITY_INDEX identity_index_1a
+					#define ORDER order_1a
+					#define MCOL ncols_1a
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+				#ifdef CASE1B
+					#define ROW row_1b
+					#define COL col_1b
+					#define IDENTITY_INDEX identity_index_1b
+					#define ORDER order_1b
+					#define MCOL ncols_1b
+					#define NCOLS 24
+					#define WIDTH 7
+				#endif
+				#ifdef CASE1C
+					#define ROW row_1c
+					#define COL col_1c
+					#define IDENTITY_INDEX identity_index_1c
+					#define ORDER order_1c
+					#define MCOL ncols_1c
+					#define NCOLS 24
+					#define WIDTH 6
+				#endif
+				#ifdef CASE2
+					#define ROW row_2
+					#define COL col_2
+					#define IDENTITY_INDEX identity_index_2
+					#define ORDER order_2
+					#define MCOL ncols_2
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+				#ifdef CASE3
+					#define ROW row_3
+					#define COL col_3
+					#define IDENTITY_INDEX identity_index_3
+					#define ORDER order_3
+					#define MCOL ncols_3
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+				#ifdef CASE4
+					#define ROW row_4
+					#define COL col_4
+					#define IDENTITY_INDEX identity_index_4
+					#define ORDER order_4
+					#define MCOL ncols_4
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+				#ifdef CASE5
+					#define ROW row_5
+					#define COL col_5
+					#define IDENTITY_INDEX identity_index_5
+					#define ORDER order_5
+					#define MCOL ncols_5
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+				#ifdef CASE6A
+					#define ROW row_6a
+					#define COL col_6a
+					#define IDENTITY_INDEX identity_index_6a
+					#define ORDER order_6a
+					#define MCOL ncols_6a
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+				#ifdef CASE6B
+					#define ROW row_6b
+					#define COL col_6b
+					#define IDENTITY_INDEX identity_index_6b
+					#define ORDER order_6b
+					#define MCOL ncols_6b
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+				#ifdef CASE6C
+					#define ROW row_6c
+					#define COL col_6c
+					#define IDENTITY_INDEX identity_index_6c
+					#define ORDER order_6c
+					#define MCOL ncols_6c
+					#define NCOLS 23
+					#define WIDTH 7
+				#endif
+
+				std::array<std::array<int, 80>, WIDTH> matrix;
+				std::set<std::array<std::array<int, 80>, WIDTH>> matrixset;
+
+				for(int i=NCOLS-WIDTH; i<NCOLS; i++)
+				{	for(int j=0; j<80; j++)
+					{	matrix[i-(NCOLS-WIDTH)][j] = (assigns[111*j+i]==l_True?1:0);
+					}
+				}
+				matrixset.insert(matrix);
+
+				for(int k=0; k<ORDER; k++)
+				{
+					if(k==IDENTITY_INDEX)
+						continue;
+
+					for(int r=0; r<80; r++)
+					{	for(int c=NCOLS-WIDTH; c<NCOLS; c++)
+						{
+							const int index = 111*r+c;
+							const int newrow = ROW[k][r];
+							int newcol = c;
+							if(c<MCOL-1)
+								newcol = COL[k][c];
+
+							if(assigns[index]==l_True)
+								matrix[newcol-(NCOLS-WIDTH)][newrow] = 1;
+							else
+								matrix[newcol-(NCOLS-WIDTH)][newrow] = 0;
+						}
+					}
+
+					std::sort(matrix.begin(), matrix.end(), std::greater<std::array<int, 80>>());
+
+					if(matrixset.count(matrix)>0)
+						continue;
+
+					matrixset.insert(matrix);
+
+					vec<Lit> clause;
+
+					for(int j=0; j<80; j++)
+					{	for(int i=NCOLS-WIDTH; i<NCOLS; i++)
+							if(matrix[i-(NCOLS-WIDTH)][j]==1)
+								clause.push(~mkLit(111*j+i));
+					}
+
+					{
+						int max_index = 0;
+						for(int i=1; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[0];
+						clause[0] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<clause.size(); i++)
+							if(level(var(clause[i])) > level(var(clause[max_index])))
+								max_index = i;
+						Lit p = clause[1];
+						clause[1] = clause[max_index];
+						clause[max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(clause, false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
+
+					/*for(int i=0; i<80; i++)
+					{	for(int j=0; j<WIDTH; j++)
+						{	printf("%d", matrix[j][i]);
+						}
+						printf("\n");
+					}
+					printf("\n");*/
+
+				}
+			}
+
 		}
 	}
 }
