@@ -26,7 +26,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Solver.h"
 
 FILE* exhaustfile = NULL;
-//FILE* exhaustfile2 = NULL;
+FILE* exhaustfile2 = NULL;
 FILE* savefile = NULL;
 //FILE* transfile = NULL;
 
@@ -90,7 +90,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, HUGE_VAL, true));
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static StringOption  opt_assums            (_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
-//static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
+static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for printing all solutions ignored using isomorphism blocking");
 //static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
 #if 0
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", -1);
@@ -179,7 +179,7 @@ Solver::Solver() :
 #endif
   , addunits           (opt_addunits)
   , exhauststring (opt_exhaustive)
-  //, exhauststring2 (opt_exhaustive2)
+  , exhauststring2 (opt_exhaustive2)
   , savestring (opt_savefile)
   //, transstring (opt_transfile)
   , ok                 (true)
@@ -206,9 +206,9 @@ Solver::Solver() :
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
     }
-    //if(exhauststring2 != NULL)
-    //{   exhaustfile2 = fopen(exhauststring2, "a");
-    //}
+    if(exhauststring2 != NULL)
+    {   exhaustfile2 = fopen(exhauststring2, "a");
+    }
     if(savestring != NULL)
     {   savefile = fopen(savestring, "a");
     }
@@ -220,9 +220,9 @@ Solver::~Solver()
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
     }
-    //if(exhauststring2 != NULL)
-    //{   fclose(exhaustfile2);
-    //}
+    if(exhauststring2 != NULL)
+    {   fclose(exhaustfile2);
+    }
     if(savefile != NULL)
     {   fclose(savefile);
     }
@@ -840,6 +840,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							if(matrix[i-(NCOLS-WIDTH)][j]==1)
 								clause.push(~mkLit(111*j+i));
 					}
+
+					fprintclause(exhaustfile2, clause);
 
 					{
 						int max_index = 0;
