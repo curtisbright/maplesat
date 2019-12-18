@@ -91,6 +91,8 @@ static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt cl
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static StringOption  opt_assums            (_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for printing all solutions ignored using isomorphism blocking");
+static BoolOption    opt_equivsizes(_cat, "equivsizes", "Print size of equivalence classes", false);
+static BoolOption    opt_printassums(_cat, "printassums", "Print assumptions in second exhaustive file", false);
 //static StringOption  opt_transfile(_cat, "transfile", "File for transitive blocking clauses");
 #if 0
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", -1);
@@ -666,15 +668,22 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			out_learnts.push();
 
 			fprintf(exhaustfile, "a ");
+			if(opt_printassums && exhaustfile2 != NULL)
+				fprintf(exhaustfile2, "a ");
 
 			for(int i=0; i<nVars(); i++)
 			{	if(assigns[i]==l_True && !unit_clauses[i])
 				{	out_learnts[0].push(~mkLit(i));
 					fprintf(exhaustfile, "%d ", i+1);
+					if(opt_printassums && exhaustfile2 != NULL)
+						fprintf(exhaustfile2, "%d ", i+1);
 				}
 			}
 
-			fprintf(exhaustfile, "0\n");
+			if(opt_printassums && exhaustfile2 != NULL)
+				fprintf(exhaustfile2, "0\n");
+
+			fprintf(exhaustfile, "0%s", opt_equivsizes ? "" : "\n");
 			fflush(exhaustfile);
 
 			{
@@ -876,6 +885,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					printf("\n");*/
 
 				}
+
+				if(opt_equivsizes)
+					fprintf(exhaustfile, " %d\n", matrixset.size());
 			}
 
 		}
