@@ -188,6 +188,8 @@ int main(int argc, char** argv)
         
         S.output = (argc >= 3) ? fopen(argv[2], "a") : NULL;
         parse_DIMACS(in, S);
+
+        S.addAssumClauses();
 #if 0
         if(lex)
             S.addLexClauses();
@@ -242,8 +244,6 @@ int main(int argc, char** argv)
           outfile = fopen(file_name, "w");
         }
 #endif
-
-        S.addAssumClauses();
 
         lbool ret;
         vec<Lit> dummy;
