@@ -1760,7 +1760,7 @@ lbool Solver::search(int nof_conflicts)
                         proofsize += clausestrlen(conflict);
                     }
                     conflict.copyTo(lastconflict);
-                    nbclausesbeforereduce = firstReduceDB;
+                    nbclausesbeforereduce = 1; //firstReduceDB;
                     return l_False;
                 }else{
                     next = p;
