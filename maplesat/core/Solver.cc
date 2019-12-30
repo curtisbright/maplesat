@@ -1655,7 +1655,7 @@ int min(int a, int b) {
 
 const int firstReduceDB = 2000;
 const int incReduceDB = 300;
-const int specialIncReduceDB = 1000;
+//const int specialIncReduceDB = 1000;
 int nbclausesbeforereduce = firstReduceDB;
 
 /*_________________________________________________________________________________________________
@@ -1709,9 +1709,9 @@ void Solver::reduceDB()
 #endif
 
   // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
-  if(ca[learnts[learnts.size() / 2]].activity()<=3) {nbclausesbeforereduce +=specialIncReduceDB;}
+  //if(ca[learnts[learnts.size() / 2]].activity()<=3) {nbclausesbeforereduce +=specialIncReduceDB;}
   // Useless :-)
-  if(ca[learnts.last()].activity()<=5)  {nbclausesbeforereduce +=specialIncReduceDB;}
+  //if(ca[learnts.last()].activity()<=5)  {nbclausesbeforereduce +=specialIncReduceDB;}
 
 
     const int limit=learnts.size() / opt_reducefrac;
