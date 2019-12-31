@@ -827,9 +827,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(opt_transblock)
 #endif
 	{
-		for(int k=1; k<11; k++)
+		for(int k=0; k<11; k++)
 		{	
 			if(k==1 && firsthash!=0)
+				continue;
+
+			if(k!=1 && firsthash==0)
 				continue;
 
 			if(untouched[k])
