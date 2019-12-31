@@ -1965,6 +1965,7 @@ lbool Solver::search(int nof_conflicts)
             if(learnt_clause.size()==1)
             {  printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
                lastlearnt=learnt_clause[0];
+               fflush(stdout);
 #ifdef BLOCKSET
 	       minimize_blockset(learnt_clause[0]);
 #endif
@@ -2102,6 +2103,7 @@ lbool Solver::search(int nof_conflicts)
                                    units.push(learnt_clause[0]);
                                    printf("Learnt %i\n", (var(learnt_clause[0])+1)*(-2*sign(learnt_clause[0])+1));
                                    lastlearnt=learnt_clause[0];
+                                   fflush(stdout);
 #ifdef BLOCKSET
                                    minimize_blockset(learnt_clause[0]);
 #endif
