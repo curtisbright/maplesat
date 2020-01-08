@@ -1,7 +1,7 @@
 MROOT := $(shell pwd)
 export MROOT
 
-all: maplesat_static_1a maplesat_static_1b maplesat_static_1c maplesat_static_2 maplesat_static_3 maplesat_static_4 maplesat_static_5 maplesat_static_6a maplesat_static_6b maplesat_static_6c
+all: maplesat_static_1a maplesat_static_1b maplesat_static_1c #maplesat_static_2 maplesat_static_3 maplesat_static_4 maplesat_static_5 maplesat_static_6a maplesat_static_6b maplesat_static_6c
 
 maplesat_static_1a:
 	touch core/Solver.cc
