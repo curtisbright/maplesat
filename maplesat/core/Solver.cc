@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "automorphisms.h"
 
-#define MAXN 66
+#define MAXN 87
 
 //#include "nauty.h"
 #include "naututil.h"
@@ -77,7 +77,7 @@ static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhausti
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", -1);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", -1);
 //static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
-static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
+static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", false);
 //static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
@@ -469,7 +469,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	//printf("\n");*/
 
-	if(opt_eager && opt_rowmin != -1 && opt_rowmax != -1 && opt_colmin != -1 && opt_colmax != -1)
+	/*if(opt_eager && opt_rowmin != -1 && opt_rowmax != -1 && opt_colmin != -1 && opt_colmax != -1)
 	{	
 		for(int r=opt_rowmin; r<opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<opt_colmax; c++)
@@ -478,16 +478,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					return;
 			}
 		}
-		/*if(!complete)
+		if(!complete)
 		{	printf("The following variables were not set: ");
 			for(int i=0; i<assigns.size(); i++)
 				if(assigns[i]==l_Undef)
 					printf("%d ", i);
 			printf("\n");
 			exit(1);
-		}*/
+		}
 		complete = true;
-	}
+	}*/
 
 	if(complete)
 	{
@@ -551,14 +551,35 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		EMPTYGRAPH(g,m,n);
 
-		for(int c=0; c<21; c++)
-		{	for(int r1=0; r1<66; r1++)
-			{	for(int r2=r1+1; r2<66; r2++)
+		for(int c=0; c<30; c++)
+		{	
+			if(c >= 12 && c < 21)
+				continue;
+			int col = c;
+			if(c >= 21)
+				col -= 9;
+
+			/*for(int r1=0; r1<66; r1++)
+			{	const int index1 = 111*r1+col;
+				if(assigns[index1]==l_True)
+				{	printf("1");
+				}
+				if(assigns[index1]==l_False)
+				{	printf("0");
+				}
+				if(assigns[index1]==l_Undef)
+				{	printf(" ");
+				}
+			}
+			printf("\n");*/
+
+			for(int r1=0; r1<66; r1++)
+			{	//for(int r2=r1+1; r2<66; r2++)
 				{
 					const int index1 = 111*r1+c;
-					const int index2 = 111*r2+c;
-					if(assigns[index1]==l_True && assigns[index2]==l_True)
-					{	ADDONEEDGE(g,r1,r2,m);
+					//const int index2 = 111*r2+col;
+					if(assigns[index1]==l_True /*&& assigns[index2]==l_True*/)
+					{	ADDONEEDGE(g,r1,66+col,m);
 					}
 				}
 			}
