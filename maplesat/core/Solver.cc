@@ -2264,10 +2264,21 @@ lbool Solver::solve_()
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
-#ifdef BLOCKSET
-        printf("Blockset size: %d\n", blockset[0].size()+blockset[1].size()+blockset[2].size()+blockset[3].size()+blockset[4].size());
+#ifdef DISPLAYSOL
+	for(int i=0; i<66; i++)
+	{	for(int j=0; j<66; j++)
+		{
+			if(assigns[111*i+j]==l_True)
+			{	printf("1");
+			}
+			else
+			{	printf("0");
+			}
+		}
+		printf("\n");
+	}
+	printf("\n");
 #endif
-        //printf("Blockset2 size: %d\n", blockset2.size());
     }
 
     if (status == l_True){
