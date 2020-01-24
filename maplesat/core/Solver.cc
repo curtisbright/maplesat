@@ -97,7 +97,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
-static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, HUGE_VAL, true));
+//static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, HUGE_VAL, true));
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static StringOption  opt_assums            (_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 //static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search2");
@@ -1717,6 +1717,7 @@ void Solver::reduceDB()
   //if(ca[learnts.last()].activity()<=5)  {nbclausesbeforereduce +=specialIncReduceDB;}
 
 
+    const int opt_reducefrac = 10;
     const int limit=learnts.size() / opt_reducefrac;
 
     //if(ca[learnts[limit]].size()==2)
