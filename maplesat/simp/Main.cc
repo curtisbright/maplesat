@@ -98,7 +98,7 @@ int main(int argc, char** argv)
         StringOption assumout ("MAIN", "assumout", "Output results of each instance (using assumptions) to a file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
-        BoolOption   lex    ("MAIN", "lex",    "Use lexicographic constraints.", false);
+        //BoolOption   lex    ("MAIN", "lex",    "Use lexicographic constraints.", false);
 
         parseOptions(argc, argv, true);
         
@@ -148,8 +148,8 @@ int main(int argc, char** argv)
             printf("|                                                                             |\n"); }
         
         parse_DIMACS(in, S);
-        if(lex)
-            S.addLexClauses();
+        //if(lex)
+        //    S.addLexClauses();
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 
