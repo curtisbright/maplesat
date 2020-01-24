@@ -428,11 +428,11 @@ Lit Solver::pickBranchLit()
 bool startinit = false;
 sparsegraph start;
 //graph start[MAXN*MAXM];
-//graph g[MAXN*MAXM];
-//graph canong[MAXN*MAXM];
 int lab[MAXN],ptn[MAXN],orbits[MAXN];
 
 #ifdef DENSE
+graph g[MAXN*MAXM];
+graph canong[MAXN*MAXM];
 DEFAULTOPTIONS_GRAPH(options);
 statsblk stats;
 #endif
