@@ -241,6 +241,7 @@ int main(int argc, char** argv)
                   tmp = fscanf(assertion_file, "a ");
                   if(ret==l_True)
                     numsat++;
+                  if(ret == l_Undef) break;
                 }
                 else
                 {
