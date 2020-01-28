@@ -26,7 +26,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Solver.h"
 
 FILE* exhaustfile = NULL;
-long numsols = 0;
 
 using namespace Minisat;
 
@@ -1098,6 +1097,11 @@ int min(int a, int b) {
     return a < b ? a : b;
 }
 
+const int firstReduceDB = 2000;
+const int incReduceDB = 300;
+const int specialIncReduceDB = 1000;
+int nbclausesbeforereduce = firstReduceDB;
+
 /*_________________________________________________________________________________________________
 |
 |  reduceDB : ()  ->  [void]
@@ -1302,7 +1306,7 @@ lbool Solver::search(int nof_conflicts)
 #endif
 
                 if (verbosity >= 1)
-                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %8d |\n", 
+                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %8ld |\n", 
                            (int)conflicts, 
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
                            (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), numsols /*progressEstimate()*100*/);
@@ -1320,6 +1324,7 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
+	    /*
             if (learnts.size()-nAssigns() >= max_learnts) {
                 // Reduce the set of learnt clauses:
                 reduceDB();
@@ -1327,6 +1332,18 @@ lbool Solver::search(int nof_conflicts)
                 max_learnts += 500;
 #endif
             }
+	    */
+
+	    // Perform clause database reduction !
+	    if(conflicts >=  curRestart * nbclausesbeforereduce )
+	      {
+		//printf("Reducing DB, conflicts %d curRestart %d nbclausesbeforereduce %d\n", conflicts, curRestart, nbclausesbeforereduce);
+		assert(learnts.size()>0);
+		curRestart = (conflicts/ nbclausesbeforereduce)+1;
+		reduceDB();
+		reductions++;
+		nbclausesbeforereduce += incReduceDB;
+	      }
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()){

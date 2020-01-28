@@ -34,6 +34,17 @@ using namespace Minisat;
 
 //=================================================================================================
 
+int numlines(const char* str)
+{	FILE* fp = fopen(str, "r");
+	if(!fp)
+		printf("Could not read file %s\n", str), exit(1);
+	int count = 0;
+	for (char c = getc(fp); c != EOF; c = getc(fp))
+		if (c == '\n') // Increment count if this character is newline
+			count++;
+	fclose(fp);
+	return count;
+}
 
 void printStats(Solver& solver)
 {
@@ -71,6 +82,13 @@ static void SIGINT_exit(int signum) {
         printf("\n"); printf("*** INTERRUPTED ***\n"); }
     _exit(1); }
 
+int Solver::numclauses()
+{	return clauses.size();
+}
+
+int Solver::numlearnts()
+{	return learnts.size();
+}
 
 //=================================================================================================
 // Main:
@@ -94,6 +112,7 @@ int main(int argc, char** argv)
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 1000, IntRange(0, INT32_MAX));
 
         parseOptions(argc, argv, true);
         
@@ -192,6 +211,7 @@ int main(int argc, char** argv)
         vec<Lit> dummy;
         if (assumptions) {
             const char* file_name = assumptions;
+            int numassums = numlines(assumptions);
             FILE* assertion_file = fopen (file_name, "r");
             if (assertion_file == NULL)
                 printf("ERROR! Could not open file: %s\n", file_name), exit(1);
@@ -206,7 +226,12 @@ int main(int argc, char** argv)
                      for( int i = 0; i < dummy.size(); i++)
                        printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
                      printf("0\n");
-                     printf("Bound %d: ", bound);
+                     printf("Bound %d: \n", bound);
+                  }
+                  if(bound % print_bound == 0)
+                  {  
+                     printf("Bound %d/%d (%.2f%%) Cl: %d Le: %d Time: %.2f s Est: %.2f h Reducts: %d Sols: %ld\n", bound, numassums, 100*bound/(double)numassums, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.reductions, S.numsols);
+                     fflush(stdout);
                   }
                   ret = S.solveLimited(dummy);
                   bound++;

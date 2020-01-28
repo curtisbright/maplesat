@@ -43,6 +43,9 @@ public:
 
     char unit_clauses[200000];
     bool addunits = false;
+    long curRestart = 1;
+    int reductions = 0;
+    long numsols = 0;
 
     // Problem specification:
     //
@@ -172,6 +175,9 @@ public:
 
     vec<long double> total_actual_rewards;
     vec<int> total_actual_count;
+
+    int numclauses();
+    int numlearnts();
 
 protected:
 
