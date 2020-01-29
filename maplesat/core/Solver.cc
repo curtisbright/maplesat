@@ -66,6 +66,7 @@ static BoolOption    opt_luby_restart      (_cat, "luby",        "Use the Luby r
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
+static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt clauses to remove", 2, DoubleRange(0, false, HUGE_VAL, true));
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
@@ -80,6 +81,7 @@ static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntR
 static BoolOption opt_printneg(_cat, "printneg", "Include negative literals in exhaustive output", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
+static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -1132,10 +1134,14 @@ struct reduceDB_lt {
 #endif
     bool operator () (CRef x, CRef y) { 
 #if LBD_BASED_CLAUSE_DELETION
-        return ca[x].activity() > ca[y].activity();
+    if(opt_sortlbd)
+      return ca[x].activity() > ca[y].activity();
+    if(ca[x].size() == ca[y].size())
+      return ca[x].activity() > ca[y].activity();
+    return ca[x].size() > ca[y].size();
     }
 #else
-        return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()); } 
+    return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()); } 
 #endif
 };
 void Solver::reduceDB()
@@ -1148,12 +1154,14 @@ void Solver::reduceDB()
     sort(learnts, reduceDB_lt(ca));
 #endif
 
+    const int limit=learnts.size() / opt_reducefrac;
+
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
 #if LBD_BASED_CLAUSE_DELETION
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
-        if (c.activity() > 2 && !locked(c) && i < learnts.size() / 2)
+        if ((c.activity() > 2 || !opt_sortlbd) && !locked(c) && i < limit)
 #else
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
