@@ -395,9 +395,6 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	
-	if(exhaustfile==NULL)
-		return;
-
 	/*bool all_assigned = true;
 	for(int i=0; i<assigns.size(); i++)
 	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
@@ -435,6 +432,12 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}*/
 		complete = true;
 	}
+
+	if(complete)
+		numsols++;
+
+	if(exhaustfile==NULL)
+		return;
 
 	if(complete)
 	{
@@ -606,8 +609,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				ind++;
 			}
 		}
-
-		numsols++;
 	}
 }
 
