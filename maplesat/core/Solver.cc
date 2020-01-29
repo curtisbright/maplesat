@@ -29,6 +29,17 @@ FILE* exhaustfile = NULL;
 
 using namespace Minisat;
 
+bool equalclause(vec<Lit>& x, vec<Lit>& y)
+{ if(x.size()!=y.size())
+    return false;
+  int const size = x.size();
+  for(int i=0; i<size; i++)
+  {  if(x[i]!=y[i])
+       return false;
+  }
+  return true;
+}
+
 //=================================================================================================
 // Options:
 
@@ -1212,6 +1223,8 @@ bool Solver::simplify()
     return true;
 }
 
+Lit lastlearnt = lit_Undef;
+
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1291,6 +1304,8 @@ lbool Solver::search(int nof_conflicts)
                                   (-2 * sign(learnt_clause[i]) + 1) );
               fprintf(output, "0\n");
             }
+            if(learnt_clause.size()==1)
+               lastlearnt=learnt_clause[0];
 
 #if BRANCHING_HEURISTIC == VSIDS
             varDecayActivity();
@@ -1355,6 +1370,17 @@ lbool Solver::search(int nof_conflicts)
                     newDecisionLevel();
                 }else if (value(p) == l_False){
                     analyzeFinal(~p, conflict);
+                    sort(conflict);
+                    cancelUntil(0);
+                    if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict) && !(conflict.size()==1 && conflict[0]==lastlearnt))
+                    {   addClause_(conflict);
+                        //fprintclause(output, conflict);
+                        //fprintclause(savefile, conflict);
+                        //fflush(savefile);
+                        //proofsize += clausestrlen(conflict);
+                    }
+                    conflict.copyTo(lastconflict);
+                    nbclausesbeforereduce = firstReduceDB;
                     return l_False;
                 }else{
                     next = p;
@@ -1384,6 +1410,7 @@ lbool Solver::search(int nof_conflicts)
                             backtrack_level = level;
                         }
                         if (learnt_clause.size() == 1) {
+                            lastlearnt=learnt_clause[0];
                             units.push(learnt_clause[0]);
                         } else {
                             CRef cr = ca.alloc(learnt_clause, true);

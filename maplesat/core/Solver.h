@@ -41,7 +41,7 @@ public:
     Solver();
     virtual ~Solver();
 
-    char unit_clauses[200000];
+    //char unit_clauses[200000];
     bool addunits = false;
     long curRestart = 1;
     int reductions = 0;
@@ -119,6 +119,7 @@ public:
     vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
     vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
                                   // this vector represent the final conflict clause expressed in the assumptions.
+    vec<Lit>   lastconflict;      // Previous conflict clause
 
     // Mode of operation:
     //
