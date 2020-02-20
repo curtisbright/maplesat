@@ -261,6 +261,8 @@ int main(int argc, char** argv)
         	ret = S.solveLimited(dummy);
 
         /*if (S.verbosity > 0)*/{
+            printf("Number of solutions: %ld\n", S.numsols);
+            printf("Number of removed solutions: %ld\n", S.removedsols);
             if(assumptions)
 	      printf("Number of satisfiable bounds: %d\n", numsat);        
             printStats(S);

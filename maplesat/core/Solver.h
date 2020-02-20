@@ -46,6 +46,7 @@ public:
     long curRestart = 1;
     int reductions = 0;
     long numsols = 0;
+    long removedsols = 0;
 
     // Problem specification:
     //
@@ -159,6 +160,7 @@ public:
 
     uint64_t lbd_calls;
     const char* exhauststring;
+    const char* exhauststring2;
     vec<uint64_t> lbd_seen;
     vec<uint64_t> picked;
     vec<uint64_t> conflicted;

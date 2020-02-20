@@ -26,8 +26,22 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Solver.h"
 
 FILE* exhaustfile = NULL;
+FILE* exhaustfile2 = NULL;
 
 using namespace Minisat;
+
+void fprintlit(FILE* fp, Lit l)
+{ fprintf(fp, "%s%d", sign(l) ? "-" : "", var(l)+1);
+}
+
+void fprintclause(FILE* fp, vec<Lit>& c)
+{ for(int i = 0; i < c.size(); i++)
+  { fprintlit(fp, c[i]);
+    fprintf(fp, " ");
+  }
+  fprintf(fp, "0\n");
+}
+
 
 bool equalclause(vec<Lit>& x, vec<Lit>& y)
 { if(x.size()!=y.size())
@@ -71,6 +85,7 @@ static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt cl
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
+static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search (output equivalent solutions discarded by applying automorphisms)");
 static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 0);
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 0);
 static IntOption  opt_extracolmin(_cat, "extracolmin", "Minimum extra column to use for exhaustive search", 0);
@@ -136,6 +151,7 @@ Solver::Solver() :
   , addunits           (opt_addunits)
 
   , exhauststring (opt_exhaustive)
+  , exhauststring2 (opt_exhaustive2)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -160,6 +176,9 @@ Solver::Solver() :
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
     }
+    if(exhauststring2 != NULL)
+    {   exhaustfile2 = fopen(exhauststring2, "a");
+    }
 }
 
 
@@ -167,6 +186,9 @@ Solver::~Solver()
 {
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
+    }
+    if(exhauststring2 != NULL)
+    {   fclose(exhaustfile2);
     }
 }
 
@@ -392,6 +414,7 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+#include <set>
 #include <array>
 #include <algorithm>
 
@@ -505,11 +528,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		{	for(int c=opt_colmin; c<=opt_colmax; c++)
 			{
 				const int index = 100*r+c-1;
-				if(assigns[index]==l_True)
+				if(assigns[index]==l_True && index < nVars())
 				{	out_learnts[0].push(~mkLit(index));
 					fprintf(exhaustfile, "%d ", index+1);
 				}
-				else if(opt_printneg)
+				else if(opt_printneg && index < nVars())
 				{	//out_learnts[0].push(mkLit(index));
 					fprintf(exhaustfile, "-%d ", index+1);
 				}
@@ -519,11 +542,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				for(int c=opt_extracolmin; c<=opt_extracolmax; c++)
 				{
 					const int index = 100*r+c-1;
-					if(assigns[index]==l_True)
+					if(assigns[index]==l_True && index < nVars())
 					{	out_learnts[0].push(~mkLit(index));
 						fprintf(exhaustfile, "%d ", index+1);
 					}
-					else if(opt_printneg)
+					else if(opt_printneg && index < nVars())
 					{	//out_learnts[0].push(mkLit(index));
 						fprintf(exhaustfile, "-%d ", index+1);
 					}
@@ -531,6 +554,21 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 		fprintf(exhaustfile, "0\n");
+
+		std::set<std::array<std::array<int, 19>, 37>> matrixset;
+
+		std::array<std::array<int, 19>, 37> matrix;
+		for(int r=7; r<=43; r++)
+		{	for(int c=1; c<=111; c++)
+			{
+				const int index = 100*r+c-1;
+				if(assigns[index]==l_True)
+					matrix[r-7][c-1] = 1;
+				else
+					matrix[r-7][c-1] = 0;
+			}
+		}
+		matrixset.insert(matrix);
 
 		vec<Lit> clause;
 		out_learnts[0].copyTo(clause);
@@ -578,7 +616,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					}
 				}
 
-				std::sort(matrix.begin(), matrix.end(), std::greater<std::array<int, 19>>()); 
+				std::sort(matrix.begin(), matrix.end(), std::greater<std::array<int, 19>>());
 
 				/*for(int i=0; i<37; i++)
 				{	printf("%02d ", i+7);
@@ -587,6 +625,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					printf("\n");
 				}*/
 
+				if(matrixset.count(matrix)>0)
+				{	ind++;
+					continue;
+				}
+				matrixset.insert(matrix);
+				removedsols++;
+
 				vec<Lit> clause;
 
 				for(int i=0; i<37; i++)
@@ -594,6 +639,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 						if(matrix[i][j]==1)
 							clause.push(~mkLit((i+7)*100+j));
 				}
+
+				if(exhaustfile2!=NULL)
+					fprintclause(exhaustfile2, clause);
 
 				{
 					int max_index = 0;
@@ -1555,7 +1603,9 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
-        printf("Number of solutions: %ld\n", numsols);
+        /*printf("Number of solutions: %ld\n", numsols);
+	if(opt_caseno != 0)
+          printf("Number of removed solutions: %ld\n", removedsols);*/
     }
 
     if (status == l_True){
