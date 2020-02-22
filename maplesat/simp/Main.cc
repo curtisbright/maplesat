@@ -122,6 +122,19 @@ int main(int argc, char** argv)
         
         SimpSolver  S;
         double      initial_time = cpuTime();
+            
+        const char* file_name = assumptions;
+        FILE* assertion_file = fopen (file_name, "r");
+        int tmp = fscanf(assertion_file, "a ");
+        int i;
+        while (fscanf(assertion_file, "%d ", &i) == 1)
+        {
+          if(i!=0)
+            S.var_used[i-1] = 1;
+          else
+            tmp = fscanf(assertion_file, "a ");
+        }
+        fclose(assertion_file);
 
         S.parsing = 1;
         if (!pre) S.eliminate(true);
@@ -215,7 +228,6 @@ int main(int argc, char** argv)
         vec<Lit> dummy;
         if (assumptions) {
             print_numsols = true;
-            const char* file_name = assumptions;
             int numassums = numlines(assumptions);
             FILE* assertion_file = fopen (file_name, "r");
             if (assertion_file == NULL)

@@ -30,7 +30,6 @@ namespace Minisat {
 
 //=================================================================================================
 // DIMACS Parser:
-char var_used[100000] = {};
 
 template<class B, class Solver>
 static void readClause(B& in, Solver& S, vec<Lit>& lits) {
@@ -41,7 +40,7 @@ static void readClause(B& in, Solver& S, vec<Lit>& lits) {
         if (parsed_lit == 0) break;
         var = abs(parsed_lit)-1;
         if(var < 100000)
-          var_used[var] = 1;
+          S.var_used[var] = 1;
         while (var >= S.nVars()) S.newVar();
         lits.push( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
     }

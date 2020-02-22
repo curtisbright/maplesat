@@ -112,6 +112,11 @@ public:
     void    checkGarbage(double gf);
     void    checkGarbage();
 
+    int colmin = 0;
+    int colmax = 0;
+    int rowmin = 0;
+    int rowmax = 0;
+    char var_used[100000] = {};
 
     FILE*               output;
 

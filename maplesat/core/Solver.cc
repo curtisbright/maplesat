@@ -128,6 +128,10 @@ Solver::Solver() :
   , garbage_frac     (opt_garbage_frac)
   , restart_first    (opt_restart_first)
   , restart_inc      (opt_restart_inc)
+  , rowmin (opt_rowmin)
+  , rowmax (opt_rowmax)
+  , colmin (opt_colmin)
+  , colmax (opt_colmax)
 
     // Parameters (the rest):
     //
