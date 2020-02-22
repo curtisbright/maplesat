@@ -81,7 +81,7 @@ static void parse_DIMACS_main(B& in, Solver& S) {
         fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
     int addedunits = 0;
     for(int i=0; i<100000 && i<S.nVars(); i++)
-      if(!var_used[i])
+      if(!S.var_used[i])
       {  if(S.addunits)
 	   S.addClause(mkLit(i, true));
          addedunits++;
