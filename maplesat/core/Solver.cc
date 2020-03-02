@@ -1125,7 +1125,8 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
-	    untouched[x/dim] = false;
+	    if(x/dim < 4)
+                untouched[x/dim] = false;
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
