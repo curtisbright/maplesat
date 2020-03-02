@@ -18,12 +18,14 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+//#define PREASSIGN
+
+#ifdef PREASSIGN
 #include <NTL/mat_GF2.h>
 
 //using namespace std;
 using namespace NTL;
-
-#define PREASSIGN
+#endif
 
 #include <math.h>
 
