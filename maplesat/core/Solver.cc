@@ -87,6 +87,9 @@ double assigned_psds[4][99];
 int assigned_pafs[4][99];
 #endif
 
+bool untouched[4] = {false, false, false, false};
+double lastpsds[4][99] = {};
+
 int div1, div2;
 int compA[2][99];
 int compB[2][99];
@@ -1089,10 +1092,11 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
-
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
 void Solver::cancelUntil(int level) {
+  const int n = order;
+  const int dim = n/2+1;  
     if (decisionLevel() > level){
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
@@ -1121,6 +1125,7 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
+	    untouched[x/dim] = false;
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -1270,10 +1275,10 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
 
     if(seqcomplete)
     { 
-
 #ifdef PREASSIGN
       if(!seq_assigned[seq])
 #endif
+      if(!untouched[seq])
       {
         fft_signal[0] = (assigns[seq*dim] == l_True) ? 1 : -1;
         for(int i=1; i<dim; i++)
@@ -1291,7 +1296,13 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
             psd_i = assigned_psds[seq][i];
         else
 #endif
-            psd_i = fft_result[i][0]*fft_result[i][0];
+	if(untouched[seq])
+	{    psd_i = lastpsds[seq][i];
+	}
+	else
+	{    psd_i = fft_result[i][0]*fft_result[i][0];
+	     lastpsds[seq][i] = psd_i;
+	}
 
         psds[i][seq].seqindex = seq;
         psds[i][seq].psd = psd_i;
@@ -1416,6 +1427,8 @@ bool Solver::filtering_check(vec<vec<Lit> >& out_learnts)
         }
 
       }
+
+      untouched[seq] = true;
 
     }
     else
