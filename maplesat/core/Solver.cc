@@ -429,9 +429,9 @@ Lit Solver::pickBranchLit()
 }
 
 #include <set>
-#include <map>
 
-std::map<long, long> hashlookup;
+std::set<long> blocked_hashes;
+std::set<long> not_blocked_hashes;
 
 bool startinit = false;
 sparsegraph start;
@@ -617,53 +617,59 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		long hash1 = hashgraph_sg(sg, 19883109L);
 
-		sparsegraph canong;
-		SG_INIT(canong);
-		Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-		long hash = hashgraph_sg(&canong, 19883109L);
-
-		if(hashlookup.find(hash) == hashlookup.end())
-			hashlookup.insert({hash, hash1});
-
-		if(hashlookup.find(hash)->second != hash1)
+		if(not_blocked_hashes.find(hash1)==not_blocked_hashes.end())
 		{
-			vec<Lit> clause;
-			out_learnts.push();
+			sparsegraph canong;
+			SG_INIT(canong);
+			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+			long hash = hashgraph_sg(&canong, 19883109L);
 
-			for(int r=opt_rowmin; r<opt_rowmax; r++)
-			{	for(int c=opt_colmin; c<opt_colmin+3; c++)
-				{
-					const int index = 111*r+c;
-					if(assigns[index]==l_True)
-					{	out_learnts[0].push(~mkLit(index));
+			if(blocked_hashes.find(hash)==blocked_hashes.end())
+			{
+				not_blocked_hashes.insert(hash1);
+				blocked_hashes.insert(hash);
+			}
+			else
+			{
+				vec<Lit> clause;
+				out_learnts.push();
+
+				for(int r=opt_rowmin; r<opt_rowmax; r++)
+				{	for(int c=opt_colmin; c<opt_colmin+3; c++)
+					{
+						const int index = 111*r+c;
+						if(assigns[index]==l_True)
+						{	out_learnts[0].push(~mkLit(index));
+						}
 					}
 				}
-			}
 
-			{
-				int max_index = 0;
-				for(int i=1; i<out_learnts[0].size(); i++)
-					if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
-						max_index = i;
-				Lit p = out_learnts[0][0];
-				out_learnts[0][0] = out_learnts[0][max_index];
-				out_learnts[0][max_index] = p;
-			}
+				{
+					int max_index = 0;
+					for(int i=1; i<out_learnts[0].size(); i++)
+						if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+							max_index = i;
+					Lit p = out_learnts[0][0];
+					out_learnts[0][0] = out_learnts[0][max_index];
+					out_learnts[0][max_index] = p;
+				}
 
-			{
-				int max_index = 1;
-				for(int i=2; i<out_learnts[0].size(); i++)
-					if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
-						max_index = i;
-				Lit p = out_learnts[0][1];
-				out_learnts[0][1] = out_learnts[0][max_index];
-				out_learnts[0][max_index] = p;
-			}
+				{
+					int max_index = 1;
+					for(int i=2; i<out_learnts[0].size(); i++)
+						if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+							max_index = i;
+					Lit p = out_learnts[0][1];
+					out_learnts[0][1] = out_learnts[0][max_index];
+					out_learnts[0][max_index] = p;
+				}
 
-			CRef confl_clause = ca.alloc(out_learnts[0], false);
-			attachClause(confl_clause);
-			clauses.push(confl_clause);
+				CRef confl_clause = ca.alloc(out_learnts[0], false);
+				attachClause(confl_clause);
+				clauses.push(confl_clause);
+			}
 		}
+
 	}
 
 	if(complete)
