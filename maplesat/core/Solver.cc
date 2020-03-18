@@ -573,15 +573,21 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		{
 			first3cols[l] = true;
 
+			const int lowerbound = (l==0) ? opt_colmin : opt_colmin+2+l;
+
 			for(int r=opt_rowmin; r<opt_rowmax; r++)
-			{	for(int c=opt_colmin; c<opt_colmin+3+l; c++)
+			{	for(int c=lowerbound; c<opt_colmin+3+l; c++)
 				{	const int index = 111*r+c;
 					if(assigns[index]==l_Undef)
 					{	first3cols[l] = false;
 						break;
 					}
 				}
+				if(!first3cols[l])
+					break;
 			}
+			if(!first3cols[l])
+				break;
 		}
 
 		if(first3cols[l])
