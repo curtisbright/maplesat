@@ -342,6 +342,7 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
+bool first3coluntouched = false;
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -374,6 +375,10 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
+            const int col = x % 111;
+            if(col >= opt_colmin && col < opt_colmin+3)
+            {   first3coluntouched = false;
+            }
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -424,6 +429,9 @@ Lit Solver::pickBranchLit()
 }
 
 #include <set>
+#include <map>
+
+std::map<long, long> hashlookup;
 
 bool startinit = false;
 sparsegraph start;
@@ -551,6 +559,112 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 	}
 	#endif
+
+	bool first3cols = false;
+
+	if(!first3coluntouched)
+	{
+		first3cols = true;
+
+		for(int r=opt_rowmin; r<opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<opt_colmin+3; c++)
+			{	const int index = 111*r+c;
+		                  if(assigns[index]==l_Undef)
+				{	first3cols = false;
+					break;
+				}
+			}
+		}
+	}
+
+	if(first3cols)
+	{
+		first3coluntouched = true;
+
+		sparsegraph* sg = copy_sg(&start, NULL);
+		sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
+		sg->elen = 87*11;
+
+		const int k = 1;
+
+		for(int c=12+9*k; c<12+9*k+3; c++)
+		{
+			for(int r=0; r<66; r++)
+			{
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
+				{
+					sg->e[11*(66+c-9*k)+sg->d[66+c-9*k]] = r;
+					sg->d[66+c-9*k]++;
+					sg->nde++;
+				}
+			}
+		}
+
+		for(int r=0; r<66; r++)
+		{
+			for(int c=12+9*k; c<12+9*k+3; c++)
+			{
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
+				{
+					sg->e[11*r+sg->d[r]] = 66+c-9*k;
+					sg->d[r]++;
+					sg->nde++;
+				}
+			}
+		}
+
+		long hash1 = hashgraph_sg(sg, 19883109L);
+
+		sparsegraph canong;
+		SG_INIT(canong);
+		Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+		long hash = hashgraph_sg(&canong, 19883109L);
+
+		if(hashlookup.find(hash) == hashlookup.end())
+			hashlookup.insert({hash, hash1});
+
+		if(hashlookup.find(hash)->second != hash1)
+		{
+			vec<Lit> clause;
+			out_learnts.push();
+
+			for(int r=opt_rowmin; r<opt_rowmax; r++)
+			{	for(int c=opt_colmin; c<opt_colmin+3; c++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{	out_learnts[0].push(~mkLit(index));
+					}
+				}
+			}
+
+			{
+				int max_index = 0;
+				for(int i=1; i<out_learnts[0].size(); i++)
+					if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+						max_index = i;
+				Lit p = out_learnts[0][0];
+				out_learnts[0][0] = out_learnts[0][max_index];
+				out_learnts[0][max_index] = p;
+			}
+
+			{
+				int max_index = 1;
+				for(int i=2; i<out_learnts[0].size(); i++)
+					if(level(var(out_learnts[0][i])) > level(var(out_learnts[0][max_index])))
+						max_index = i;
+				Lit p = out_learnts[0][1];
+				out_learnts[0][1] = out_learnts[0][max_index];
+				out_learnts[0][max_index] = p;
+			}
+
+			CRef confl_clause = ca.alloc(out_learnts[0], false);
+			attachClause(confl_clause);
+			clauses.push(confl_clause);
+		}
+	}
 
 	if(complete)
 	{
