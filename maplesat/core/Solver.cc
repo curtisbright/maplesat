@@ -342,7 +342,7 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
-bool first3coluntouched[6] = {false, false, false, false, false, false};
+bool first3coluntouched[7] = {false, false, false, false, false, false, false};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -376,7 +376,7 @@ void Solver::cancelUntil(int level) {
 #endif
             assigns [x] = l_Undef;
             const int col = x % 111;
-            for(int l=0; l<6; l++)
+            for(int l=0; l<7; l++)
             {
                   if(col >= opt_colmin && col < opt_colmin+3+l)
                   {    first3coluntouched[l] = false;
@@ -565,9 +565,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	#endif
 
-	bool first3cols[6] = {false, false, false, false, false, false};
+	bool first3cols[7] = {false, false, false, false, false, false, false};
 
-	for(int l=0; l<6; l++)
+	for(int l=0; l<7; l++)
 	{
 		if(!first3coluntouched[l])
 		{
@@ -746,6 +746,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		attachClause(confl_clause);
 		clauses.push(confl_clause);
 
+		#if 0
 		#if defined(TRACES) || defined(SPARSE)
 		sparsegraph* sg = copy_sg(&start, NULL);
 		sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
@@ -896,6 +897,22 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 			fprintf(exhaustfile, "0\n");
 		}
+		#endif
+
+		numsols++;
+		fprintf(exhaustfile, "a ");
+
+		for(int r=opt_rowmin; r<opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<opt_colmax; c++)
+			{
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
+				{	
+					fprintf(exhaustfile, "%d ", index+1);
+				}
+			}
+		}
+		fprintf(exhaustfile, "0\n");
 	}
 }
 
