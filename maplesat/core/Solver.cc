@@ -18,6 +18,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define MAXCOLS 7
 #define TRACES
 #define MAXN 87
 
@@ -342,7 +343,7 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
-bool first3coluntouched[7] = {false, false, false, false, false, false, false};
+bool first3coluntouched[MAXCOLS] = {};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -376,7 +377,7 @@ void Solver::cancelUntil(int level) {
 #endif
             assigns [x] = l_Undef;
             const int col = x % 111;
-            for(int l=0; l<7; l++)
+            for(int l=0; l<MAXCOLS; l++)
             {
                   if(col >= opt_colmin && col < opt_colmin+3+l)
                   {    first3coluntouched[l] = false;
@@ -492,7 +493,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 
 		ptn[65] = 0;
-		ptn[86] = 0;
+		ptn[MAXN-1] = 0;
 
 		#ifdef TRACES
 		options_traces.writeautoms = FALSE;
@@ -513,20 +514,21 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		//SG_ALLOC(start,87,2*186,"malloc");
 
 		start.nde = 0;
-		start.v = (size_t*)malloc(87*sizeof(size_t));
-		start.d = (int*)malloc(87*sizeof(int));
-		start.e = (int*)malloc(87*11*sizeof(int));
-		start.nv = 87;
-		start.vlen = 87;
-		start.dlen = 87;
-		start.elen = 87*11;
+		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
+		start.d = (int*)malloc(MAXN*sizeof(int));
+		start.e = (int*)malloc(MAXN*11*sizeof(int));
+		start.nv = MAXN;
+		start.vlen = MAXN;
+		start.dlen = MAXN;
+		start.elen = MAXN*11;
 
-		for(int i=0; i<87; i++)
-			start.v[i] = 11*i;
+		for(int i=0; i<MAXN; i++)
+		{	start.v[i] = 11*i;
+			start.d[i] = 0;
+		}
 
 		for(int c=0; c<12; c++)
 		{	
-			start.d[66+c] = 0;
 			for(int r=0; r<66; r++)
 			{
 				const int index = 111*r+c;
@@ -541,7 +543,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		for(int r=0; r<66; r++)
 		{	
-			start.d[r] = 0;
 			for(int c=0; c<12; c++)
 			{
 				const int index = 111*r+c;
@@ -554,9 +555,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 
-		for(int c=0; c<9; c++)
-			start.d[66+12+c] = 0;
-
 		startinit = true;
 
 		/*put_sg(stdout, &start, true, 80);
@@ -568,9 +566,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	#endif
 
-	bool first3cols[7] = {false, false, false, false, false, false, false};
+	bool first3cols[MAXCOLS] = {};
 
-	for(int l=0; l<7; l++)
+	for(int l=0; l<MAXCOLS; l++)
 	{
 		if(!first3coluntouched[l])
 		{
@@ -598,8 +596,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			first3coluntouched[l] = true;
 
 			sparsegraph* sg = copy_sg(&start, NULL);
-			sg->e = (int*)realloc(sg->e, 87*11*sizeof(int));
-			sg->elen = 87*11;
+			sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
+			sg->elen = MAXN*11;
 
 			const int k = 1;
 
