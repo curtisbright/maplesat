@@ -18,6 +18,14 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define MAXROWS 27
+#define MAXCOLS 75
+#define MAXN (MAXROWS+MAXCOLS)
+
+extern "C" {
+#include "traces.h"
+}
+
 #include "automorphisms.h"
 
 #include <math.h>
@@ -74,7 +82,7 @@ static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive 
 //static IntOption  opt_colprint(_cat, "colprint", "Maximum column to use for printing", 111);
 static BoolOption opt_isoblock(_cat, "isoblock", "Use isomorphism blocking", true);
 //static BoolOption opt_isoblock2(_cat, "isoblock2", "Use isomorphism blocking2", false);
-static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
+//static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 //static BoolOption opt_transblock(_cat, "transblock", "Use transitive blocking", false);
 //static BoolOption opt_transread(_cat, "transread", "Read transitive blocking clauses", false);
@@ -311,6 +319,7 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
+bool rowsuntouched[6] = {false, false, false, false, false, false};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -343,6 +352,13 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
+            const int row = x / 111;
+            for(int l=0; l<6; l++)
+            {
+                  if(row >= opt_rowmin && row < opt_rowmin+l+1)
+                  {    rowsuntouched[l] = false;
+                  }
+            }
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -392,13 +408,26 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-#include <array>
+#include <map>
 #include <set>
+#define STARTROWS 21
+#define STARTCOLS 75
 
-//#include <algorithm>
-//#include <utility>
+std::set<long> blocked_hashes;
+std::set<long> not_blocked_hashes;
+std::set<long> blocked_hashes2;
+std::set<long> not_blocked_hashes2;
 
-//vec<Lit> blocking_clause;
+std::map<long, sparsegraph*> hash_map;
+
+bool startinit = false;
+sparsegraph start;
+int lab[MAXN],ptn[MAXN],orbits[MAXN];
+
+DEFAULTOPTIONS_TRACES(options_traces);
+TracesStats stats_traces;
+
+int blocked_count = 0;
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -416,37 +445,182 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(exhaustfile==NULL)
 		return;
 
-	/*bool all_assigned = true;
-	for(int i=0; i<assigns.size(); i++)
-	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
-		if(assigns[i]==l_Undef)
-		{	all_assigned = false;
+	if(!startinit)
+	{
+		for(int i=0; i<MAXN; i++)
+		{	lab[i] = i;
+			ptn[i] = 1;
+		}
+
+		ptn[MAXROWS-1] = 0;
+		ptn[MAXN-1] = 0;
+
+		options_traces.writeautoms = FALSE;
+		options_traces.defaultptn = FALSE;
+		options_traces.writeautoms = FALSE;
+		options_traces.getcanon = TRUE;
+		options_traces.outfile = NULL;
+
+		SG_INIT(start);
+
+		start.nde = 0;
+		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
+		start.d = (int*)malloc(MAXN*sizeof(int));
+		start.e = (int*)malloc(MAXN*11*sizeof(int));
+		start.nv = MAXN;
+		start.vlen = MAXN;
+		start.dlen = MAXN;
+		start.elen = MAXN*11;
+
+		for(int i=0; i<MAXN; i++)
+		{	start.v[i] = 11*i;
+			start.d[i] = 0;
+		}
+
+		for(int c=0; c<STARTCOLS; c++)
+		{	
+			for(int r=0; r<STARTROWS; r++)
+			{
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
+				{
+					start.e[11*r+start.d[r]] = MAXROWS+c;
+					start.d[r]++;
+					start.e[11*(MAXROWS+c)+start.d[MAXROWS+c]] = r;
+					start.d[MAXROWS+c]++;
+					start.nde += 2;
+				}
+			}
+		}
+
+		startinit = true;
+
+		/*put_sg(stdout, &start, true, 80);
+		printf("start.vlen %d\n", start.vlen);
+		printf("start.dlen %d\n", start.dlen);
+		printf("start.elen %d\n", start.elen);
+		printf("---\n");*/
+	}
+
+	bool rows[6] = {false, false, false, false, false, false};
+
+	for(int l=0; l<6; l++)
+	{
+		if(!rowsuntouched[l])
+		{
+			rows[l] = true;
+
+			for(int r=opt_rowmin; r<opt_rowmin+l+1; r++)
+			{	for(int c=opt_colmin; c<opt_colmax; c++)
+				{	const int index = 111*r+c;
+					if(assigns[index]==l_Undef)
+					{	rows[l] = false;
+						break;
+					}
+				}
+				if(!rows[l])
+					break;
+			}
+			if(!rows[l])
+				break;
+		}
+
+		if(rows[l])
+		{
+			sparsegraph* sg = copy_sg(&start, NULL);
+			//sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
+			//sg->elen = MAXN*11;
+
+			for(int c=0; c<MAXCOLS; c++)
+			{
+				for(int r=STARTROWS; r<STARTROWS+l+1; r++)
+				{
+					const int index = 111*r+c;
+					if(assigns[index]==l_True)
+					{
+						sg->e[11*r+sg->d[r]] = MAXROWS+c;
+						sg->d[r]++;
+						sg->e[11*(MAXROWS+c)+sg->d[MAXROWS+c]] = r;
+						sg->d[MAXROWS+c]++;
+						sg->nde += 2;
+					}
+				}
+			}
+
+			long hash_sg = hashgraph_sg(sg, 19883105L);
+			//long hash_sg2 = hashgraph_sg(sg, 1L);
+
+			if(not_blocked_hashes.find(hash_sg)==not_blocked_hashes.end() /*|| not_blocked_hashes2.find(hash_sg2)==not_blocked_hashes2.end()*/)
+			{
+				sparsegraph canong;
+				SG_INIT(canong);
+				Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+				long hash_canong = hashgraph_sg(&canong, 19883105L);
+				//long hash_canong2 = hashgraph_sg(&canong, 1L);
+
+				if(blocked_hashes.find(hash_canong)==blocked_hashes.end() /*|| blocked_hashes2.find(hash_canong2)==blocked_hashes2.end()*/)
+				{
+					not_blocked_hashes.insert(hash_sg);
+					blocked_hashes.insert(hash_canong);
+					sparsegraph* canong_copy = copy_sg(&canong, NULL);
+					hash_map.insert({hash_canong, canong_copy});
+					//not_blocked_hashes2.insert(hash_sg2);
+					//blocked_hashes2.insert(hash_canong2);
+				}
+				else
+				{
+					if(!aresame_sg(&canong, hash_map.find(hash_canong)->second))
+					{	printf("Warning: Non-isomorphic graph hash collision!\n"); //exit(1);
+					}
+					blocked_count++;
+
+					vec<Lit> clause;
+					const int size = out_learnts.size();
+					out_learnts.push();
+
+					for(int r=opt_rowmin; r<opt_rowmin+l+1; r++)
+					{	for(int c=opt_colmin; c<opt_colmax; c++)
+						{
+							const int index = 111*r+c;
+							if(assigns[index]==l_True)
+							{	out_learnts[size].push(~mkLit(index));
+							}
+						}
+					}
+
+					{
+						int max_index = 0;
+						for(int i=1; i<out_learnts[size].size(); i++)
+							if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
+								max_index = i;
+						Lit p = out_learnts[size][0];
+						out_learnts[size][0] = out_learnts[size][max_index];
+						out_learnts[size][max_index] = p;
+					}
+
+					{
+						int max_index = 1;
+						for(int i=2; i<out_learnts[size].size(); i++)
+							if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
+								max_index = i;
+						Lit p = out_learnts[size][1];
+						out_learnts[size][1] = out_learnts[size][max_index];
+						out_learnts[size][max_index] = p;
+					}
+
+					CRef confl_clause = ca.alloc(out_learnts[size], false);
+					attachClause(confl_clause);
+					clauses.push(confl_clause);
+				}
+			}
+
+			SG_FREE(*sg);
+			rowsuntouched[l] = true;
 			break;
 		}
 	}
-	//printf("\n");*/
 
-	if(opt_eager && opt_rowmin != -1 && opt_rowmax != -1 && opt_colmin != -1 && opt_colmax != -1)
-	{	
-		for(int r=opt_rowmin; r<opt_rowmax; r++)
-		{	for(int c=opt_colmin; c<opt_colmax; c++)
-			{	const int index = 111*r+c;
-				if(assigns[index]==l_Undef)
-					return;
-			}
-		}
-		/*if(!complete)
-		{	printf("The following variables were not set: ");
-			for(int i=0; i<assigns.size(); i++)
-				if(assigns[i]==l_Undef)
-					printf("%d ", i);
-			printf("\n");
-			exit(1);
-		}*/
-		complete = true;
-	}
-
-	if(complete)
+	if(complete && out_learnts.size() == 0)
 	{
 		vec<Lit> clause;
 		out_learnts.push();
@@ -464,37 +638,20 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 		fprintf(exhaustfile, "0\n");*/
 
-		fprintf(exhaustfile, "a ");
-
-		for(int i=0; i<assumptions.size(); i++)
-		{	out_learnts[0].push(~assumptions[i]);
-			if(sign(assumptions[i]))
-			{	
-				//out_learnts[0].push(mkLit(var(assumptions[i])));
-				//if(opt_printneg)
-				fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
-			}
-			else
-			{	
-				//out_learnts[0].push(~mkLit(var(assumptions[i])));
-				fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
-			}
-		}
-
 		for(int r=opt_rowmin; r<opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<opt_colmax; c++)
 			{
 				const int index = 111*r+c;
 				if(assigns[index]==l_True)
 				{	out_learnts[0].push(~mkLit(index));
-					fprintf(exhaustfile, "%d ", index+1);
+					//fprintf(exhaustfile, "%d ", index+1);
 				}
 			}
 		}
-		if(!opt_printtags)
-			fprintf(exhaustfile, "0\n");
-		else
-			fprintf(exhaustfile, "0 %d\n", numsols+1);
+		//if(!opt_printtags)
+		//	fprintf(exhaustfile, "0\n");
+		//else
+		//	fprintf(exhaustfile, "0 %d\n", numsols+1);
 
 		{
 			int max_index = 0;
@@ -520,410 +677,20 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		attachClause(confl_clause);
 		clauses.push(confl_clause);
 
-		if(opt_isoblock)
-		{
-			std::array<std::array<int, 75>, 6> matrix;
-			std::set<std::array<std::array<int, 75>, 6>> matrixset;
-			for(int i=0; i<6; i++)
-				for(int j=0; j<75; j++)
-					matrix[i][j] = (assigns[111*(i+21)+j]==l_True?1:0);
-			matrixset.insert(matrix);
+		numsols++;
+		fprintf(exhaustfile, "a ");
 
-			for(int k=0; k<48; k++)
+		for(int r=opt_rowmin; r<opt_rowmax; r++)
+		{	for(int c=opt_colmin; c<opt_colmax; c++)
 			{
-				if(k!=identity_index)
-				{
-
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-21][col[k][c]] = 1;
-								//matrix[r-7][c-1] = 1;
-							else
-								matrix[r-21][col[k][c]] = 0;
-								//matrix[r-7][c-1] = 0;
-							
-						}
-					}
-
-					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					if(matrixset.count(matrix)>0)
-						continue;
-
-					matrixset.insert(matrix);
-
-					vec<Lit> clause;
-
-					if(opt_printtags)
-						fprintf(exhaustfile2, "a ");
-
-					for(int i=0; i<6; i++)
-					{	//if(i+21 >= opt_colprint)
-						//	break;
-						for(int j=0; j<75; j++)
-							if(matrix[i][j]==1)
-							{	clause.push(~mkLit((i+21)*111+j));
-								if(exhaustfile2 != NULL)
-								{	if(opt_printtags)
-									{	if(j>0)
-											fprintf(exhaustfile2, "%d ", (i+21)*111+j+1);
-									}
-									else
-										fprintf(exhaustfile2, "-%d ", (i+21)*111+j+1);
-								}
-							}
-					}
-					if(exhaustfile2 != NULL)
-					{	if(!opt_printtags)
-							fprintf(exhaustfile2, "0\n");
-						else
-							fprintf(exhaustfile2, "0 %d\n", numsols+1);
-					}
-
-					{
-						{
-							int max_index = 0;
-							for(int i=1; i<clause.size(); i++)
-								if(level(var(clause[i])) > level(var(clause[max_index])))
-									max_index = i;
-							Lit p = clause[0];
-							clause[0] = clause[max_index];
-							clause[max_index] = p;
-						}
-
-						{
-							int max_index = 1;
-							for(int i=2; i<clause.size(); i++)
-								if(level(var(clause[i])) > level(var(clause[max_index])))
-									max_index = i;
-							Lit p = clause[1];
-							clause[1] = clause[max_index];
-							clause[max_index] = p;
-						}
-
-						CRef confl_clause = ca.alloc(clause, false);
-						attachClause(confl_clause);
-						clauses.push(confl_clause);
-					}
-
+				const int index = 111*r+c;
+				if(assigns[index]==l_True)
+				{	
+					fprintf(exhaustfile, "%d ", index+1);
 				}
-				/*if(opt_transblock && row[k]==10 && transfile != NULL)
-				{
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-21][col[k][c]] = 1;
-								//matrix[r-7][c-1] = 1;
-							else
-								matrix[r-21][col[k][c]] = 0;
-								//matrix[r-7][c-1] = 0;
-							
-						}
-					}
-
-					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+6+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					{
-						for(int i=0; i<blocking_clause.size(); i++)
-							fprintf(transfile, "-%d ", var(blocking_clause[i])+1);
-
-						vec<Lit> clause;
-
-						for(int i=0; i<6; i++)
-						{	//if(i+21+6 >= opt_colprint)
-							//	break;
-							for(int j=0; j<75; j++)
-								if(matrix[i][j]==1)
-								{	//clause.push(~mkLit((i+21+6)*111+j));
-									fprintf(transfile, "-%d ", (i+21+6)*111+j+1);
-								}
-						}
-						fprintf(transfile, "0\n");
-
-					}
-				}
-				if(opt_transblock && row[k]==15 && transfile != NULL)
-				{
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-21][col[k][c]] = 1;
-								//matrix[r-7][c-1] = 1;
-							else
-								matrix[r-21][col[k][c]] = 0;
-								//matrix[r-7][c-1] = 0;
-							
-						}
-					}
-
-					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+2*6+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					{
-						for(int i=0; i<blocking_clause.size(); i++)
-							fprintf(transfile, "-%d ", var(blocking_clause[i])+1);
-
-						vec<Lit> clause;
-
-						for(int i=0; i<6; i++)
-						{	//if(i+21+2*6 >= opt_colprint)
-							//	break;
-							for(int j=0; j<75; j++)
-								if(matrix[i][j]==1)
-								{	//clause.push(~mkLit((i+21+2*6)*111+j));
-									fprintf(transfile, "-%d ", (i+21+2*6)*111+j+1);
-								}
-						}
-						fprintf(transfile, "0\n");
-					}
-
-				}
-				if(opt_transblock && row[k]==11 && transfile != NULL)
-				{
-					std::array<std::array<int, 75>, 6> matrix;
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-21][col[k][c]] = 1;
-								//matrix[r-7][c-1] = 1;
-							else
-								matrix[r-21][col[k][c]] = 0;
-								//matrix[r-7][c-1] = 0;
-							
-						}
-					}
-
-					//std::sort(matrix.begin(), matrix.end(), std::greater<>()); 
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+3*6+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					{
-						for(int i=0; i<blocking_clause.size(); i++)
-							fprintf(transfile, "-%d ", var(blocking_clause[i])+1);
-
-						vec<Lit> clause;
-
-						for(int i=0; i<6; i++)
-						{	//if(i+21+3*6 >= opt_colprint)
-							//	break;
-							for(int j=0; j<75; j++)
-								if(matrix[i][j]==1)
-								{	//clause.push(~mkLit((i+21+3*6)*111+j));
-									fprintf(transfile, "-%d ", (i+21+3*6)*111+j+1);
-								}
-						}
-						fprintf(transfile, "0\n");
-					}
-				}*/
 			}
 		}
-
-		/*if(opt_isoblock2)
-		{
-
-			for(int k=0; k<16; k++)
-			{
-				std::array<std::array<int, 75>, 6> matrix;
-				std::array<std::array<int, 75>, 6> matrix2;
-
-				if(row2[k]==1)
-				{
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-21][col2[k][c]] = 1;
-							else
-								matrix[r-21][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					for(int r=27; r<33; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix2[r-27][col2[k][c]] = 1;
-							else
-								matrix2[r-27][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix2[j][15+6+i]==1)
-								swap(matrix2[i], matrix2[j]);
-						}
-
-					}
-
-					vec<Lit> clause;
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
-						{	if(matrix[i][j]==1)
-							{	clause.push(~mkLit((i+21)*111+j));
-							}
-							if(matrix2[i][j]==1)
-							{	clause.push(~mkLit((i+27)*111+j));
-							}
-						}
-					}
-
-					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
-
-				}
-				if(row2[k]==10)
-				{
-					for(int r=27; r<33; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix[r-27][col2[k][c]] = 1;
-							else
-								matrix[r-27][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix[j][15+6+i]==1)
-								swap(matrix[i], matrix[j]);
-						}
-
-					}
-
-					for(int r=21; r<27; r++)
-					{	for(int c=0; c<75; c++)
-						{
-							const int index = 111*r+c;
-							if(assigns[index]==l_True)
-								matrix2[r-21][col2[k][c]] = 1;
-							else
-								matrix2[r-21][col2[k][c]] = 0;
-							
-						}
-					}
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<6; j++)
-						{	if(matrix2[j][15+i]==1)
-								swap(matrix2[i], matrix2[j]);
-						}
-
-					}
-
-					vec<Lit> clause;
-
-					for(int i=0; i<6; i++)
-					{	for(int j=0; j<75; j++)
-						{	if(matrix[i][j]==1)
-							{	clause.push(~mkLit((i+21)*111+j));
-							}
-							if(matrix2[i][j]==1)
-							{	clause.push(~mkLit((i+27)*111+j));
-							}
-						}
-					}
-
-					{
-						int max_index = 0;
-						for(int i=1; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[0];
-						clause[0] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					{
-						int max_index = 1;
-						for(int i=2; i<clause.size(); i++)
-							if(level(var(clause[i])) > level(var(clause[max_index])))
-								max_index = i;
-						Lit p = clause[1];
-						clause[1] = clause[max_index];
-						clause[max_index] = p;
-					}
-
-					CRef confl_clause = ca.alloc(clause, false);
-					attachClause(confl_clause);
-					clauses.push(confl_clause);
-
-				}
-			}
-		}*/
-
-		numsols++;
+		fprintf(exhaustfile, "0\n");
 	}
 }
 
@@ -1828,6 +1595,8 @@ lbool Solver::solve_()
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
+        printf("Number of partial assignments not blocked: %d\n", not_blocked_hashes.size());
+        printf("Number of partial assignments blocked: %d\n", blocked_count);
     }
 
     if (status == l_True){
