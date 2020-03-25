@@ -431,6 +431,9 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+#include <map>
+std::map<long, sparsegraph*> hash_map;
+
 #include <set>
 
 std::set<long> blocked_hashes;
@@ -628,9 +631,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 
-			long hash1 = hashgraph_sg(sg, 19883109L);
+			long hash_sg = hashgraph_sg(sg, 19883109L);
 
-			if(not_blocked_hashes.find(hash1)==not_blocked_hashes.end())
+			if(not_blocked_hashes.find(hash_sg)==not_blocked_hashes.end())
 			{
 				sparsegraph canong;
 				SG_INIT(canong);
@@ -639,11 +642,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 				if(blocked_hashes.find(hash)==blocked_hashes.end())
 				{
-					not_blocked_hashes.insert(hash1);
+					not_blocked_hashes.insert(hash_sg);
 					blocked_hashes.insert(hash);
+					sparsegraph* canong_copy = copy_sg(&canong, NULL);
+					hash_map.insert({hash, canong_copy});
 				}
 				else
 				{
+					if(!aresame_sg(&canong, hash_map.find(hash)->second))
+						printf("Warning: Non-isomorphic graph hash collision!\n");
+
 					blocked_count++;
 
 					vec<Lit> clause;
