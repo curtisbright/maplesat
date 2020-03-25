@@ -18,7 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#define MAXROWS 27
+#define MAXC (6*1)
+#define MAXROWS (21+MAXC)
 #define MAXCOLS 75
 #define MAXN (MAXROWS+MAXCOLS)
 
@@ -319,7 +320,7 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
-bool rowsuntouched[6] = {false, false, false, false, false, false};
+bool rowsuntouched[MAXC] = {};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -353,7 +354,7 @@ void Solver::cancelUntil(int level) {
 #endif
             assigns [x] = l_Undef;
             const int row = x / 111;
-            for(int l=0; l<6; l++)
+            for(int l=0; l<MAXC; l++)
             {
                   if(row >= opt_rowmin && row < opt_rowmin+l+1)
                   {    rowsuntouched[l] = false;
@@ -502,9 +503,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		printf("---\n");*/
 	}
 
-	bool rows[6] = {false, false, false, false, false, false};
+	bool rows[MAXC] = {};
 
-	for(int l=0; l<6; l++)
+	for(int l=0; l<MAXC; l++)
 	{
 		if(!rowsuntouched[l])
 		{
@@ -528,8 +529,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		if(rows[l])
 		{
 			sparsegraph* sg = copy_sg(&start, NULL);
-			//sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
-			//sg->elen = MAXN*11;
+			sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
+			sg->elen = MAXN*11;
 
 			for(int c=0; c<MAXCOLS; c++)
 			{
@@ -548,24 +549,24 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 
 			long hash_sg = hashgraph_sg(sg, 19883105L);
-			//long hash_sg2 = hashgraph_sg(sg, 1L);
+			long hash_sg2 = hashgraph_sg(sg, 1L);
 
-			if(not_blocked_hashes.find(hash_sg)==not_blocked_hashes.end() /*|| not_blocked_hashes2.find(hash_sg2)==not_blocked_hashes2.end()*/)
+			if(not_blocked_hashes.find(hash_sg)==not_blocked_hashes.end() || not_blocked_hashes2.find(hash_sg2)==not_blocked_hashes2.end())
 			{
 				sparsegraph canong;
 				SG_INIT(canong);
 				Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
 				long hash_canong = hashgraph_sg(&canong, 19883105L);
-				//long hash_canong2 = hashgraph_sg(&canong, 1L);
+				long hash_canong2 = hashgraph_sg(&canong, 1L);
 
-				if(blocked_hashes.find(hash_canong)==blocked_hashes.end() /*|| blocked_hashes2.find(hash_canong2)==blocked_hashes2.end()*/)
+				if(blocked_hashes.find(hash_canong)==blocked_hashes.end() || blocked_hashes2.find(hash_canong2)==blocked_hashes2.end())
 				{
 					not_blocked_hashes.insert(hash_sg);
 					blocked_hashes.insert(hash_canong);
 					sparsegraph* canong_copy = copy_sg(&canong, NULL);
 					hash_map.insert({hash_canong, canong_copy});
-					//not_blocked_hashes2.insert(hash_sg2);
-					//blocked_hashes2.insert(hash_canong2);
+					not_blocked_hashes2.insert(hash_sg2);
+					blocked_hashes2.insert(hash_canong2);
 				}
 				else
 				{
@@ -615,6 +616,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 
 			SG_FREE(*sg);
+			free(sg);
 			rowsuntouched[l] = true;
 			break;
 		}
