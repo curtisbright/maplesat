@@ -18,9 +18,10 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#define MAXC (6*1)
-#define MAXROWS (21+MAXC)
-#define MAXCOLS 75
+#define STARTROWS 6
+#define MAXR 37
+#define MAXROWS 43
+#define MAXCOLS 19
 #define MAXN (MAXROWS+MAXCOLS)
 
 extern "C" {
@@ -320,7 +321,7 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
-bool rowsuntouched[MAXC] = {};
+bool rowsuntouched[MAXR] = {};
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -353,8 +354,8 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
-            const int row = x / 111;
-            for(int l=0; l<MAXC; l++)
+            const int row = x / 100;
+            for(int l=0; l<MAXR; l++)
             {
                   if(row >= opt_rowmin && row < opt_rowmin+l+1)
                   {    rowsuntouched[l] = false;
@@ -411,8 +412,6 @@ Lit Solver::pickBranchLit()
 
 #include <map>
 #include <set>
-#define STARTROWS 21
-#define STARTCOLS 75
 
 std::set<long> blocked_hashes;
 std::set<long> not_blocked_hashes;
@@ -478,11 +477,11 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			start.d[i] = 0;
 		}
 
-		for(int c=0; c<STARTCOLS; c++)
+		for(int c=0; c<MAXCOLS; c++)
 		{	
 			for(int r=0; r<STARTROWS; r++)
 			{
-				const int index = 111*r+c;
+				const int index = 100*r+c;
 				if(assigns[index]==l_True)
 				{
 					start.e[11*r+start.d[r]] = MAXROWS+c;
@@ -496,16 +495,16 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 		startinit = true;
 
-		/*put_sg(stdout, &start, true, 80);
+		put_sg(stdout, &start, true, 80);
 		printf("start.vlen %d\n", start.vlen);
 		printf("start.dlen %d\n", start.dlen);
 		printf("start.elen %d\n", start.elen);
-		printf("---\n");*/
+		printf("---\n");
 	}
 
-	bool rows[MAXC] = {};
+	bool rows[MAXR] = {};
 
-	for(int l=0; l<MAXC; l++)
+	for(int l=0; l<MAXR; l++)
 	{
 		if(!rowsuntouched[l])
 		{
@@ -513,7 +512,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 
 			for(int r=opt_rowmin; r<opt_rowmin+l+1; r++)
 			{	for(int c=opt_colmin; c<opt_colmax; c++)
-				{	const int index = 111*r+c;
+				{	const int index = 100*r+c;
 					if(assigns[index]==l_Undef)
 					{	rows[l] = false;
 						break;
@@ -536,7 +535,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			{
 				for(int r=STARTROWS; r<STARTROWS+l+1; r++)
 				{
-					const int index = 111*r+c;
+					const int index = 100*r+c;
 					if(assigns[index]==l_True)
 					{
 						sg->e[11*r+sg->d[r]] = MAXROWS+c;
@@ -582,7 +581,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					for(int r=opt_rowmin; r<opt_rowmin+l+1; r++)
 					{	for(int c=opt_colmin; c<opt_colmax; c++)
 						{
-							const int index = 111*r+c;
+							const int index = 100*r+c;
 							if(assigns[index]==l_True)
 							{	out_learnts[size].push(~mkLit(index));
 							}
@@ -630,8 +629,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		/*fprintf(exhaustfile, "a ");
 		for(int i=0; i<assigns.size(); i++)
 		{	
-			int r = (i/111);
-			int c = (i%111);
+			int r = (i/100);
+			int c = (i%100);
 			if(assigns[i]==l_True && r >= opt_rowmin && r < opt_rowmax && c >= opt_colmin && c < opt_colmax)
 			{	clause.push(mkLit(i, assigns[i]==l_True));
 				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
@@ -643,7 +642,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		for(int r=opt_rowmin; r<opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<opt_colmax; c++)
 			{
-				const int index = 111*r+c;
+				const int index = 100*r+c;
 				if(assigns[index]==l_True)
 				{	out_learnts[0].push(~mkLit(index));
 					//fprintf(exhaustfile, "%d ", index+1);
@@ -685,7 +684,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		for(int r=opt_rowmin; r<opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<opt_colmax; c++)
 			{
-				const int index = 111*r+c;
+				const int index = 100*r+c;
 				if(assigns[index]==l_True)
 				{	
 					fprintf(exhaustfile, "%d ", index+1);
