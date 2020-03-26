@@ -413,12 +413,9 @@ Lit Solver::pickBranchLit()
 #include <map>
 #include <set>
 
-std::set<long> blocked_hashes;
-std::set<long> not_blocked_hashes;
-std::set<long> blocked_hashes2;
-std::set<long> not_blocked_hashes2;
-
-std::map<long, sparsegraph*> hash_map;
+std::set<__int128_t> blocked_hashes[MAXR];
+std::set<__int128_t> not_blocked_hashes[MAXR];
+std::map<__int128_t, sparsegraph*> hash_map[MAXR];
 
 bool startinit = false;
 sparsegraph start;
@@ -428,6 +425,7 @@ DEFAULTOPTIONS_TRACES(options_traces);
 TracesStats stats_traces;
 
 int blocked_count = 0;
+int not_blocked_count = 0;
 
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
@@ -547,29 +545,27 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 
-			long hash_sg = hashgraph_sg(sg, 19883105L);
-			long hash_sg2 = hashgraph_sg(sg, 1L);
+			__int128_t hash_sg = hashgraph_sg(sg, 19883105L)*hashgraph_sg(sg, 1L);
 
-			if(not_blocked_hashes.find(hash_sg)==not_blocked_hashes.end() || not_blocked_hashes2.find(hash_sg2)==not_blocked_hashes2.end())
+			if(not_blocked_hashes[l].find(hash_sg)==not_blocked_hashes[l].end())
 			{
 				sparsegraph canong;
 				SG_INIT(canong);
 				Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-				long hash_canong = hashgraph_sg(&canong, 19883105L);
-				long hash_canong2 = hashgraph_sg(&canong, 1L);
+				__int128_t hash_canong = hashgraph_sg(&canong, 19883105L)*hashgraph_sg(&canong, 1L);
 
-				if(blocked_hashes.find(hash_canong)==blocked_hashes.end() || blocked_hashes2.find(hash_canong2)==blocked_hashes2.end())
+				if(blocked_hashes[l].find(hash_canong)==blocked_hashes[l].end())
 				{
-					not_blocked_hashes.insert(hash_sg);
-					blocked_hashes.insert(hash_canong);
 					sparsegraph* canong_copy = copy_sg(&canong, NULL);
-					hash_map.insert({hash_canong, canong_copy});
-					not_blocked_hashes2.insert(hash_sg2);
-					blocked_hashes2.insert(hash_canong2);
+
+					hash_map[l].insert({hash_canong, canong_copy});
+					not_blocked_hashes[l].insert(hash_sg);
+					blocked_hashes[l].insert(hash_canong);
+					not_blocked_count++;
 				}
 				else
 				{
-					if(!aresame_sg(&canong, hash_map.find(hash_canong)->second))
+					if(!aresame_sg(&canong, hash_map[l].find(hash_canong)->second))
 					{	printf("Warning: Non-isomorphic graph hash collision!\n"); //exit(1);
 					}
 					blocked_count++;
@@ -1391,10 +1387,12 @@ lbool Solver::search(int nof_conflicts)
 #endif
 
                 if (verbosity >= 1)
-                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %8d |\n", 
+                {    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %8d |\n", 
                            (int)conflicts, 
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
                            (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), numsols /*progressEstimate()*100*/);
+                     fflush(stdout);
+                }
             }
 
         }else{
@@ -1596,7 +1594,7 @@ lbool Solver::solve_()
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
         printf("Number of solutions: %ld\n", numsols);
-        printf("Number of partial assignments not blocked: %d\n", not_blocked_hashes.size());
+        printf("Number of partial assignments not blocked: %d\n", not_blocked_count);
         printf("Number of partial assignments blocked: %d\n", blocked_count);
     }
 
