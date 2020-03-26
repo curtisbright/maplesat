@@ -545,14 +545,14 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				}
 			}
 
-			__int128_t hash_sg = hashgraph_sg(sg, 19883105L)*hashgraph_sg(sg, 1L);
+			__int128_t hash_sg = ((__int128_t)hashgraph_sg(sg, 19883105L) << 64) + (__int128_t)hashgraph_sg(sg, 50138891L);
 
 			if(not_blocked_hashes[l].find(hash_sg)==not_blocked_hashes[l].end())
 			{
 				sparsegraph canong;
 				SG_INIT(canong);
 				Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-				__int128_t hash_canong = hashgraph_sg(&canong, 19883105L)*hashgraph_sg(&canong, 1L);
+				__int128_t hash_canong = ((__int128_t)hashgraph_sg(&canong, 19883105L) << 64) + (__int128_t)hashgraph_sg(&canong, 50138891L);
 
 				if(blocked_hashes[l].find(hash_canong)==blocked_hashes[l].end())
 				{
@@ -563,11 +563,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					blocked_hashes[l].insert(hash_canong);
 					not_blocked_count++;
 				}
-				else
+				else if(aresame_sg(&canong, hash_map[l].find(hash_canong)->second))
 				{
-					if(!aresame_sg(&canong, hash_map[l].find(hash_canong)->second))
-					{	printf("Warning: Non-isomorphic graph hash collision!\n"); //exit(1);
-					}
 					blocked_count++;
 
 					vec<Lit> clause;
@@ -607,6 +604,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 					CRef confl_clause = ca.alloc(out_learnts[size], false);
 					attachClause(confl_clause);
 					clauses.push(confl_clause);
+				}
+				else
+				{	printf("Warning: Non-isomorphic graph hash collision!\n"); //exit(1);
 				}
 			}
 
