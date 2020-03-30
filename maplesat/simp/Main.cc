@@ -34,8 +34,6 @@ using namespace Minisat;
 
 //=================================================================================================
 
-bool print_numsols = false;
-
 int numlines(const char* str)
 {	FILE* fp = fopen(str, "r");
 	if(!fp)
@@ -52,8 +50,8 @@ void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
-    if (print_numsols)
-      printf("Number of solutions: %ld\n", solver.numsols);
+    //if (print_numsols)
+    //  printf("Number of solutions: %ld\n", solver.numsols);
     printf("restarts              : %"PRIu64"\n", solver.starts);
     printf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
     printf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
@@ -117,6 +115,7 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 1000, IntRange(0, INT32_MAX));
+        BoolOption   print_numsols("MAIN", "print-numsols", "Print # of solutions.", true);
 
         parseOptions(argc, argv, true);
         
@@ -227,7 +226,6 @@ int main(int argc, char** argv)
         lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
-            print_numsols = true;
             int numassums = numlines(assumptions);
             FILE* assertion_file = fopen (file_name, "r");
             if (assertion_file == NULL)
@@ -273,7 +271,8 @@ int main(int argc, char** argv)
         	ret = S.solveLimited(dummy);
 
         /*if (S.verbosity > 0)*/{
-            //printf("Number of solutions: %ld\n", S.numsols);
+            if(print_numsols)
+              printf("Number of solutions: %ld\n", S.numsols);
             printf("Number of removed solutions: %ld\n", S.removedsols);
             if(assumptions)
 	      printf("Number of satisfiable bounds: %d\n", numsat);        
