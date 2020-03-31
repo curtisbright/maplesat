@@ -18,6 +18,14 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define MAXROWS 6
+#define MAXCOLS 19
+#define MAXN (MAXROWS+MAXCOLS)
+
+extern "C" {
+#include "traces.h"
+}
+
 #include <math.h>
 
 #include "mtl/Sort.h"
@@ -343,6 +351,21 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+//#include <map>
+#include <set>
+
+std::set<long> blocked_hashes;
+std::set<long> not_blocked_hashes;
+
+bool startinit = false;
+sparsegraph start;
+int lab[MAXN],ptn[MAXN],orbits[MAXN];
+
+DEFAULTOPTIONS_TRACES(options_traces);
+TracesStats stats_traces;
+
+int not_blocked_count = 0;
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -369,8 +392,133 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	//printf("\n");*/
 
+	if(!startinit)
+	{
+		for(int i=0; i<MAXN; i++)
+		{	lab[i] = i;
+			ptn[i] = 1;
+		}
+
+		ptn[MAXROWS-1] = 0;
+		ptn[MAXN-1] = 0;
+
+		options_traces.writeautoms = FALSE;
+		options_traces.defaultptn = FALSE;
+		options_traces.writeautoms = FALSE;
+		options_traces.getcanon = TRUE;
+		options_traces.outfile = NULL;
+
+		SG_INIT(start);
+
+		start.nde = 0;
+		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
+		start.d = (int*)malloc(MAXN*sizeof(int));
+		start.e = (int*)malloc(MAXN*11*sizeof(int));
+		start.nv = MAXN;
+		start.vlen = MAXN;
+		start.dlen = MAXN;
+		start.elen = MAXN*5;
+
+		for(int i=0; i<MAXN; i++)
+		{	start.v[i] = 5*i;
+			start.d[i] = 0;
+		}
+
+		startinit = true;
+	}
+
 	if(complete)
 	{
+		sparsegraph* sg = copy_sg(&start, NULL);
+		sg->e = (int*)realloc(sg->e, MAXN*5*sizeof(int));
+		sg->elen = MAXN*5;
+
+		for(int c=0; c<MAXCOLS; c++)
+		{
+			for(int r=0; r<MAXROWS; r++)
+			{
+				const int index = 100*(r+1)+(c+1)-1;
+				if(assigns[index]==l_True)
+				{
+					sg->e[5*r+sg->d[r]] = MAXROWS+c;
+					sg->d[r]++;
+					sg->e[5*(MAXROWS+c)+sg->d[MAXROWS+c]] = r;
+					sg->d[MAXROWS+c]++;
+					sg->nde += 2;
+				}
+			}
+		}
+
+		long hash_sg = hashgraph_sg(sg, 19883109L);
+
+		if(not_blocked_hashes.find(hash_sg)==not_blocked_hashes.end())
+		{
+			sparsegraph canong;
+			SG_INIT(canong);
+			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+			long hash_canong = hashgraph_sg(&canong, 19883109L);
+
+			if(blocked_hashes.find(hash_canong)==blocked_hashes.end())
+			{
+				//sparsegraph* canong_copy = copy_sg(&canong, NULL);
+				//hash_map.insert({hash_canong, canong_copy});
+
+				not_blocked_hashes.insert(hash_sg);
+				blocked_hashes.insert(hash_canong);
+				not_blocked_count++;
+				printf("Case %d hash %ld\n", not_blocked_count, hash_canong);
+			}
+			else //if(aresame_sg(&canong, hash_map[l].find(hash_canong)->second))
+			{
+				//blocked_count++;
+
+				vec<Lit> clause;
+				const int size = out_learnts.size();
+				out_learnts.push();
+
+				for(int r=opt_rowmin; r<=opt_rowmax; r++)
+				{	for(int c=opt_colmin; c<=opt_colmax; c++)
+					{
+						const int index = 100*r+c-1;
+						if(assigns[index]==l_True)
+						{	out_learnts[size].push(~mkLit(index));
+						}
+					}
+				}
+
+				{
+					int max_index = 0;
+					for(int i=1; i<out_learnts[size].size(); i++)
+						if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
+							max_index = i;
+					Lit p = out_learnts[size][0];
+					out_learnts[size][0] = out_learnts[size][max_index];
+					out_learnts[size][max_index] = p;
+				}
+
+				{
+					int max_index = 1;
+					for(int i=2; i<out_learnts[size].size(); i++)
+						if(level(var(out_learnts[size][i])) > level(var(out_learnts[size][max_index])))
+							max_index = i;
+					Lit p = out_learnts[size][1];
+					out_learnts[size][1] = out_learnts[size][max_index];
+					out_learnts[size][max_index] = p;
+				}
+
+				CRef confl_clause = ca.alloc(out_learnts[size], false);
+				attachClause(confl_clause);
+				clauses.push(confl_clause);
+		
+				SG_FREE(*sg);
+				free(sg);
+				return;
+			}
+		}
+
+		SG_FREE(*sg);
+		free(sg);
+
 		vec<Lit> clause;
 		out_learnts.push();
 		fprintf(exhaustfile, "a ");
