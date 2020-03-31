@@ -26,6 +26,8 @@ extern "C" {
 #include "traces.h"
 }
 
+#include "lamcases.h"
+
 #include <math.h>
 
 #include "mtl/Sort.h"
@@ -351,11 +353,13 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-//#include <map>
+#include <map>
 #include <set>
 
 std::set<long> blocked_hashes;
 std::set<long> not_blocked_hashes;
+
+std::map<long,int> hash_map;
 
 bool startinit = false;
 sparsegraph start;
@@ -425,6 +429,38 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 
 		startinit = true;
+
+		for(int caseno=0; caseno<66; caseno++)
+		{
+			sparsegraph* sg = copy_sg(&start, NULL);
+			sg->e = (int*)realloc(sg->e, MAXN*5*sizeof(int));
+			sg->elen = MAXN*5;
+
+			for(int c=0; c<MAXCOLS; c++)
+			{
+				for(int r=0; r<MAXROWS; r++)
+				{
+					if(lamcases[caseno][r][c]==1)
+					{
+						sg->e[5*r+sg->d[r]] = MAXROWS+c;
+						sg->d[r]++;
+						sg->e[5*(MAXROWS+c)+sg->d[MAXROWS+c]] = r;
+						sg->d[MAXROWS+c]++;
+						sg->nde += 2;
+					}
+				}
+			}
+
+			sparsegraph canong;
+			SG_INIT(canong);
+			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+			long hash_canong = hashgraph_sg(&canong, 19883109L);
+
+			hash_map.insert({hash_canong, caseno+1});
+
+			SG_FREE(*sg);
+			free(sg);
+		}
 	}
 
 	if(complete)
@@ -466,7 +502,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				not_blocked_hashes.insert(hash_sg);
 				blocked_hashes.insert(hash_canong);
 				not_blocked_count++;
-				printf("Case %d hash %ld\n", not_blocked_count, hash_canong);
+				printf("Count %d hash %ld, case %d\n", not_blocked_count, hash_canong, hash_map.find(hash_canong)->second);
 			}
 			else //if(aresame_sg(&canong, hash_map[l].find(hash_canong)->second))
 			{
