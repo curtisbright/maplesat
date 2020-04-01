@@ -18,7 +18,16 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define MAXROWS 6
+#define MAXCOLS 19
+#define MAXN (MAXROWS+MAXCOLS)
+
+extern "C" {
+#include "traces.h"
+}
+
 #include "automorphisms.h"
+#include "lamcases.h"		// lam_hashes map
 
 #include <math.h>
 
@@ -422,6 +431,13 @@ Lit Solver::pickBranchLit()
 #include <array>
 #include <algorithm>
 
+bool startinit = false;
+sparsegraph start;
+int lab[MAXN],ptn[MAXN],orbits[MAXN];
+
+DEFAULTOPTIONS_TRACES(options_traces);
+TracesStats stats_traces;
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -444,6 +460,41 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		}
 	}
 	//printf("\n");*/
+
+	if(!startinit)
+	{
+		for(int i=0; i<MAXN; i++)
+		{	lab[i] = i;
+			ptn[i] = 1;
+		}
+
+		ptn[MAXROWS-1] = 0;
+		ptn[MAXN-1] = 0;
+
+		options_traces.writeautoms = FALSE;
+		options_traces.defaultptn = FALSE;
+		options_traces.writeautoms = FALSE;
+		options_traces.getcanon = TRUE;
+		options_traces.outfile = NULL;
+
+		SG_INIT(start);
+
+		start.nde = 0;
+		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
+		start.d = (int*)malloc(MAXN*sizeof(int));
+		start.e = (int*)malloc(MAXN*11*sizeof(int));
+		start.nv = MAXN;
+		start.vlen = MAXN;
+		start.dlen = MAXN;
+		start.elen = MAXN*11;
+
+		for(int i=0; i<MAXN; i++)
+		{	start.v[i] = 11*i;
+			start.d[i] = 0;
+		}
+
+		startinit = true;
+	}
 
 	if(opt_eager && opt_rowmin != 0 && opt_rowmax != 0 && opt_colmin != 0 && opt_colmax != 0)
 	{	
@@ -479,8 +530,74 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(exhaustfile==NULL)
 		return;
 
+	int const r1 = 0;
+	int const r2 = 5;
+
 	if(complete)
 	{
+		sparsegraph* sg = copy_sg(&start, NULL);
+		sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
+		sg->elen = MAXN*11;
+
+		int newrows = 0;
+		for(int r=0; r<43; r++)
+		{
+			int count = 0;
+			for(int c=0; c<opt_colmax; c++)
+			{
+				if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
+				{	
+					if(assigns[100*(r+1)+c]==l_True)
+					{	
+						count++;
+					}
+				}
+			}
+
+			//printf("row %d count %d\n", r, count);
+
+			if(count==5)
+			{
+				int col = 0;
+				for(int c=0; c<opt_colmax; c++)
+				{
+					if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
+					{	
+						if(assigns[100*(r+1)+c]==l_True)
+						{	
+							//printf("Adding edge (%d,%d)\n", newrows, col);
+							sg->e[11*newrows+sg->d[newrows]] = MAXROWS+col;
+							sg->d[newrows]++;
+							sg->e[11*(MAXROWS+col)+sg->d[MAXROWS+col]] = newrows;
+							sg->d[MAXROWS+col]++;
+							sg->nde += 2;
+						}
+						col++;
+					}
+				}
+				newrows++;
+			}
+
+			if(newrows==6)
+				break;
+		}
+
+		/*put_sg(stdout, sg, true, 80);
+		printf("start.vlen %d\n", sg->vlen);
+		printf("start.dlen %d\n", sg->dlen);
+		printf("start.elen %d\n", sg->elen);
+		printf("---\n");*/
+
+		sparsegraph canong;
+		SG_INIT(canong);
+		Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+		long hash_canong = hashgraph_sg(&canong, 19883109L);
+
+		printf("rows (%d,%d) incidence pattern case %d\n", r1, r2, lam_hashes.find(hash_canong)->second);
+
+		SG_FREE(*sg);
+		free(sg);
+
 		out_learnts.push();
 
 		/*fprintf(exhaustfile, "a ");
