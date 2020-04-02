@@ -79,6 +79,8 @@ static void parse_DIMACS_main(B& in, Solver& S) {
         fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
     if (cnt  != clauses)
         fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
+
+    S.addAssumClauses();
     int addedunits = 0;
     for(int i=0; i<100000 && i<S.nVars(); i++)
       if(!S.var_used[i])

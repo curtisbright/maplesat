@@ -107,6 +107,7 @@ static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly",
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
 static BoolOption opt_partremove(_cat, "partremove", "Use Lam's partial isomorphism removal technique", false);
+static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -233,6 +234,38 @@ Solver::~Solver()
 //=================================================================================================
 // Minor methods:
 
+void Solver::addAssumClauses()
+{
+        if (opt_hardassums)
+        {
+                const char* the_assums = opt_hardassums;
+                char* tmp = (char*)the_assums;
+                int i = 0;
+                while (sscanf(tmp, "%d", &i) == 1)
+                {
+                        Var v = abs(i) - 1;
+				var_used[v] = 1;
+                        Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                        //printf("Adding assumption %d\n", var(l)+1);
+                        addClause(l);
+
+                        /*if(output != NULL)
+                        {       if(sign(l))
+                                        fprintf(output, "t -%d 0\n", var(l)+1);
+                                else
+                                        fprintf(output, "t %d 0\n", var(l)+1);
+                        }
+                        proofsize += 5+numdigits(var(l));
+                        if(sign(l))
+                                proofsize++;                                     */
+
+                        while(*tmp != ',' && *tmp != '\0')
+                                tmp++;
+                        if(*tmp == ',')
+                                tmp++;
+                }
+        }
+}
 
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
 // used as a decision variable (NOTE! This has effects on the meaning of a SATISFIABLE result).

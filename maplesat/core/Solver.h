@@ -41,6 +41,8 @@ public:
     Solver();
     virtual ~Solver();
 
+    void addAssumClauses();
+
     //char unit_clauses[200000];
     bool addunits = false;
     long curRestart = 1;
