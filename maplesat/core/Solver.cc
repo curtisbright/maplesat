@@ -106,6 +106,7 @@ static BoolOption opt_printneg(_cat, "printneg", "Include negative literals in e
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
+static BoolOption opt_partremove(_cat, "partremove", "Use Lam's partial isomorphism removal technique", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -401,9 +402,11 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
-		for(int ii=0; ii<r1s.size(); ii++)
-		{	if(varsets[ii].find(x) != varsets[ii].end())
-				touched[ii] = true;
+		if(opt_partremove)
+		{	for(int ii=0; ii<r1s.size(); ii++)
+			{	if(varsets[ii].find(x) != varsets[ii].end())
+					touched[ii] = true;
+			}
 		}
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
@@ -483,88 +486,90 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(exhaustfile==NULL)
 		return;
 
-	for(int ii=0; ii<r1s.size(); ii++)
-	{
-		if(!touched[ii])
-		{	//printf("Skip because variables have not been touched since last check\n");
-			continue;
-		}
-		
-		vec<Lit> clause;
-
-		const int r1 = r1s[ii];
-		const int r2 = r2s[ii];
-
-		sparsegraph* sg = copy_sg(&start, NULL);
-		sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
-		sg->elen = MAXN*11;
-
-		const std::set<int> varset = varsets[ii];
-		const std::map<int, int> varrowmap = varrowmaps[ii];
-		const std::map<int, int> varcolmap = varcolmaps[ii];
-
-		bool allassigned = true;
-		for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
-		{	const int var = *it;
-			if(assigns[var]==l_Undef)
-			{	allassigned = false;
-				break;
-			}
-		}
-		if(!allassigned)
-			continue;
-		else
-			touched[ii] = false;
-
-		for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
+	if(opt_partremove)
+	{	for(int ii=0; ii<r1s.size(); ii++)
 		{
-			const int var = *it;
-			if(assigns[var]==l_True)
-			{	
-				clause.push(~mkLit(var));
-				const int row = varrowmap.find(var)->second;
-				const int col = varcolmap.find(var)->second;
-				//printf("Adding edge (%d,%d)\n", row, col);
-				sg->e[11*row+sg->d[row]] = MAXROWS+col;
-				sg->d[row]++;
-				sg->e[11*(MAXROWS+col)+sg->d[MAXROWS+col]] = row;
-				sg->d[MAXROWS+col]++;
-				sg->nde += 2;
+			if(!touched[ii])
+			{	//printf("Skip because variables have not been touched since last check\n");
+				continue;
 			}
-		}
+			
+			vec<Lit> clause;
 
-		/*put_sg(stdout, sg, true, 80);
-		printf("start.vlen %d\n", sg->vlen);
-		printf("start.dlen %d\n", sg->dlen);
-		printf("start.elen %d\n", sg->elen);
-		printf("---\n");*/
-		//exit(1);
+			const int r1 = r1s[ii];
+			const int r2 = r2s[ii];
 
-		sparsegraph canong;
-		SG_INIT(canong);
-		Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-		long hash_canong = hashgraph_sg(&canong, 19883109L);
+			sparsegraph* sg = copy_sg(&start, NULL);
+			sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
+			sg->elen = MAXN*11;
 
-		int incidence_case = lam_hashes.find(hash_canong)->second;
-		int incidence_index = 0;
-		for(int i=0; i<37; i++)
-			if(caseorder[i]==incidence_case)
-				incidence_index=i;
+			const std::set<int> varset = varsets[ii];
+			const std::map<int, int> varrowmap = varrowmaps[ii];
+			const std::map<int, int> varcolmap = varcolmaps[ii];
 
-		//printf("rows (%d,%d) incidence pattern case %d\n", r1, r2, incidence_case);
+			bool allassigned = true;
+			for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
+			{	const int var = *it;
+				if(assigns[var]==l_Undef)
+				{	allassigned = false;
+					break;
+				}
+			}
+			if(!allassigned)
+				continue;
+			else
+				touched[ii] = false;
 
-		if(incidence_case!=0 && incidence_index<caseindex)
-		{	printf("Learning conflict clause (case %d before case %d)\n", incidence_case, caseno);
-			fflush(stdout);
-			out_learnts.push();
-			clause.copyTo(out_learnts[0]);
+			for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
+			{
+				const int var = *it;
+				if(assigns[var]==l_True)
+				{	
+					clause.push(~mkLit(var));
+					const int row = varrowmap.find(var)->second;
+					const int col = varcolmap.find(var)->second;
+					//printf("Adding edge (%d,%d)\n", row, col);
+					sg->e[11*row+sg->d[row]] = MAXROWS+col;
+					sg->d[row]++;
+					sg->e[11*(MAXROWS+col)+sg->d[MAXROWS+col]] = row;
+					sg->d[MAXROWS+col]++;
+					sg->nde += 2;
+				}
+			}
+
+			/*put_sg(stdout, sg, true, 80);
+			printf("start.vlen %d\n", sg->vlen);
+			printf("start.dlen %d\n", sg->dlen);
+			printf("start.elen %d\n", sg->elen);
+			printf("---\n");*/
+			//exit(1);
+
+			sparsegraph canong;
+			SG_INIT(canong);
+			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+			long hash_canong = hashgraph_sg(&canong, 19883109L);
+
+			int incidence_case = lam_hashes.find(hash_canong)->second;
+			int incidence_index = 0;
+			for(int i=0; i<37; i++)
+				if(caseorder[i]==incidence_case)
+					incidence_index=i;
+
+			//printf("rows (%d,%d) incidence pattern case %d\n", r1, r2, incidence_case);
+
+			if(incidence_case!=0 && incidence_index<caseindex)
+			{	printf("Learning conflict clause (case %d before case %d)\n", incidence_case, caseno);
+				fflush(stdout);
+				out_learnts.push();
+				clause.copyTo(out_learnts[0]);
+				SG_FREE(*sg);
+				free(sg);
+				return;
+			}
+
 			SG_FREE(*sg);
 			free(sg);
-			return;
 		}
-
-		SG_FREE(*sg);
-		free(sg);
 	}
 
 	if(complete)
@@ -1395,7 +1400,7 @@ lbool Solver::search(int nof_conflicts)
 		printf("\n");
 	}*/
 
-	if(!startinit)
+	if(!startinit && opt_partremove)
 	{
 		for(int i=0; i<MAXN; i++)
 		{	lab[i] = i;
@@ -1536,6 +1541,7 @@ lbool Solver::search(int nof_conflicts)
 				}
 			}
 		}
+		fflush(stdout);
 	}
 
     assert(ok);
