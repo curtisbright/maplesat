@@ -110,6 +110,29 @@ static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", fa
 //=================================================================================================
 // Constructor/Destructor:
 
+int caseno = 0;
+int caseindex = 0;
+
+int caseorder[37] = {46,60,66,53,63,39,34,65,56,48,47,50,42,27,3,37,18,55,51,58,43,36,11,23,16,17,41,12,13,7,33,24,22,26,25,15,9};
+
+#include <set>
+#include <map>
+#include <array>
+#include <vector>
+#include <algorithm>
+
+bool startinit = false;
+sparsegraph start;
+int lab[MAXN],ptn[MAXN],orbits[MAXN];
+
+DEFAULTOPTIONS_TRACES(options_traces);
+TracesStats stats_traces;
+
+std::vector<int> r1s, r2s;
+std::vector<std::map<int, int>> varrowmaps;
+std::vector<std::map<int, int>> varcolmaps;
+std::vector<std::set<int>> varsets;
+std::vector<bool> touched;
 
 Solver::Solver() :
 
@@ -378,6 +401,10 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
+		for(int ii=0; ii<r1s.size(); ii++)
+		{	if(varsets[ii].find(x) != varsets[ii].end())
+				touched[ii] = true;
+		}
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -427,17 +454,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-#include <set>
-#include <array>
-#include <algorithm>
-
-bool startinit = false;
-sparsegraph start;
-int lab[MAXN],ptn[MAXN],orbits[MAXN];
-
-DEFAULTOPTIONS_TRACES(options_traces);
-TracesStats stats_traces;
-
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -461,125 +477,60 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	}
 	//printf("\n");*/
 
-	if(!startinit)
-	{
-		for(int i=0; i<MAXN; i++)
-		{	lab[i] = i;
-			ptn[i] = 1;
-		}
-
-		ptn[MAXROWS-1] = 0;
-		ptn[MAXN-1] = 0;
-
-		options_traces.writeautoms = FALSE;
-		options_traces.defaultptn = FALSE;
-		options_traces.writeautoms = FALSE;
-		options_traces.getcanon = TRUE;
-		options_traces.outfile = NULL;
-
-		SG_INIT(start);
-
-		start.nde = 0;
-		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
-		start.d = (int*)malloc(MAXN*sizeof(int));
-		start.e = (int*)malloc(MAXN*11*sizeof(int));
-		start.nv = MAXN;
-		start.vlen = MAXN;
-		start.dlen = MAXN;
-		start.elen = MAXN*11;
-
-		for(int i=0; i<MAXN; i++)
-		{	start.v[i] = 11*i;
-			start.d[i] = 0;
-		}
-
-		startinit = true;
-	}
-
-	if(opt_eager && opt_rowmin != 0 && opt_rowmax != 0 && opt_colmin != 0 && opt_colmax != 0)
-	{	
-		for(int r=opt_rowmin; r<=opt_rowmax; r++)
-		{	for(int c=opt_colmin; c<=opt_colmax; c++)
-			{	const int index = 100*r+c-1;
-				if(assigns[index]==l_Undef)
-					return;
-			}
-			if(opt_extracolmin > 0 && opt_extracolmax > 0)
-			{
-				for(int c=opt_extracolmin; c<=opt_extracolmax; c++)
-				{	const int index = 100*r+c-1;
-					if(assigns[index]==l_Undef)
-						return;
-				}
-			}
-		}
-		/*if(!complete)
-		{	printf("The following variables were not set: ");
-			for(int i=0; i<assigns.size(); i++)
-				if(assigns[i]==l_Undef)
-					printf("%d ", i);
-			printf("\n");
-			exit(1);
-		}*/
-		complete = true;
-	}
-
 	if(complete)
 		numsols++;
 
 	if(exhaustfile==NULL)
 		return;
 
-	int const r1 = 0;
-	int const r2 = 5;
-
-	if(complete)
+	for(int ii=0; ii<r1s.size(); ii++)
 	{
+		if(!touched[ii])
+		{	//printf("Skip because variables have not been touched since last check\n");
+			continue;
+		}
+		
+		vec<Lit> clause;
+
+		const int r1 = r1s[ii];
+		const int r2 = r2s[ii];
+
 		sparsegraph* sg = copy_sg(&start, NULL);
 		sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
 		sg->elen = MAXN*11;
 
-		int newrows = 0;
-		for(int r=0; r<43; r++)
-		{
-			int count = 0;
-			for(int c=0; c<opt_colmax; c++)
-			{
-				if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
-				{	
-					if(assigns[100*(r+1)+c]==l_True)
-					{	
-						count++;
-					}
-				}
-			}
+		const std::set<int> varset = varsets[ii];
+		const std::map<int, int> varrowmap = varrowmaps[ii];
+		const std::map<int, int> varcolmap = varcolmaps[ii];
 
-			//printf("row %d count %d\n", r, count);
-
-			if(count==5)
-			{
-				int col = 0;
-				for(int c=0; c<opt_colmax; c++)
-				{
-					if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
-					{	
-						if(assigns[100*(r+1)+c]==l_True)
-						{	
-							//printf("Adding edge (%d,%d)\n", newrows, col);
-							sg->e[11*newrows+sg->d[newrows]] = MAXROWS+col;
-							sg->d[newrows]++;
-							sg->e[11*(MAXROWS+col)+sg->d[MAXROWS+col]] = newrows;
-							sg->d[MAXROWS+col]++;
-							sg->nde += 2;
-						}
-						col++;
-					}
-				}
-				newrows++;
-			}
-
-			if(newrows==6)
+		bool allassigned = true;
+		for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
+		{	const int var = *it;
+			if(assigns[var]==l_Undef)
+			{	allassigned = false;
 				break;
+			}
+		}
+		if(!allassigned)
+			continue;
+		else
+			touched[ii] = false;
+
+		for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
+		{
+			const int var = *it;
+			if(assigns[var]==l_True)
+			{	
+				clause.push(~mkLit(var));
+				const int row = varrowmap.find(var)->second;
+				const int col = varcolmap.find(var)->second;
+				//printf("Adding edge (%d,%d)\n", row, col);
+				sg->e[11*row+sg->d[row]] = MAXROWS+col;
+				sg->d[row]++;
+				sg->e[11*(MAXROWS+col)+sg->d[MAXROWS+col]] = row;
+				sg->d[MAXROWS+col]++;
+				sg->nde += 2;
+			}
 		}
 
 		/*put_sg(stdout, sg, true, 80);
@@ -587,17 +538,37 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		printf("start.dlen %d\n", sg->dlen);
 		printf("start.elen %d\n", sg->elen);
 		printf("---\n");*/
+		//exit(1);
 
 		sparsegraph canong;
 		SG_INIT(canong);
 		Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
 		long hash_canong = hashgraph_sg(&canong, 19883109L);
 
-		printf("rows (%d,%d) incidence pattern case %d\n", r1, r2, lam_hashes.find(hash_canong)->second);
+		int incidence_case = lam_hashes.find(hash_canong)->second;
+		int incidence_index = 0;
+		for(int i=0; i<37; i++)
+			if(caseorder[i]==incidence_case)
+				incidence_index=i;
+
+		//printf("rows (%d,%d) incidence pattern case %d\n", r1, r2, incidence_case);
+
+		if(incidence_case!=0 && incidence_index<caseindex)
+		{	printf("Learning conflict clause (case %d before case %d)\n", incidence_case, caseno);
+			fflush(stdout);
+			out_learnts.push();
+			clause.copyTo(out_learnts[0]);
+			SG_FREE(*sg);
+			free(sg);
+			return;
+		}
 
 		SG_FREE(*sg);
 		free(sg);
+	}
 
+	if(complete)
+	{
 		out_learnts.push();
 
 		/*fprintf(exhaustfile, "a ");
@@ -1417,6 +1388,156 @@ Lit lastlearnt = lit_Undef;
 |________________________________________________________________________________________________@*/
 lbool Solver::search(int nof_conflicts)
 {
+	/*for(int r=0; r<43; r++)
+	{	for(int c=0; c<54; c++)
+		{	printf("%c", assigns[100*(r+1)+c]==l_True ? '1' : assigns[100*(r+1)+c]==l_False ? '0' : '?');
+		}
+		printf("\n");
+	}*/
+
+	if(!startinit)
+	{
+		for(int i=0; i<MAXN; i++)
+		{	lab[i] = i;
+			ptn[i] = 1;
+		}
+
+		ptn[MAXROWS-1] = 0;
+		ptn[MAXN-1] = 0;
+
+		options_traces.writeautoms = FALSE;
+		options_traces.defaultptn = FALSE;
+		options_traces.writeautoms = FALSE;
+		options_traces.getcanon = TRUE;
+		options_traces.outfile = NULL;
+
+		SG_INIT(start);
+
+		start.nde = 0;
+		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
+		start.d = (int*)malloc(MAXN*sizeof(int));
+		start.e = (int*)malloc(MAXN*11*sizeof(int));
+		start.nv = MAXN;
+		start.vlen = MAXN;
+		start.dlen = MAXN;
+		start.elen = MAXN*11;
+
+		for(int i=0; i<MAXN; i++)
+		{	start.v[i] = 11*i;
+			start.d[i] = 0;
+		}
+
+		startinit = true;
+
+		sparsegraph* sg = copy_sg(&start, NULL);
+		sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
+		sg->elen = MAXN*11;
+
+		for(int r=0; r<6; r++)
+		{	
+			for(int c=0; c<19; c++)
+				if(assigns[100*(r+1)+c]==l_True)
+				{
+					sg->e[11*r+sg->d[r]] = MAXROWS+c;
+					sg->d[r]++;
+					sg->e[11*(MAXROWS+c)+sg->d[MAXROWS+c]] = r;
+					sg->d[MAXROWS+c]++;
+					sg->nde += 2;
+				}
+
+		}
+
+		sparsegraph canong;
+		SG_INIT(canong);
+		Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
+		long hash_canong = hashgraph_sg(&canong, 19883109L);
+		caseno = lam_hashes.find(hash_canong)->second;
+
+		for(int i=0; i<37; i++)
+			if(caseorder[i]==caseno)
+				caseindex=i;
+
+		printf("Solving case %d...\n", caseno);
+
+		SG_FREE(*sg);
+		free(sg);
+
+		for(int r1=0; r1<6; r1++)
+		{	for(int r2=r1+1; r2<6; r2++)
+			{
+				bool does_intersect = false;
+				for(int c=0; c<19; c++)
+					if(assigns[100*(r1+1)+c]==l_True && assigns[100*(r2+1)+c]==l_True)
+						does_intersect = true;
+				if(!does_intersect)
+				{	r1s.push_back(r1);
+					r2s.push_back(r2);
+					printf("Rows %d and %d have outside intersection\n", r1, r2);
+
+					std::set<int> varset;
+					std::map<int, int> varrowmap;
+					std::map<int, int> varcolmap;
+
+					int newrows = 0;
+					for(int r=0; r<43; r++)
+					{
+						int count = 0;
+						for(int c=0; c<opt_colmax; c++)
+						{
+							if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
+							{	
+								if(assigns[100*(r+1)+c]==l_True)
+								{	
+									count++;
+								}
+							}
+						}
+						int count2 = 0;
+						for(int c=19; c<opt_colmax; c++)
+						{
+							if(assigns[100*(r1+1)+c]==l_True && assigns[100*(r+1)+c]==l_Undef)
+							{	
+								count2++;
+							}
+						}
+						int count3 = 0;
+						for(int c=19; c<opt_colmax; c++)
+						{
+							if(assigns[100*(r2+1)+c]==l_True && assigns[100*(r+1)+c]==l_Undef)
+							{	
+								count3++;
+							}
+						}
+
+						if(count==5 || (count==3 && count2 > 0 && count3 > 0))
+						{	
+							int col=0;
+							for(int c=0; c<opt_colmax; c++)
+							{
+								if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
+								{	
+									//printf("%d %d %d\n", 100*(r+1)+c, newrows, col);
+									varset.insert(100*(r+1)+c);
+									varrowmap.insert({100*(r+1)+c, newrows});
+									varcolmap.insert({100*(r+1)+c, col});
+									col++;
+								}
+							}
+							newrows++;
+						}
+
+						if(newrows==6)
+							break;
+					}
+					varsets.push_back(varset);
+					varrowmaps.push_back(varrowmap);
+					varcolmaps.push_back(varcolmap);
+					touched.push_back(true);
+				}
+			}
+		}
+	}
+
     assert(ok);
     int         backtrack_level;
     int         conflictC = 0;
