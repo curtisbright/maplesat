@@ -115,8 +115,6 @@ static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of 
 int caseno = 0;
 int caseindex = 0;
 
-int caseorder[37] = {46,60,66,53,63,39,34,65,56,48,47,50,42,27,3,37,18,55,51,58,43,36,11,23,16,17,41,12,13,7,33,24,22,26,25,15,9};
-
 #include <set>
 #include <map>
 #include <array>
@@ -557,17 +555,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			{
 				const int var = *it;
 				if(assigns[var]==l_True)
-				{	
+				{
 					clause.push(~mkLit(var));
 					const int row = varrowmap.find(var)->second;
 					const int col = varcolmap.find(var)->second;
-					//printf("Adding edge (%d,%d)\n", row, col);
+					//printf("%d Adding edge (%d,%d)\n", var, row, col);
 					sg->e[11*row+sg->d[row]] = MAXROWS+col;
 					sg->d[row]++;
 					sg->e[11*(MAXROWS+col)+sg->d[MAXROWS+col]] = row;
 					sg->d[MAXROWS+col]++;
 					sg->nde += 2;
 				}
+				//else
+				//	printf("%d false\n", var);
 			}
 
 			/*put_sg(stdout, sg, true, 80);
@@ -586,7 +586,9 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			int incidence_index = 0;
 			for(int i=0; i<37; i++)
 				if(caseorder[i]==incidence_case)
-					incidence_index=i;
+				{	incidence_index=i;
+					casecounts[i]++;
+				}
 
 			//printf("rows (%d,%d) incidence pattern case %d\n", r1, r2, incidence_case);
 
@@ -599,9 +601,25 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				free(sg);
 				return;
 			}
+			else if(incidence_case==0)
+			{	printf("rows (%d,%d) incidence pattern case 0\n", r1, r2);
+				put_sg(stdout, sg, true, 80);
+				printf("start.vlen %d\n", sg->vlen);
+				printf("start.dlen %d\n", sg->dlen);
+				printf("start.elen %d\n", sg->elen);
+				printf("---\n");
+				for(int r=0; r<43; r++)
+				{	for(int c=0; c<54; c++)
+					{	printf("%c", assigns[100*(r+1)+c]==l_True ? '1' : assigns[100*(r+1)+c]==l_False ? '0' : '?');
+					}
+					printf("\n");
+				}
+				exit(1);
+			}
 
 			SG_FREE(*sg);
 			free(sg);
+			fflush(stdout);
 		}
 	}
 
@@ -1494,6 +1512,12 @@ lbool Solver::search(int nof_conflicts)
 		for(int i=0; i<37; i++)
 			if(caseorder[i]==caseno)
 				caseindex=i;
+
+		/*put_sg(stdout, sg, true, 80);
+		printf("start.vlen %d\n", sg->vlen);
+		printf("start.dlen %d\n", sg->dlen);
+		printf("start.elen %d\n", sg->elen);
+		printf("---\n");*/
 
 		printf("Solving case %d...\n", caseno);
 

@@ -273,6 +273,12 @@ int main(int argc, char** argv)
         else
         	ret = S.solveLimited(dummy);
 
+    for(int i=0; i<37; i++)
+    {
+        if(S.casecounts[i] > 0)
+          printf("Case %d count: %d\n", S.caseorder[i], S.casecounts[i]);
+    }
+
         /*if (S.verbosity > 0)*/{
             if(print_numsols)
               printf("Number of solutions: %ld\n", S.numsols);
