@@ -1546,9 +1546,12 @@ lbool Solver::search(int nof_conflicts)
 								count3++;
 							}
 						}
+						count+=(count2 > 0 ? 1 : 0)+(count3 > 0 ? 1 : 0);
 
-						if(count==5 || (count==3 && count2 > 0 && count3 > 0))
-						{	
+						//printf("%d %d %d\n", r, count2, count3);
+
+						if(count==5)
+						{
 							int col=0;
 							for(int c=0; c<opt_colmax; c++)
 							{
