@@ -489,6 +489,8 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
+std::set<std::array<int, 30>> arrayset;
+
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -527,17 +529,13 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 			
 			vec<Lit> clause;
+			int cl = 0;
+			std::array<int, 30> arrayclause;
 
 			const int r1 = r1s[ii];
 			const int r2 = r2s[ii];
 
-			sparsegraph* sg = copy_sg(&start, NULL);
-			sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
-			sg->elen = MAXN*11;
-
 			const std::set<int> varset = varsets[ii];
-			const std::map<int, int> varrowmap = varrowmaps[ii];
-			const std::map<int, int> varcolmap = varcolmaps[ii];
 
 			bool allassigned = true;
 			for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
@@ -546,27 +544,47 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				{	allassigned = false;
 					break;
 				}
+				if(assigns[var]==l_True)
+					arrayclause[cl++] = var;
 			}
 			if(!allassigned)
 				continue;
 			else
 				touched[ii] = false;
 
-			for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
+			if(arrayset.find(arrayclause)==arrayset.end())
+				arrayset.insert(arrayclause);
+			else
+				continue;
+
+			sparsegraph* sg = copy_sg(&start, NULL);
+			sg->e = (int*)realloc(sg->e, MAXN*5*sizeof(int));
+			sg->elen = MAXN*5;
+
+			const std::map<int, int> varrowmap = varrowmaps[ii];
+			const std::map<int, int> varcolmap = varcolmaps[ii];
+
+			/*for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
 			{
 				const int var = *it;
 				if(assigns[var]==l_True)
-				{
+				{*/
+
+			for(int i=0; i<30; i++)
+			{
+					const int var = arrayclause[i];
+
 					clause.push(~mkLit(var));
 					const int row = varrowmap.find(var)->second;
 					const int col = varcolmap.find(var)->second;
 					//printf("%d Adding edge (%d,%d)\n", var, row, col);
-					sg->e[11*row+sg->d[row]] = MAXROWS+col;
+					sg->e[5*row+sg->d[row]] = MAXROWS+col;
 					sg->d[row]++;
-					sg->e[11*(MAXROWS+col)+sg->d[MAXROWS+col]] = row;
+					sg->e[5*(MAXROWS+col)+sg->d[MAXROWS+col]] = row;
 					sg->d[MAXROWS+col]++;
 					sg->nde += 2;
-				}
+
+				//}
 				//else
 				//	printf("%d false\n", var);
 			}
@@ -1473,31 +1491,31 @@ lbool Solver::search(int nof_conflicts)
 		start.nde = 0;
 		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
 		start.d = (int*)malloc(MAXN*sizeof(int));
-		start.e = (int*)malloc(MAXN*11*sizeof(int));
+		start.e = (int*)malloc(MAXN*5*sizeof(int));
 		start.nv = MAXN;
 		start.vlen = MAXN;
 		start.dlen = MAXN;
-		start.elen = MAXN*11;
+		start.elen = MAXN*5;
 
 		for(int i=0; i<MAXN; i++)
-		{	start.v[i] = 11*i;
+		{	start.v[i] = 5*i;
 			start.d[i] = 0;
 		}
 
 		startinit = true;
 
 		sparsegraph* sg = copy_sg(&start, NULL);
-		sg->e = (int*)realloc(sg->e, MAXN*11*sizeof(int));
-		sg->elen = MAXN*11;
+		sg->e = (int*)realloc(sg->e, MAXN*5*sizeof(int));
+		sg->elen = MAXN*5;
 
 		for(int r=0; r<6; r++)
 		{	
 			for(int c=0; c<19; c++)
 				if(assigns[100*(r+1)+c]==l_True)
 				{
-					sg->e[11*r+sg->d[r]] = MAXROWS+c;
+					sg->e[5*r+sg->d[r]] = MAXROWS+c;
 					sg->d[r]++;
-					sg->e[11*(MAXROWS+c)+sg->d[MAXROWS+c]] = r;
+					sg->e[5*(MAXROWS+c)+sg->d[MAXROWS+c]] = r;
 					sg->d[MAXROWS+c]++;
 					sg->nde += 2;
 				}
