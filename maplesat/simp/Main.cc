@@ -130,8 +130,9 @@ int main(int argc, char** argv)
 		int i;
 		while (fscanf(assertion_file, "%d ", &i) == 1)
 		{
+              const int var = abs(i)-1;
 		  if(i!=0)
-		    S.var_used[i-1] = 1;
+		    S.var_used[var] = 1;
 		  else
 		    tmp = fscanf(assertion_file, "a ");
 		}
