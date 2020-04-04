@@ -108,6 +108,7 @@ static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variab
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
 static BoolOption opt_partremove(_cat, "partremove", "Use Lam's partial isomorphism removal technique", false);
 static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
+static StringOption opt_useblocks(_cat, "useblocks", "{0,1} string of length 6 encoding which blocks to use.", "111111");
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -1531,7 +1532,8 @@ lbool Solver::search(int nof_conflicts)
 				for(int c=0; c<19; c++)
 					if(assigns[100*(r1+1)+c]==l_True && assigns[100*(r2+1)+c]==l_True)
 						does_intersect = true;
-				if(!does_intersect)
+				const char* useblocks = opt_useblocks;
+				if(!does_intersect && useblocks[r1]=='1' && useblocks[r2]=='1')
 				{	r1s.push_back(r1);
 					r2s.push_back(r2);
 					printf("Rows %d and %d have outside intersection\n", r1, r2);
