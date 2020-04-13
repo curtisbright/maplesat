@@ -18,6 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#define TRACES
+#ifdef TRACES
 #define MAXROWS 6
 #define MAXCOLS 19
 #define MAXN (MAXROWS+MAXCOLS)
@@ -26,8 +28,9 @@ extern "C" {
 #include "traces.h"
 }
 
-#include "automorphisms.h"
 #include "lamcases.h"		// lam_hashes map
+#endif
+#include "automorphisms.h"
 
 #include <math.h>
 
@@ -106,7 +109,9 @@ static BoolOption opt_printneg(_cat, "printneg", "Include negative literals in e
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
+#ifdef TRACES
 static BoolOption opt_partremove(_cat, "partremove", "Use Lam's partial isomorphism removal technique", false);
+#endif
 static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 static StringOption opt_useblocks(_cat, "useblocks", "{0,1} string of length 6 encoding which blocks to use.", "111111");
 
@@ -122,6 +127,7 @@ int caseindex = 0;
 #include <vector>
 #include <algorithm>
 
+#ifdef TRACES
 bool startinit = false;
 sparsegraph start;
 int lab[MAXN],ptn[MAXN],orbits[MAXN];
@@ -134,6 +140,7 @@ std::vector<std::map<int, int>> varrowmaps;
 std::vector<std::map<int, int>> varcolmaps;
 std::vector<std::set<int>> varsets;
 std::vector<bool> touched;
+#endif
 
 Solver::Solver() :
 
@@ -434,12 +441,14 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
+#ifdef TRACES
 		if(opt_partremove)
 		{	for(int ii=0; ii<r1s.size(); ii++)
 			{	if(varsets[ii].find(x) != varsets[ii].end())
 					touched[ii] = true;
 			}
 		}
+#endif
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -520,6 +529,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(exhaustfile==NULL)
 		return;
 
+#ifdef TRACES
 	if(opt_partremove)
 	{	for(int ii=0; ii<r1s.size(); ii++)
 		{
@@ -641,6 +651,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			fflush(stdout);
 		}
 	}
+#endif
 
 	if(complete)
 	{
@@ -1470,6 +1481,7 @@ lbool Solver::search(int nof_conflicts)
 		printf("\n");
 	}*/
 
+#ifdef TRACES
 	if(!startinit && opt_partremove)
 	{
 		for(int i=0; i<MAXN; i++)
@@ -1623,6 +1635,7 @@ lbool Solver::search(int nof_conflicts)
 		}
 		fflush(stdout);
 	}
+#endif
 
     assert(ok);
     int         backtrack_level;

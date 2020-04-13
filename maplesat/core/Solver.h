@@ -42,8 +42,10 @@ public:
     virtual ~Solver();
 
     void addAssumClauses();
+#ifdef TRACES
     int caseorder[37] = {46,60,66,53,63,39,34,65,56,48,47,50,42,27,3,37,18,55,51,58,43,36,11,23,16,17,41,12,13,7,33,24,22,26,25,15,9};
     int casecounts[37] = {};
+#endif
 
     //char unit_clauses[200000];
     bool addunits = false;
