@@ -18,7 +18,11 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#define TRACES
+#include <math.h>
+
+#include "mtl/Sort.h"
+#include "core/Solver.h"
+
 #ifdef TRACES
 #define MAXROWS 6
 #define MAXCOLS 19
@@ -31,11 +35,6 @@ extern "C" {
 #include "lamcases.h"		// lam_hashes map
 #endif
 #include "automorphisms.h"
-
-#include <math.h>
-
-#include "mtl/Sort.h"
-#include "core/Solver.h"
 
 FILE* exhaustfile = NULL;
 FILE* exhaustfile2 = NULL;
