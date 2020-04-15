@@ -5,4 +5,4 @@ minisat:
 	make -C core
 
 clean:
-	make -C core
+	make -C core clean
