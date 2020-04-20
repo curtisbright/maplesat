@@ -1770,7 +1770,7 @@ lbool Solver::search(int nof_conflicts)
                     cancelUntil(0);
                     if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict) && !(conflict.size()==1 && conflict[0]==lastlearnt))
                     {   addClause_(conflict);
-                        //fprintclause(output, conflict);
+                        fprintclause(output, conflict);
                         //fprintclause(savefile, conflict);
                         //fflush(savefile);
                         //proofsize += clausestrlen(conflict);
