@@ -206,10 +206,10 @@ Solver::Solver() :
   , asynch_interrupt   (false)
 {
     if(exhauststring != NULL)
-    {   exhaustfile = fopen(exhauststring, "a");
+    {   exhaustfile = fopen(exhauststring, "w");
     }
     if(exhauststring2 != NULL)
-    {   exhaustfile2 = fopen(exhauststring2, "a");
+    {   exhaustfile2 = fopen(exhauststring2, "w");
     }
     if(savestring != NULL)
     {   savefile = fopen(savestring, "a");
