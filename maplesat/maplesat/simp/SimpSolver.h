@@ -21,8 +21,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_SimpSolver_h
 #define Minisat_SimpSolver_h
 
-#include "mtl/Queue.h"
-#include "core/Solver.h"
+#include "maplesat/mtl/Queue.h"
+#include "maplesat/core/Solver.h"
 
 
 namespace Minisat {
