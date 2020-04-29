@@ -46,7 +46,9 @@ void fprintlit(FILE* fp, Lit l)
 }
 
 void fprintclause(FILE* fp, vec<Lit>& c)
-{ for(int i = 0; i < c.size(); i++)
+{ if(fp==NULL)
+    return;
+  for(int i = 0; i < c.size(); i++)
   { fprintlit(fp, c[i]);
     fprintf(fp, " ");
   }
@@ -817,8 +819,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 							clause.push(~mkLit((i+7)*100+j));
 				}
 
-				if(exhaustfile2!=NULL)
-					fprintclause(exhaustfile2, clause);
+				fprintclause(exhaustfile2, clause);
 
 				{
 					int max_index = 0;
