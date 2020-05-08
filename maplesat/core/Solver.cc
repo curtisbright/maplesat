@@ -672,7 +672,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		fprintf(exhaustfile, "0\n");*/
 
 		fprintf(exhaustfile, "a ");
-		for(int i=0; i<assumptions.size(); i++)
+		/*for(int i=0; i<assumptions.size(); i++)
 		{	out_learnts[0].push(~assumptions[i]);
 			if(sign(assumptions[i]))
 			{	
@@ -685,7 +685,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				//out_learnts[0].push(~mkLit(var(assumptions[i])));
 				fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
 			}
-		}
+		}*/
 		/*if(!(opt_rowmin==7&&opt_rowmax==43&&opt_colmin==1&&opt_colmax==19))
 		{
 			for(int r=7; r<=43; r++)
@@ -1801,6 +1801,7 @@ lbool Solver::search(int nof_conflicts)
                         int level;
                         learnt_clause.clear();
                         analyze(callbackLearntClauses[i], learnt_clause, level);
+                        fprintclause(output, learnt_clause);
                         if (level == -1) {
                             return l_False;
                         } else if (level < backtrack_level) {
