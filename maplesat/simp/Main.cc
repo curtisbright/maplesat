@@ -274,14 +274,6 @@ int main(int argc, char** argv)
         else
         	ret = S.solveLimited(dummy);
 
-#ifdef TRACES
-    for(int i=0; i<37; i++)
-    {
-        if(S.casecounts[i] > 0)
-          printf("Case %d count: %d\n", S.caseorder[i], S.casecounts[i]);
-    }
-#endif
-
         /*if (S.verbosity > 0)*/{
             if(print_numsols)
               printf("Number of solutions: %ld\n", S.numsols);
@@ -300,9 +292,9 @@ int main(int argc, char** argv)
                     if (S.model[i] != l_Undef)
                         fprintf(S.output, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(S.output, " 0\n");
-            }else if (ret == l_False)
-                fprintf(S.output, "0\n");
-            else
+            }//else if (ret == l_False)
+             //   fprintf(S.output, "0\n");
+            else if (ret == l_Undef)
                 fprintf(S.output, "INDET\n");
             fclose(S.output);
         }
