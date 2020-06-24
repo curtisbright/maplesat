@@ -24,8 +24,8 @@ LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3
 
-CFLAGS    += -I$(MROOT) -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -I/usr/include/x86_64-linux-gnu/nauty/ -I/usr/include/nauty/ -std=c++11
-LFLAGS    += -lz -lnauty
+CFLAGS    += -std=c++0x -I$(MROOT) -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
+LFLAGS    += -lz
 
 .PHONY : s p d r rs clean 
 
