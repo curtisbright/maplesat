@@ -34,7 +34,6 @@ extern "C" {
 
 #include "lamcases.h"		// lam_hashes map
 #endif
-#include "automorphisms.h"
 
 FILE* exhaustfile = NULL;
 FILE* exhaustfile2 = NULL;
@@ -105,7 +104,6 @@ static IntOption  opt_extracolmin(_cat, "extracolmin", "Minimum extra column to 
 static IntOption  opt_extracolmax(_cat, "extracolmax", "Maximum extra column to use for exhaustive search", 0);
 static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
 static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 0);
-static IntOption  opt_caseno(_cat, "caseno", "Weight 19 case to search", 0, IntRange(0, 66));
 static BoolOption opt_printneg(_cat, "printneg", "Include negative literals in exhaustive output", false);
 static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
@@ -119,7 +117,6 @@ static StringOption opt_useblocks(_cat, "useblocks", "{0,1} string of length 6 e
 //=================================================================================================
 // Constructor/Destructor:
 
-int caseno = 0;
 int caseindex = 0;
 
 #include <set>
@@ -530,130 +527,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	if(exhaustfile==NULL)
 		return;
 
-#ifdef TRACES
-	if(opt_partremove)
-	{	for(int ii=0; ii<r1s.size(); ii++)
-		{
-			if(!touched[ii])
-			{	//printf("Skip because variables have not been touched since last check\n");
-				continue;
-			}
-			
-			vec<Lit> clause;
-			int cl = 0;
-			std::array<int, 30> arrayclause;
-
-			const int r1 = r1s[ii];
-			const int r2 = r2s[ii];
-
-			const std::set<int> varset = varsets[ii];
-
-			bool allassigned = true;
-			for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
-			{	const int var = *it;
-				if(assigns[var]==l_Undef)
-				{	allassigned = false;
-					break;
-				}
-				if(assigns[var]==l_True)
-					arrayclause[cl++] = var;
-			}
-			if(!allassigned)
-				continue;
-			else
-				touched[ii] = false;
-
-			if(arrayset.find(arrayclause)==arrayset.end())
-				arrayset.insert(arrayclause);
-			else
-				continue;
-
-			sparsegraph* sg = copy_sg(&start, NULL);
-			sg->e = (int*)realloc(sg->e, MAXN*5*sizeof(int));
-			sg->elen = MAXN*5;
-
-			const std::map<int, int> varrowmap = varrowmaps[ii];
-			const std::map<int, int> varcolmap = varcolmaps[ii];
-
-			/*for(std::set<int>::iterator it = varset.begin(); it != varset.end(); it++)
-			{
-				const int var = *it;
-				if(assigns[var]==l_True)
-				{*/
-
-			for(int i=0; i<30; i++)
-			{
-					const int var = arrayclause[i];
-
-					clause.push(~mkLit(var));
-					const int row = varrowmap.find(var)->second;
-					const int col = varcolmap.find(var)->second;
-					//printf("%d Adding edge (%d,%d)\n", var, row, col);
-					sg->e[5*row+sg->d[row]] = MAXROWS+col;
-					sg->d[row]++;
-					sg->e[5*(MAXROWS+col)+sg->d[MAXROWS+col]] = row;
-					sg->d[MAXROWS+col]++;
-					sg->nde += 2;
-
-				//}
-				//else
-				//	printf("%d false\n", var);
-			}
-
-			/*put_sg(stdout, sg, true, 80);
-			printf("start.vlen %d\n", sg->vlen);
-			printf("start.dlen %d\n", sg->dlen);
-			printf("start.elen %d\n", sg->elen);
-			printf("---\n");*/
-			//exit(1);
-
-			sparsegraph canong;
-			SG_INIT(canong);
-			Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-			long hash_canong = hashgraph_sg(&canong, 19883109L);
-
-			int incidence_case = lam_hashes.find(hash_canong)->second;
-			int incidence_index = 0;
-			for(int i=0; i<37; i++)
-				if(caseorder[i]==incidence_case)
-				{	incidence_index=i;
-					casecounts[i]++;
-				}
-
-			//printf("rows (%d,%d) incidence pattern case %d\n", r1, r2, incidence_case);
-
-			if(incidence_case!=0 && incidence_index<caseindex)
-			{	printf("Learning conflict clause (case %d before case %d)\n", incidence_case, caseno);
-				fflush(stdout);
-				out_learnts.push();
-				clause.copyTo(out_learnts[0]);
-				SG_FREE(*sg);
-				free(sg);
-				return;
-			}
-			else if(incidence_case==0)
-			{	printf("rows (%d,%d) incidence pattern case 0\n", r1, r2);
-				put_sg(stdout, sg, true, 80);
-				printf("start.vlen %d\n", sg->vlen);
-				printf("start.dlen %d\n", sg->dlen);
-				printf("start.elen %d\n", sg->elen);
-				printf("---\n");
-				for(int r=0; r<43; r++)
-				{	for(int c=0; c<54; c++)
-					{	printf("%c", assigns[100*(r+1)+c]==l_True ? '1' : assigns[100*(r+1)+c]==l_False ? '0' : '?');
-					}
-					printf("\n");
-				}
-				exit(1);
-			}
-
-			SG_FREE(*sg);
-			free(sg);
-			fflush(stdout);
-		}
-	}
-#endif
-
 	if(complete)
 	{
 		out_learnts.push();
@@ -775,79 +648,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 		attachClause(confl_clause);
 		clauses.push(confl_clause);
 
-		if(opt_caseno != 0)
-		{
-			int ind=0;
-			while(!(col[opt_caseno-1][ind][0]==0 && col[opt_caseno-1][ind][1]==0) && ind < 17280)
-			{
-				std::array<std::array<int, 19>, 37> matrix;
-				for(int r=opt_rowmin; r<=opt_rowmax; r++)
-				{	for(int c=opt_colmin; c<=opt_colmax; c++)
-					{
-						const int index = 100*r+c-1;
-						if(assigns[index]==l_True)
-							matrix[r-7][col[opt_caseno-1][ind][c-1]] = 1;
-							//matrix[r-7][c-1] = 1;
-						else
-							matrix[r-7][col[opt_caseno-1][ind][c-1]] = 0;
-							//matrix[r-7][c-1] = 0;
-						
-					}
-				}
-
-				std::sort(matrix.begin(), matrix.end(), std::greater<std::array<int, 19>>());
-
-				/*for(int i=0; i<37; i++)
-				{	printf("%02d ", i+7);
-					for(int j=0; j<19; j++)
-						printf("%d", matrix[i][j]);
-					printf("\n");
-				}*/
-
-				if(matrixset.count(matrix)>0)
-				{	ind++;
-					continue;
-				}
-				matrixset.insert(matrix);
-				removedsols++;
-
-				vec<Lit> clause;
-
-				for(int i=0; i<37; i++)
-				{	for(int j=0; j<19; j++)
-						if(matrix[i][j]==1)
-							clause.push(~mkLit((i+7)*100+j));
-				}
-
-				fprintclause(exhaustfile2, clause);
-
-				{
-					int max_index = 0;
-					for(int i=1; i<clause.size(); i++)
-						if(level(var(clause[i])) > level(var(clause[max_index])))
-							max_index = i;
-					Lit p = clause[0];
-					clause[0] = clause[max_index];
-					clause[max_index] = p;
-				}
-
-				{
-					int max_index = 1;
-					for(int i=2; i<clause.size(); i++)
-						if(level(var(clause[i])) > level(var(clause[max_index])))
-							max_index = i;
-					Lit p = clause[1];
-					clause[1] = clause[max_index];
-					clause[max_index] = p;
-				}
-
-				CRef confl_clause = ca.alloc(clause, false);
-				attachClause(confl_clause);
-				clauses.push(confl_clause);
-
-				ind++;
-			}
-		}
 	}
 }
 
@@ -1481,162 +1281,6 @@ lbool Solver::search(int nof_conflicts)
 		printf("\n");
 	}*/
 
-#ifdef TRACES
-	if(!startinit && opt_partremove)
-	{
-		for(int i=0; i<MAXN; i++)
-		{	lab[i] = i;
-			ptn[i] = 1;
-		}
-
-		ptn[MAXROWS-1] = 0;
-		ptn[MAXN-1] = 0;
-
-		options_traces.writeautoms = FALSE;
-		options_traces.defaultptn = FALSE;
-		options_traces.writeautoms = FALSE;
-		options_traces.getcanon = TRUE;
-		options_traces.outfile = NULL;
-
-		SG_INIT(start);
-
-		start.nde = 0;
-		start.v = (size_t*)malloc(MAXN*sizeof(size_t));
-		start.d = (int*)malloc(MAXN*sizeof(int));
-		start.e = (int*)malloc(MAXN*5*sizeof(int));
-		start.nv = MAXN;
-		start.vlen = MAXN;
-		start.dlen = MAXN;
-		start.elen = MAXN*5;
-
-		for(int i=0; i<MAXN; i++)
-		{	start.v[i] = 5*i;
-			start.d[i] = 0;
-		}
-
-		startinit = true;
-
-		sparsegraph* sg = copy_sg(&start, NULL);
-		sg->e = (int*)realloc(sg->e, MAXN*5*sizeof(int));
-		sg->elen = MAXN*5;
-
-		for(int r=0; r<6; r++)
-		{	
-			for(int c=0; c<19; c++)
-				if(assigns[100*(r+1)+c]==l_True)
-				{
-					sg->e[5*r+sg->d[r]] = MAXROWS+c;
-					sg->d[r]++;
-					sg->e[5*(MAXROWS+c)+sg->d[MAXROWS+c]] = r;
-					sg->d[MAXROWS+c]++;
-					sg->nde += 2;
-				}
-
-		}
-
-		sparsegraph canong;
-		SG_INIT(canong);
-		Traces(sg,lab,ptn,orbits,&options_traces,&stats_traces,&canong);
-		long hash_canong = hashgraph_sg(&canong, 19883109L);
-		caseno = lam_hashes.find(hash_canong)->second;
-
-		for(int i=0; i<37; i++)
-			if(caseorder[i]==caseno)
-				caseindex=i;
-
-		/*put_sg(stdout, sg, true, 80);
-		printf("start.vlen %d\n", sg->vlen);
-		printf("start.dlen %d\n", sg->dlen);
-		printf("start.elen %d\n", sg->elen);
-		printf("---\n");*/
-
-		printf("Solving case %d...\n", caseno);
-
-		SG_FREE(*sg);
-		free(sg);
-
-		for(int r1=0; r1<6; r1++)
-		{	for(int r2=r1+1; r2<6; r2++)
-			{
-				bool does_intersect = false;
-				for(int c=0; c<19; c++)
-					if(assigns[100*(r1+1)+c]==l_True && assigns[100*(r2+1)+c]==l_True)
-						does_intersect = true;
-				const char* useblocks = opt_useblocks;
-				if(!does_intersect && useblocks[r1]=='1' && useblocks[r2]=='1')
-				{	r1s.push_back(r1);
-					r2s.push_back(r2);
-					printf("Rows %d and %d have outside intersection\n", r1, r2);
-
-					std::set<int> varset;
-					std::map<int, int> varrowmap;
-					std::map<int, int> varcolmap;
-
-					int newrows = 0;
-					for(int r=0; r<43; r++)
-					{
-						int count = 0;
-						for(int c=0; c<opt_colmax; c++)
-						{
-							if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
-							{	
-								if(assigns[100*(r+1)+c]==l_True)
-								{	
-									count++;
-								}
-							}
-						}
-						int count2 = 0;
-						for(int c=19; c<opt_colmax; c++)
-						{
-							if(assigns[100*(r1+1)+c]==l_True && assigns[100*(r+1)+c]==l_Undef)
-							{	
-								count2++;
-							}
-						}
-						int count3 = 0;
-						for(int c=19; c<opt_colmax; c++)
-						{
-							if(assigns[100*(r2+1)+c]==l_True && assigns[100*(r+1)+c]==l_Undef)
-							{	
-								count3++;
-							}
-						}
-						count+=(count2 > 0 ? 1 : 0)+(count3 > 0 ? 1 : 0);
-
-						//printf("%d %d %d\n", r, count2, count3);
-
-						if(count==5)
-						{
-							int col=0;
-							for(int c=0; c<opt_colmax; c++)
-							{
-								if(((assigns[100*(r1+1)+c]==l_True ? 1 : 0)+(assigns[100*(r2+1)+c]==l_True ? 1 : 0)+(c<19 ? 1 : 0))%2==1)
-								{	
-									//printf("%d %d %d\n", 100*(r+1)+c, newrows, col);
-									varset.insert(100*(r+1)+c);
-									varrowmap.insert({100*(r+1)+c, newrows});
-									varcolmap.insert({100*(r+1)+c, col});
-									col++;
-								}
-							}
-							newrows++;
-						}
-
-						if(newrows==6)
-							break;
-					}
-					varsets.push_back(varset);
-					varrowmaps.push_back(varrowmap);
-					varcolmaps.push_back(varcolmap);
-					touched.push_back(true);
-				}
-			}
-		}
-		fflush(stdout);
-	}
-#endif
-
     assert(ok);
     int         backtrack_level;
     int         conflictC = 0;
@@ -1945,9 +1589,7 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
-        /*printf("Number of solutions: %ld\n", numsols);
-	if(opt_caseno != 0)
-          printf("Number of removed solutions: %ld\n", removedsols);*/
+        //printf("Number of solutions: %ld\n", numsols);
     }
 
     if (status == l_True){
