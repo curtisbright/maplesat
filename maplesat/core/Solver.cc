@@ -496,8 +496,6 @@ Lit Solver::pickBranchLit()
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
 
-std::set<std::array<int, 30>> arrayset;
-
 // A callback function for programmatic interface. If the callback detects conflicts, then
 // refine the clause database by adding clauses to out_learnts. This function is called
 // very frequently, if the analysis is expensive then add code to skip the analysis on
@@ -606,21 +604,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 			}
 		}
 		fprintf(exhaustfile, "0\n");
-
-		std::set<std::array<std::array<int, 19>, 37>> matrixset;
-
-		std::array<std::array<int, 19>, 37> matrix;
-		for(int r=7; r<=43; r++)
-		{	for(int c=1; c<=111; c++)
-			{
-				const int index = 100*r+c-1;
-				if(assigns[index]==l_True)
-					matrix[r-7][c-1] = 1;
-				else
-					matrix[r-7][c-1] = 0;
-			}
-		}
-		matrixset.insert(matrix);
 
 		vec<Lit> clause;
 		out_learnts[0].copyTo(clause);
