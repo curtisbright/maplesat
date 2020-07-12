@@ -108,14 +108,13 @@ int main(int argc, char** argv)
 #endif
         // Extra options:
         //
-        IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+        IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2));
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
-        IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 1000, IntRange(0, INT32_MAX));
-        BoolOption   print_numsols("MAIN", "print-numsols", "Print # of solutions.", true);
+        IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 10, IntRange(0, INT32_MAX));
 
         parseOptions(argc, argv, true);
         
@@ -275,11 +274,10 @@ int main(int argc, char** argv)
         	ret = S.solveLimited(dummy);
 
         /*if (S.verbosity > 0)*/{
-            if(print_numsols)
-              printf("Number of solutions: %ld\n", S.numsols);
-            printf("Number of removed solutions: %ld\n", S.removedsols);
+            printf("Number of solutions: %ld\n", S.numsols);
+            //printf("Number of removed solutions: %ld\n", S.removedsols);
             if(assumptions)
-	      printf("Number of satisfiable bounds: %d\n", numsat);        
+                printf("Number of satisfiable bounds: %d\n", numsat);        
             printStats(S);
             printf("\n");
             printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");

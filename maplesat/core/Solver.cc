@@ -23,20 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
-#ifdef TRACES
-#define MAXROWS 6
-#define MAXCOLS 19
-#define MAXN (MAXROWS+MAXCOLS)
-
-extern "C" {
-#include "traces.h"
-}
-
-#include "lamcases.h"		// lam_hashes map
-#endif
-
 FILE* exhaustfile = NULL;
-FILE* exhaustfile2 = NULL;
 
 using namespace Minisat;
 
@@ -96,23 +83,14 @@ static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt cl
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
-static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
-static StringOption  opt_exhaustive2(_cat, "exhaustive2", "Output for exhaustive search (output equivalent solutions discarded by applying automorphisms)");
-static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 0);
+static StringOption  opt_exhaustive(_cat, "recorded", "Output for solutions in exhaustive search");
+static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 1);
 static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 0);
-static IntOption  opt_extracolmin(_cat, "extracolmin", "Minimum extra column to use for exhaustive search", 0);
-static IntOption  opt_extracolmax(_cat, "extracolmax", "Maximum extra column to use for exhaustive search", 0);
-static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 0);
-static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 0);
-static BoolOption opt_printneg(_cat, "printneg", "Include negative literals in exhaustive output", false);
-static BoolOption opt_eager(_cat, "eager", "Learn programmatic clauses eagerly", false);
-static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in instance", false);
+static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 7);
+static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 111);
+static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in the instance", true);
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
-#ifdef TRACES
-static BoolOption opt_partremove(_cat, "partremove", "Use Lam's partial isomorphism removal technique", false);
-#endif
 static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
-static StringOption opt_useblocks(_cat, "useblocks", "{0,1} string of length 6 encoding which blocks to use.", "111111");
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -124,21 +102,6 @@ int caseindex = 0;
 #include <array>
 #include <vector>
 #include <algorithm>
-
-#ifdef TRACES
-bool startinit = false;
-sparsegraph start;
-int lab[MAXN],ptn[MAXN],orbits[MAXN];
-
-DEFAULTOPTIONS_TRACES(options_traces);
-TracesStats stats_traces;
-
-std::vector<int> r1s, r2s;
-std::vector<std::map<int, int>> varrowmaps;
-std::vector<std::map<int, int>> varcolmaps;
-std::vector<std::set<int>> varsets;
-std::vector<bool> touched;
-#endif
 
 Solver::Solver() :
 
@@ -193,7 +156,6 @@ Solver::Solver() :
   , addunits           (opt_addunits)
 
   , exhauststring (opt_exhaustive)
-  , exhauststring2 (opt_exhaustive2)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -218,9 +180,6 @@ Solver::Solver() :
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "w");
     }
-    if(exhauststring2 != NULL)
-    {   exhaustfile2 = fopen(exhauststring2, "w");
-    }
 }
 
 
@@ -228,9 +187,6 @@ Solver::~Solver()
 {
     if(exhauststring != NULL)
     {   fclose(exhaustfile);
-    }
-    if(exhauststring2 != NULL)
-    {   fclose(exhaustfile2);
     }
 }
 
@@ -439,14 +395,6 @@ void Solver::cancelUntil(int level) {
             canceled[x] = conflicts;
 #endif
             assigns [x] = l_Undef;
-#ifdef TRACES
-		if(opt_partremove)
-		{	for(int ii=0; ii<r1s.size(); ii++)
-			{	if(varsets[ii].find(x) != varsets[ii].end())
-					touched[ii] = true;
-			}
-		}
-#endif
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -509,16 +457,6 @@ Lit Solver::pickBranchLit()
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	
-	/*bool all_assigned = true;
-	for(int i=0; i<assigns.size(); i++)
-	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
-		if(assigns[i]==l_Undef)
-		{	all_assigned = false;
-			break;
-		}
-	}
-	//printf("\n");*/
-
 	if(complete)
 		numsols++;
 
@@ -529,51 +467,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 	{
 		out_learnts.push();
 
-		/*fprintf(exhaustfile, "a ");
-		for(int i=0; i<assigns.size(); i++)
-		{	
-			int r = (i+1)/100;
-			int c = (i+1)%100;
-			if(assigns[i]==l_True && r >= opt_rowmin && r <= opt_rowmax && c >= opt_colmin && c <= opt_colmax)
-			{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
-				//out_learnts[0].push(mkLit(i, assigns[i]==l_True));
-				fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
-			}
-		}
-		fprintf(exhaustfile, "0\n");*/
-
 		fprintf(exhaustfile, "a ");
-		/*for(int i=0; i<assumptions.size(); i++)
-		{	out_learnts[0].push(~assumptions[i]);
-			if(sign(assumptions[i]))
-			{	
-				//out_learnts[0].push(mkLit(var(assumptions[i])));
-				//if(opt_printneg)
-				fprintf(exhaustfile, "-%d ", var(assumptions[i])+1);
-			}
-			else
-			{	
-				//out_learnts[0].push(~mkLit(var(assumptions[i])));
-				fprintf(exhaustfile, "%d ", var(assumptions[i])+1);
-			}
-		}*/
-		/*if(!(opt_rowmin==7&&opt_rowmax==43&&opt_colmin==1&&opt_colmax==19))
-		{
-			for(int r=7; r<=43; r++)
-			{	for(int c=1; c<=19; c++)
-				{
-					const int index = 100*r+c-1;
-					if(assigns[index]==l_True)
-					{	out_learnts[0].push(~mkLit(index));
-						fprintf(exhaustfile, "%d ", index+1);
-					}
-					else if(opt_printneg)
-					{	//out_learnts[0].push(mkLit(index));
-						fprintf(exhaustfile, "-%d ", index+1);
-					}
-				}
-			}
-		}*/
 		for(int r=opt_rowmin; r<=opt_rowmax; r++)
 		{	for(int c=opt_colmin; c<=opt_colmax; c++)
 			{
@@ -581,25 +475,6 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
 				if(assigns[index]==l_True && index < nVars())
 				{	out_learnts[0].push(~mkLit(index));
 					fprintf(exhaustfile, "%d ", index+1);
-				}
-				else if(opt_printneg && index < nVars())
-				{	//out_learnts[0].push(mkLit(index));
-					fprintf(exhaustfile, "-%d ", index+1);
-				}
-			}
-			if(opt_extracolmin > 0 && opt_extracolmax > 0)
-			{
-				for(int c=opt_extracolmin; c<=opt_extracolmax; c++)
-				{
-					const int index = 100*r+c-1;
-					if(assigns[index]==l_True && index < nVars())
-					{	out_learnts[0].push(~mkLit(index));
-						fprintf(exhaustfile, "%d ", index+1);
-					}
-					else if(opt_printneg && index < nVars())
-					{	//out_learnts[0].push(mkLit(index));
-						fprintf(exhaustfile, "-%d ", index+1);
-					}
 				}
 			}
 		}

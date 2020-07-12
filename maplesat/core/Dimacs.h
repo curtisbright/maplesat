@@ -85,11 +85,11 @@ static void parse_DIMACS_main(B& in, Solver& S) {
     for(int i=0; i<100000 && i<S.nVars(); i++)
       if(!S.var_used[i])
       {  if(S.addunits)
-	   S.addClause(mkLit(i, true));
+           S.addClause(mkLit(i, true));
          addedunits++;
       }
-    if(S.addunits)
-      printf("Added %d units\n", addedunits);
+    //if(S.addunits)
+    //  printf("Added %d units\n", addedunits);
 }
 
 // Inserts problem into solver.
