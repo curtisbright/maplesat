@@ -83,11 +83,6 @@ static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt cl
 #if BRANCHING_HEURISTIC == CHB
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
-static StringOption  opt_exhaustive(_cat, "recorded", "Output for solutions in exhaustive search");
-static IntOption  opt_colmin(_cat, "colmin", "Minimum column to use for exhaustive search", 1);
-static IntOption  opt_colmax(_cat, "colmax", "Maximum column to use for exhaustive search", 0);
-static IntOption  opt_rowmin(_cat, "rowmin", "Minimum row to use for exhaustive search", 7);
-static IntOption  opt_rowmax(_cat, "rowmax", "Maximum row to use for exhaustive search", 111);
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in the instance", true);
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
 static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
@@ -129,10 +124,6 @@ Solver::Solver() :
   , garbage_frac     (opt_garbage_frac)
   , restart_first    (opt_restart_first)
   , restart_inc      (opt_restart_inc)
-  , rowmin (opt_rowmin)
-  , rowmax (opt_rowmax)
-  , colmin (opt_colmin)
-  , colmax (opt_colmax)
 
     // Parameters (the rest):
     //
@@ -155,7 +146,6 @@ Solver::Solver() :
 #endif
   , addunits           (opt_addunits)
 
-  , exhauststring (opt_exhaustive)
   , ok                 (true)
 #if ! LBD_BASED_CLAUSE_DELETION
   , cla_inc            (1)
@@ -177,17 +167,11 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
-    if(exhauststring != NULL)
-    {   exhaustfile = fopen(exhauststring, "w");
-    }
 }
 
 
 Solver::~Solver()
 {
-    if(exhauststring != NULL)
-    {   fclose(exhaustfile);
-    }
 }
 
 
@@ -204,20 +188,10 @@ void Solver::addAssumClauses()
                 while (sscanf(tmp, "%d", &i) == 1)
                 {
                         Var v = abs(i) - 1;
-				var_used[v] = 1;
+                        var_used[v] = 1;
                         Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
                         //printf("Adding assumption %d\n", var(l)+1);
                         addClause(l);
-
-                        /*if(output != NULL)
-                        {       if(sign(l))
-                                        fprintf(output, "t -%d 0\n", var(l)+1);
-                                else
-                                        fprintf(output, "t %d 0\n", var(l)+1);
-                        }
-                        proofsize += 5+numdigits(var(l));
-                        if(sign(l))
-                                proofsize++;                                     */
 
                         while(*tmp != ',' && *tmp != '\0')
                                 tmp++;
@@ -287,17 +261,6 @@ bool Solver::addClause_(vec<Lit>& ps)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
 
-    if (flag && (output != NULL)) {
-      for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
-        fprintf(output, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
-      fprintf(output, "0\n");
-
-      fprintf(output, "d ");
-      for (i = j = 0, p = lit_Undef; i < oc.size(); i++)
-        fprintf(output, "%i ", (var(oc[i]) + 1) * (-2 * sign(oc[i]) + 1));
-      fprintf(output, "0\n");
-    }
-
     if (ps.size() == 0)
         return ok = false;
     else if (ps.size() == 1){
@@ -341,13 +304,6 @@ void Solver::detachClause(CRef cr, bool strict) {
 
 void Solver::removeClause(CRef cr) {
     Clause& c = ca[cr];
-
-    if (output != NULL) {
-      fprintf(output, "d ");
-      for (int i = 0; i < c.size(); i++)
-        fprintf(output, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
-      fprintf(output, "0\n");
-    }
 
     detachClause(cr);
     // Don't leave pointers to free'd memory!
@@ -456,57 +412,6 @@ Lit Solver::pickBranchLit()
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-	
-	if(complete)
-		numsols++;
-
-	if(exhaustfile==NULL)
-		return;
-
-	if(complete)
-	{
-		out_learnts.push();
-
-		fprintf(exhaustfile, "a ");
-		for(int r=opt_rowmin; r<=opt_rowmax; r++)
-		{	for(int c=opt_colmin; c<=opt_colmax; c++)
-			{
-				const int index = 100*r+c-1;
-				if(assigns[index]==l_True && index < nVars())
-				{	out_learnts[0].push(~mkLit(index));
-					fprintf(exhaustfile, "%d ", index+1);
-				}
-			}
-		}
-		fprintf(exhaustfile, "0\n");
-
-		vec<Lit> clause;
-		out_learnts[0].copyTo(clause);
-		{
-			int max_index = 0;
-			for(int i=1; i<clause.size(); i++)
-				if(level(var(clause[i])) > level(var(clause[max_index])))
-					max_index = i;
-			Lit p = clause[0];
-			clause[0] = clause[max_index];
-			clause[max_index] = p;
-		}
-
-		{
-			int max_index = 1;
-			for(int i=2; i<clause.size(); i++)
-				if(level(var(clause[i])) > level(var(clause[max_index])))
-					max_index = i;
-			Lit p = clause[1];
-			clause[1] = clause[max_index];
-			clause[max_index] = p;
-		}
-
-		CRef confl_clause = ca.alloc(clause, false);
-		attachClause(confl_clause);
-		clauses.push(confl_clause);
-
-	}
 }
 
 bool Solver::assertingClause(CRef confl) {
@@ -1197,12 +1102,6 @@ lbool Solver::search(int nof_conflicts)
 #endif
                 uncheckedEnqueue(learnt_clause[0], cr);
             }
-            if (output != NULL) {
-              for (int i = 0; i < learnt_clause.size(); i++)
-                fprintf(output, "%i " , (var(learnt_clause[i]) + 1) *
-                                  (-2 * sign(learnt_clause[i]) + 1) );
-              fprintf(output, "0\n");
-            }
             if(learnt_clause.size()==1)
                lastlearnt=learnt_clause[0];
 
@@ -1273,7 +1172,6 @@ lbool Solver::search(int nof_conflicts)
                     cancelUntil(0);
                     if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict) && !(conflict.size()==1 && conflict[0]==lastlearnt))
                     {   addClause_(conflict);
-                        fprintclause(output, conflict);
                         //fprintclause(savefile, conflict);
                         //fflush(savefile);
                         //proofsize += clausestrlen(conflict);
@@ -1303,7 +1201,6 @@ lbool Solver::search(int nof_conflicts)
                         int level;
                         learnt_clause.clear();
                         analyze(callbackLearntClauses[i], learnt_clause, level);
-                        fprintclause(output, learnt_clause);
                         if (level == -1) {
                             return l_False;
                         } else if (level < backtrack_level) {
