@@ -52,8 +52,6 @@ public:
     bool addunits = false;
     long curRestart = 1;
     int reductions = 0;
-    long numsols = 0;
-    long removedsols = 0;
 
     // Problem specification:
     //

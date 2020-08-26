@@ -50,8 +50,6 @@ void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
-    //if (print_numsols)
-    //  printf("Number of solutions: %ld\n", solver.numsols);
     printf("restarts              : %"PRIu64"\n", solver.starts);
     printf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
     printf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
@@ -247,7 +245,7 @@ int main(int argc, char** argv)
                   }
                   if(bound % print_bound == 0)
                   {  
-                     printf("Bound %d/%d (%.2f%%) Cl: %d Le: %d Time: %.2f s Est: %.2f h Reducts: %d Sols: %ld\n", bound, numassums, 100*bound/(double)numassums, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.reductions, S.numsols);
+                     printf("Bound %d/%d (%.2f%%) Cl: %d Le: %d Time: %.2f s Est: %.2f h Reducts: %d\n", bound, numassums, 100*bound/(double)numassums, S.numclauses(), S.numlearnts(), cpuTime(), numassums/(double)bound*cpuTime()/(double)3600, S.reductions);
                      fflush(stdout);
                   }
                   ret = S.solveLimited(dummy);
@@ -256,7 +254,7 @@ int main(int argc, char** argv)
                     printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
                   dummy.clear();
                   tmp = fscanf(assertion_file, "a ");
-                  if(ret == l_Undef) break;
+                  if(ret == l_Undef || ret == l_True) break;
                 }
                 else
                 {
@@ -271,7 +269,6 @@ int main(int argc, char** argv)
         	ret = S.solveLimited(dummy);
 
         /*if (S.verbosity > 0)*/{
-            printf("Number of solutions: %ld\n", S.numsols);
             //printf("Number of removed solutions: %ld\n", S.removedsols);
             printStats(S);
             printf("\n");

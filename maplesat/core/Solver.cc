@@ -23,8 +23,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
-FILE* exhaustfile = NULL;
-
 using namespace Minisat;
 
 void fprintlit(FILE* fp, Lit l)
@@ -84,7 +82,7 @@ static DoubleOption  opt_reducefrac (_cat, "reduce-frac", "Fraction of learnt cl
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in the instance", true);
-static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", false);
+static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", true);
 static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 
 //=================================================================================================
@@ -943,14 +941,14 @@ void Solver::reduceDB()
     sort(learnts, reduceDB_lt(ca));
 #endif
 
-    const int limit=learnts.size() / opt_reducefrac;
+    //const int limit=learnts.size() / opt_reducefrac;
 
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
 #if LBD_BASED_CLAUSE_DELETION
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
-        if ((c.activity() > 2 || !opt_sortlbd) && !locked(c) && i < limit)
+        if ((c.activity() > 2 || !opt_sortlbd) && !locked(c) && i < learnts.size() / opt_reducefrac)
 #else
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
@@ -1123,7 +1121,7 @@ lbool Solver::search(int nof_conflicts)
                     printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %8ld |\n", 
                            (int)conflicts, 
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
-                           (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), numsols /*progressEstimate()*100*/);
+                           (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progressEstimate()*100);
             }
 
         }else{
@@ -1344,7 +1342,6 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
     {   printf("===============================================================================\n");
-        //printf("Number of solutions: %ld\n", numsols);
     }
 
     if (status == l_True){
