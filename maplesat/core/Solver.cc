@@ -1328,7 +1328,7 @@ lbool Solver::solve_()
         printf("Almost Conflict : %d\n", ALMOST_CONFLICT);
         printf("Anti Exploration : %d\n", ANTI_EXPLORATION);*/
         printf("============================[ Search Statistics ]==============================\n");
-        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Num Sols |\n");
+        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
         printf("===============================================================================\n");
     }
