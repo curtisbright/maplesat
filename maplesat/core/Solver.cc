@@ -359,16 +359,19 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     const int max_exhaust_var = opt_max_exhaustive_var == 0 ? assigns.size() : opt_max_exhaustive_var;
 
     bool all_assigned = true;
-    for(int i=0; i<max_exhaust_var; i++)
-    {   //printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
-        if(assigns[i]==l_Undef)
-        {	all_assigned = false;
-            break;
+    if(!complete)
+    {
+        for(int i=0; i<max_exhaust_var; i++)
+        {   //printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+            if(assigns[i]==l_Undef)
+            {   all_assigned = false;
+                break;
+            }
         }
+        //printf("\n");
     }
-    //printf("\n");
 
-    if(all_assigned)
+    if(complete || all_assigned)
     {
         out_learnts.push();
 
