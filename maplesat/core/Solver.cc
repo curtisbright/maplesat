@@ -58,6 +58,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
+static BoolOption    opt_never_forget_blocking      (_cat, "never-forget-blocking", "Never forget the blocking clauses that are learned during the exhaustive search", false);
 
 
 //=================================================================================================
@@ -351,32 +352,62 @@ Lit Solver::pickBranchLit()
 //           the solver will return satisfiable immediately unless this function returns at
 //           least one clause.
 void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
-	
-	if(exhaustfile==NULL)
-		return;
 
-	bool all_assigned = true;
-	for(int i=0; i<assigns.size(); i++)
-	{	//printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
-		if(assigns[i]==l_Undef)
-		{	all_assigned = false;
-			break;
-		}
-	}
-	//printf("\n");
+    if(exhaustfile==NULL)
+        return;
 
-	if(all_assigned)
-	{
-		out_learnts.push();
+    bool all_assigned = true;
+    for(int i=0; i<assigns.size(); i++)
+    {   //printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
+        if(assigns[i]==l_Undef)
+        {	all_assigned = false;
+            break;
+        }
+    }
+    //printf("\n");
 
-		fprintf(exhaustfile, "a ");
-		for(int i=0; i<assigns.size(); i++)
-		{	out_learnts[0].push(mkLit(i, assigns[i]==l_True));
-			fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
-		}
-		fprintf(exhaustfile, "0\n");
-		numsols++;
-	}
+    if(all_assigned)
+    {
+        out_learnts.push();
+
+        fprintf(exhaustfile, "a ");
+        for(int i=0; i<assigns.size(); i++)
+        {   out_learnts[0].push(mkLit(i, assigns[i]==l_True));
+            fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
+
+            // Add the learned clause to the vector of original clauses if the 'never forget' option enabled
+            if(opt_never_forget_blocking)
+            {
+                vec<Lit> clause;
+                out_learnts[0].copyTo(clause);
+                {
+                    int max_index = 0;
+                    for(int i=1; i<clause.size(); i++)
+                        if(level(var(clause[i])) > level(var(clause[max_index])))
+                            max_index = i;
+                    Lit p = clause[0];
+                    clause[0] = clause[max_index];
+                    clause[max_index] = p;
+                }
+
+                {
+                    int max_index = 1;
+                    for(int i=2; i<clause.size(); i++)
+                        if(level(var(clause[i])) > level(var(clause[max_index])))
+                            max_index = i;
+                    Lit p = clause[1];
+                    clause[1] = clause[max_index];
+                    clause[max_index] = p;
+                }
+
+                CRef confl_clause = ca.alloc(clause, false);
+                attachClause(confl_clause);
+                clauses.push(confl_clause);
+            }
+        }
+        fprintf(exhaustfile, "0\n");
+        numsols++;
+    }
 }
 
 bool Solver::assertingClause(CRef confl) {
