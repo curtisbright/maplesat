@@ -58,9 +58,8 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
-static BoolOption    opt_never_forget_blocking      (_cat, "never-forget-blocking", "Never forget the blocking clauses that are learned during the exhaustive search", false);
-static IntOption     opt_max_exhaustive_var      (_cat, "max-exhaustive-var", "Only perform exhaustive search over the variables up to and including this variable index (0=use all variables)", 0, IntRange(0, INT32_MAX));
-
+static BoolOption    opt_keep_blocking     (_cat, "keep-blocking", "Never forget the blocking clauses that are learned during the exhaustive search", false);
+static IntOption     opt_max_exhaustive_var (_cat, "max-exhaustive-var", "Only perform exhaustive search over the variables up to and including this variable index (0=use all variables)", 0, IntRange(0, INT32_MAX));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -378,8 +377,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         {   out_learnts[0].push(mkLit(i, assigns[i]==l_True));
             fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
 
-            // Add the learned clause to the vector of original clauses if the 'never forget' option enabled
-            if(opt_never_forget_blocking)
+            // Add the learned clause to the vector of original clauses if the 'keep blocking' option enabled
+            if(opt_keep_blocking)
             {
                 vec<Lit> clause;
                 out_learnts[0].copyTo(clause);
