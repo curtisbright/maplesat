@@ -59,6 +59,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static BoolOption    opt_never_forget_blocking      (_cat, "never-forget-blocking", "Never forget the blocking clauses that are learned during the exhaustive search", false);
+static IntOption     opt_max_exhaustive_var      (_cat, "max-exhaustive-var", "Only perform exhaustive search over the variables up to and including this variable index (0=use all variables)", 0, IntRange(0, INT32_MAX));
 
 
 //=================================================================================================
@@ -356,8 +357,10 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
     if(exhaustfile==NULL)
         return;
 
+    const int max_exhaust_var = opt_max_exhaustive_var == 0 ? assigns.size() : opt_max_exhaustive_var;
+
     bool all_assigned = true;
-    for(int i=0; i<assigns.size(); i++)
+    for(int i=0; i<max_exhaust_var; i++)
     {   //printf("%c", assigns[i]==l_True ? '1' : (assigns[i]==l_False ? '0' : '?'));
         if(assigns[i]==l_Undef)
         {	all_assigned = false;
@@ -371,7 +374,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         out_learnts.push();
 
         fprintf(exhaustfile, "a ");
-        for(int i=0; i<assigns.size(); i++)
+        for(int i=0; i<max_exhaust_var; i++)
         {   out_learnts[0].push(mkLit(i, assigns[i]==l_True));
             fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
 
