@@ -1100,10 +1100,13 @@ lbool Solver::search(int nof_conflicts)
 #endif
 
                 if (verbosity >= 1)
+                {
                     printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", 
                            (int)conflicts, 
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
                            (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progressEstimate()*100);
+                    fflush(stdout);
+                }
             }
 
         }else{
