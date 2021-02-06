@@ -1,0 +1,7 @@
+*.or
+*.o
+*.od
+
+simp/maplesat_release
+simp/maplesat_static
+simp/depend.mk
