@@ -60,6 +60,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
 static BoolOption    opt_keep_blocking     (_cat, "keep-blocking", "Never forget the blocking clauses that are learned during the exhaustive search", false);
 static IntOption     opt_max_exhaustive_var (_cat, "max-exhaustive-var", "Only perform exhaustive search over the variables up to and including this variable index (0=use all variables)", 0, IntRange(0, INT32_MAX));
+static BoolOption    opt_fixed_card     (_cat, "fixed-card", "Assume a fixed number of true variables in solution and only use negative literals in exhaustive blocking clauses", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -378,6 +379,8 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         fprintf(exhaustfile, "a ");
         for(int i=0; i<max_exhaust_var; i++)
         {   
+            if(opt_fixed_card && assigns[i]==l_False)
+                continue;
             out_learnts[0].push(mkLit(i, assigns[i]==l_True));
             fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
         }
