@@ -379,7 +379,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         fprintf(exhaustfile, "a ");
         for(int i=0; i<max_exhaust_var; i++)
         {   
-            if(opt_fixed_card && assigns[i]==l_False)
+            if(opt_fixed_card && assigns[i]!=l_True)
                 continue;
             out_learnts[0].push(mkLit(i, assigns[i]==l_True));
             fprintf(exhaustfile, "%s%d ", assigns[i]==l_True ? "" : "-", i+1);
