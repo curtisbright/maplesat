@@ -58,7 +58,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward multiplier", 0.9, DoubleRange(0, true, 1, true));
 #endif
 static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive search");
-static BoolOption    opt_keep_blocking     (_cat, "keep-blocking", "Never forget the blocking clauses that are learned during the exhaustive search", false);
+static IntOption     opt_keep_blocking     (_cat, "keep-blocking", "Never forget the blocking clauses that are learned during the exhaustive search (0=off, 1=keep clauses after minimization, 2=keep original clauses)", 1, IntRange(0, 2));
 static IntOption     opt_max_exhaustive_var (_cat, "max-exhaustive-var", "Only perform exhaustive search over the variables up to and including this variable index (0=use all variables)", 0, IntRange(0, INT32_MAX));
 static BoolOption    opt_fixed_card     (_cat, "fixed-card", "Assume a fixed number of true variables in solution and only use negative literals in exhaustive blocking clauses", false);
 
@@ -386,7 +386,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
         }
 
         // Add the learned clause to the vector of original clauses if the 'keep blocking' option enabled
-        if(opt_keep_blocking)
+        if(opt_keep_blocking==2)
         {
             vec<Lit> clause;
             out_learnts[0].copyTo(clause);
@@ -408,6 +408,15 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
                 Lit p = clause[1];
                 clause[1] = clause[max_index];
                 clause[max_index] = p;
+            }
+
+            if (verbosity >= 2)
+            {
+                printf("Keeping clause ");
+                for(int i=0; i<clause.size(); i++)
+                {   printf("%s%d ", sign(clause[i]) ? "" : "-", var(clause[i])+1);
+                }
+                printf("0\n");
             }
 
             CRef confl_clause = ca.alloc(clause, false);
@@ -1161,13 +1170,13 @@ lbool Solver::search(int nof_conflicts)
                     units.clear();
                     backtrack_level = decisionLevel();
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
-                        int level;
+                        int curlevel;
                         learnt_clause.clear();
-                        analyze(callbackLearntClauses[i], learnt_clause, level);
-                        if (level == -1) {
+                        analyze(callbackLearntClauses[i], learnt_clause, curlevel);
+                        if (curlevel == -1) {
                             return l_False;
-                        } else if (level < backtrack_level) {
-                            backtrack_level = level;
+                        } else if (curlevel < backtrack_level) {
+                            backtrack_level = curlevel;
                         }
                         if (learnt_clause.size() == 1) {
                             units.push(learnt_clause[0]);
@@ -1181,6 +1190,46 @@ lbool Solver::search(int nof_conflicts)
 #else
                             claBumpActivity(ca[cr]);
 #endif
+
+                            // Add the learned clause (after minimization) to the vector of original clauses if the 'keep blocking' option enabled
+                            if(opt_keep_blocking==1)
+                            {
+                                vec<Lit> clause;
+                                learnt_clause.copyTo(clause);
+                                {
+                                    int max_index = 0;
+                                    for(int i=1; i<clause.size(); i++)
+                                        if(level(var(clause[i])) > level(var(clause[max_index])))
+                                            max_index = i;
+                                    Lit p = clause[0];
+                                    clause[0] = clause[max_index];
+                                    clause[max_index] = p;
+                                }
+
+                                {
+                                    int max_index = 1;
+                                    for(int i=2; i<clause.size(); i++)
+                                        if(level(var(clause[i])) > level(var(clause[max_index])))
+                                            max_index = i;
+                                    Lit p = clause[1];
+                                    clause[1] = clause[max_index];
+                                    clause[max_index] = p;
+                                }
+
+                                if (verbosity >= 2)
+                                {
+                                    printf("Keeping minimized clause ");
+                                    for(int i=0; i<clause.size(); i++)
+                                    {   printf("%s%d ", sign(clause[i]) ? "" : "-", var(clause[i])+1);
+                                    }
+                                    printf("0\n");
+                                }
+
+                                CRef confl_clause = ca.alloc(clause, false);
+                                attachClause(confl_clause);
+                                clauses.push(confl_clause);
+                            }
+
                         }
                     }
 
