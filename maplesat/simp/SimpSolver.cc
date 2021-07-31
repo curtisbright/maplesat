@@ -147,11 +147,11 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
     if (!Solver::addClause_(ps))
         return false;
 
-    if(!parsing && output != NULL) {
+    /*if(!parsing && output != NULL) {
       for (int i = 0; i < ps.size(); i++)
         fprintf(output, "%i " , (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1) );
       fprintf(output, "0\n");
-    }
+    }*/
 
     if (use_simplification && clauses.size() == nclauses + 1){
         CRef          cr = clauses.last();
@@ -203,22 +203,22 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     // if (!find(subsumption_queue, &c))
     subsumption_queue.insert(cr);
 
-    if (output != NULL) {
+    /*if (output != NULL) {
       for (int i = 0; i < c.size(); i++)
         if (c[i] != l) fprintf(output, "%i " , (var(c[i]) + 1) * (-2 * sign(c[i]) + 1) );
       fprintf(output, "0\n");
-    }
+    }*/
 
     if (c.size() == 2){
         removeClause(cr);
         c.strengthen(l);
     }else{
-        if (output != NULL) {
+        /*if (output != NULL) {
           fprintf(output, "d ");
           for (int i = 0; i < c.size(); i++)
             fprintf(output, "%i " , (var(c[i]) + 1) * (-2 * sign(c[i]) + 1) );
           fprintf(output, "0\n");
-        }
+        }*/
 
         detachClause(cr, true);
         c.strengthen(l);

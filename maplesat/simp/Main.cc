@@ -282,8 +282,8 @@ int main(int argc, char** argv)
                     if (S.model[i] != l_Undef)
                         fprintf(S.output, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(S.output, " 0\n");
-            }//else if (ret == l_False)
-             //   fprintf(S.output, "0\n");
+            }else if (ret == l_False)
+                fprintf(S.output, "UNSAT\n");
             else if (ret == l_Undef)
                 fprintf(S.output, "INDET\n");
             fclose(S.output);
