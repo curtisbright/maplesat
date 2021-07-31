@@ -289,10 +289,10 @@ int main(int argc, char** argv)
             if (ret == l_True){
                 //fclose(S.output);                 // Close the proof file
                 //S.output = fopen(argv[2], "wb");  // Clear it to put in the solution
-                for (int i = 0; i < S.nVars(); i++)
-                    if (S.model[i] != l_Undef)
-                        fprintf(S.output, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-                fprintf(S.output, " 0\n");
+                //for (int i = 0; i < S.nVars(); i++)
+                //    if (S.model[i] != l_Undef)
+                //        fprintf(S.output, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+                //fprintf(S.output, " 0\n");
             }else if (numsat == 0)
                 fprintf(S.output, "UNSAT\n");
             else if (ret == l_Undef)
