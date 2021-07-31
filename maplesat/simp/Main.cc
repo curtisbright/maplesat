@@ -113,6 +113,8 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    print_bound("MAIN", "print-bound","How often to print stats.\n", 10, IntRange(0, INT32_MAX));
+        BoolOption   stopAtSat  ("MAIN", "stop-at-sat", "Stop solving if a bound is found SATISFIABLE.\n", false);
+        BoolOption   stopAtUnsat("MAIN", "stop-at-unsat", "Stop solving if a bound is found UNSATISFIABLE.\n", false);
 
         parseOptions(argc, argv, true);
         
@@ -223,6 +225,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
+        int numsat = 0;
         lbool ret;
         vec<Lit> dummy;
         if (assumptions) {
@@ -252,9 +255,16 @@ int main(int argc, char** argv)
                   bound++;
                   if(S.verbosity > 0)
                     printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+                  if(ret == l_True) {
+                      numsat++;
+                      for (int i = 0; i < S.nVars(); i++)
+                          if (S.model[i] != l_Undef)
+                              fprintf(S.output, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+                      fprintf(S.output, " 0\n");
+                  }
                   dummy.clear();
                   tmp = fscanf(assertion_file, "a ");
-                  if(ret == l_Undef || ret == l_True) break;
+                  if(ret == l_Undef || (ret == l_True && stopAtSat) || (ret == l_False && stopAtUnsat)) break;
                 }
                 else
                 {
@@ -270,19 +280,20 @@ int main(int argc, char** argv)
 
         /*if (S.verbosity > 0)*/{
             //printf("Number of removed solutions: %ld\n", S.removedsols);
+            printf("Number of satisfiable bounds: %d\n", numsat);
             printStats(S);
             printf("\n");
-            printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            printf(numsat > 0 ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
         }
         if (S.output != NULL){
             if (ret == l_True){
-                fclose(S.output);                 // Close the proof file
-                S.output = fopen(argv[2], "wb");  // Clear it to put in the solution
+                //fclose(S.output);                 // Close the proof file
+                //S.output = fopen(argv[2], "wb");  // Clear it to put in the solution
                 for (int i = 0; i < S.nVars(); i++)
                     if (S.model[i] != l_Undef)
                         fprintf(S.output, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(S.output, " 0\n");
-            }else if (ret == l_False)
+            }else if (numsat == 0)
                 fprintf(S.output, "UNSAT\n");
             else if (ret == l_Undef)
                 fprintf(S.output, "INDET\n");
