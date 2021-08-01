@@ -83,6 +83,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in the instance", true);
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", true);
+static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add the final conflict from each set of incremental assumptions to the set of clauses", true);
 static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 
 //=================================================================================================
@@ -1170,7 +1171,7 @@ lbool Solver::search(int nof_conflicts)
                     analyzeFinal(~p, conflict);
                     sort(conflict);
                     cancelUntil(0);
-                    if(/*opt_addfinalconflict &&*/ !equalclause(conflict, lastconflict) && !(conflict.size()==1 && conflict[0]==lastlearnt))
+                    if(opt_addfinalconflict && !equalclause(conflict, lastconflict) && !(conflict.size()==1 && conflict[0]==lastlearnt))
                     {   addClause_(conflict);
                         //fprintclause(savefile, conflict);
                         //fflush(savefile);
