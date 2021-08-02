@@ -83,6 +83,7 @@ static DoubleOption  opt_reward_multiplier (_cat, "reward-multiplier", "Reward m
 #endif
 static BoolOption opt_addunits(_cat, "addunits", "Add unit clauses to fix variables that do not appear in the instance", true);
 static BoolOption opt_sortlbd(_cat, "sortlbd", "Sort learned clauses by LBD", true);
+static BoolOption opt_keepglue(_cat, "keepglue", "Never discard glue clauses", true);
 static BoolOption opt_addfinalconflict(_cat, "addfinalconflict", "Add the final conflict from each set of incremental assumptions to the set of clauses", true);
 static StringOption opt_hardassums(_cat, "hardassums", "Comma-separated list of assumptions to add as unit clauses.");
 
@@ -944,13 +945,15 @@ void Solver::reduceDB()
 
     //const int limit=learnts.size() / opt_reducefrac;
 
-    // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
-    // and clauses with activity smaller than 'extra_lim':
 #if LBD_BASED_CLAUSE_DELETION
+    // Don't delete glue or locked clauses. From the rest, delete clauses from the first 1/reducefrac
+    // If sortlbd or keepglue set to false then glue clauses may be discarded
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
-        if ((c.activity() > 2 || !opt_sortlbd) && !locked(c) && i < learnts.size() / opt_reducefrac)
+        if ((c.activity() > 2 || !opt_sortlbd || !opt_keepglue) && !locked(c) && i < learnts.size() / opt_reducefrac)
 #else
+    // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
+    // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++){
         Clause& c = ca[learnts[i]];
         if (c.size() > 2 && !locked(c) && (i < learnts.size() / 2 || c.activity() < extra_lim))
