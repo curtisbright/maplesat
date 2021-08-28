@@ -913,10 +913,6 @@ CRef Solver::propagate()
     return confl;
 }
 
-int min(int a, int b) {
-    return a < b ? a : b;
-}
-
 /*_________________________________________________________________________________________________
 |
 |  reduceDB : ()  ->  [void]
@@ -1136,12 +1132,23 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (learnts.size()-nAssigns() >= max_learnts) {
+            /*if (learnts.size()-nAssigns() >= max_learnts) {
                 // Reduce the set of learnt clauses:
                 reduceDB();
 #if RAPID_DELETION
                 max_learnts += 500;
 #endif
+            }*/
+
+            // Perform clause database reduction !
+            if(conflicts >=  curRestart * nbclausesbeforereduce)
+            {
+                assert(learnts.size()>0);
+                curRestart = (conflicts / nbclausesbeforereduce) + 1;
+                reduceDB();
+                reductions++;
+                nbclausesbeforereduce += incReduceDB;
+                max_learnts = nLearnts()+(curRestart*nbclausesbeforereduce)-conflicts;
             }
 
             Lit next = lit_Undef;
@@ -1153,6 +1160,7 @@ lbool Solver::search(int nof_conflicts)
                     newDecisionLevel();
                 }else if (value(p) == l_False){
                     analyzeFinal(~p, conflict);
+                    nbclausesbeforereduce = firstReduceDB;
                     return l_False;
                 }else{
                     next = p;
@@ -1328,7 +1336,7 @@ lbool Solver::solve_()
     solves++;
 
 #if RAPID_DELETION
-    max_learnts               = 2000;
+    max_learnts = nLearnts()+(curRestart*nbclausesbeforereduce)-conflicts;
 #else
     max_learnts               = nClauses() * learntsize_factor;
 #endif

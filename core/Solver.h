@@ -27,6 +27,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Options.h"
 #include "core/SolverTypes.h"
 
+const int firstReduceDB = 2000;
+const int incReduceDB = 300;
 
 namespace Minisat {
 
@@ -166,6 +168,10 @@ public:
 
     vec<long double> total_actual_rewards;
     vec<int> total_actual_count;
+
+    long curRestart = 1;
+    int reductions = 0;
+    int nbclausesbeforereduce = firstReduceDB;
 
 protected:
 
