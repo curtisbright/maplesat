@@ -95,6 +95,9 @@ int main(int argc, char** argv)
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption    add_zeros("MAIN", "add-zeros","Number of initial variables to set to false.\n", 0, IntRange(0, INT32_MAX));
+        IntOption    from_bound("MAIN", "from-bound","Start solving from this bound.\n", 0, IntRange(0, INT32_MAX));
+        IntOption    to_bound  ("MAIN", "to-bound","Stop solving at this bound.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
         parseOptions(argc, argv, true);
         
@@ -201,6 +204,8 @@ int main(int argc, char** argv)
             while (fscanf(assertion_file, "%d ", &i) == 1) {
                 if(i==0)
                 {
+                  if(bound > to_bound) break; // Stop solving once given to_bound is reached
+                  if(bound < from_bound) {bound++; dummy.clear(); tmp = fscanf(assertion_file, "a "); continue;} // Don't start solving until from_bound is reached
                   if(S.verbosity > 0)
                   {  printf("Bound %d: ", bound);
                      printf("a ");
