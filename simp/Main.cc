@@ -91,6 +91,7 @@ int main(int argc, char** argv)
         //
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+        BoolOption   block_cubes    ("MAIN", "block-cubes",    "Add a conflict clause to block any skipped assumptions", false);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
@@ -205,7 +206,18 @@ int main(int argc, char** argv)
                 if(i==0)
                 {
                   if(bound > to_bound) break; // Stop solving once given to_bound is reached
-                  if(bound < from_bound) {bound++; dummy.clear(); tmp = fscanf(assertion_file, "a "); continue;} // Don't start solving until from_bound is reached
+                  if(bound < from_bound) { // Don't start solving until from_bound is reached
+                      bound++;
+                      if(block_cubes) {
+                          vec<Lit> block;
+                          for(int j=0; j<dummy.size(); j++)
+                              block.push(~dummy[j]);
+                          S.addClause(block); // Add a clause blocking the current assumption
+                      }
+                      dummy.clear();
+                      tmp = fscanf(assertion_file, "a ");
+                      continue;
+                  }
                   if(S.verbosity > 0)
                   {  printf("Bound %d: ", bound);
                      printf("a ");
