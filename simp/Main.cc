@@ -194,6 +194,38 @@ int main(int argc, char** argv)
         FILE* outfile;
         lbool ret;
         vec<Lit> dummy;
+
+        if (assumptions && block_cubes) {
+            const char* file_name = assumptions;
+            FILE* assertion_file = fopen (file_name, "r");
+            if (assertion_file == NULL)
+                printf("ERROR! Could not open file: %s\n", file_name), exit(1);
+            int i = 0;
+            int bound = 0;
+            int tmp = fscanf(assertion_file, "a ");
+            while (fscanf(assertion_file, "%d ", &i) == 1) {
+                if(i==0)
+                {
+                  if(bound > to_bound || bound < from_bound) { // Add a clause that block any skipped assumptions
+                      vec<Lit> block;
+                      for(int j=0; j<dummy.size(); j++)
+                          block.push(~dummy[j]);
+                      S.addClause(block);
+                  }
+                  bound++;
+                  dummy.clear();
+                  tmp = fscanf(assertion_file, "a ");
+                }
+                else
+                {
+                  Var v = abs(i) - 1;
+                  Lit l = i > 0 ? mkLit(v) : ~mkLit(v);
+                  dummy.push(l);
+                }
+            }
+            fclose(assertion_file);
+        }
+
         if (assumptions) {
             const char* file_name = assumptions;
             FILE* assertion_file = fopen (file_name, "r");
@@ -208,12 +240,6 @@ int main(int argc, char** argv)
                   if(bound > to_bound) break; // Stop solving once given to_bound is reached
                   if(bound < from_bound) { // Don't start solving until from_bound is reached
                       bound++;
-                      if(block_cubes) {
-                          vec<Lit> block;
-                          for(int j=0; j<dummy.size(); j++)
-                              block.push(~dummy[j]);
-                          S.addClause(block); // Add a clause blocking the current assumption
-                      }
                       dummy.clear();
                       tmp = fscanf(assertion_file, "a ");
                       continue;
