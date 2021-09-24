@@ -1162,7 +1162,14 @@ lbool Solver::search(int nof_conflicts)
                     analyzeFinal(~p, conflict);
                     cancelUntil(0);
                     addClause_(conflict);
+#if DATABASE_REDUCTION_EVERY_CUBE
+                    reduceDB();
+                    reductions++;
+                    nbclausesbeforereduce += incReduceDB;
+                    max_learnts = nLearnts()+(curRestart*nbclausesbeforereduce)-conflicts;
+#else
                     nbclausesbeforereduce = firstReduceDB;
+#endif
                     return l_False;
                 }else{
                     next = p;
