@@ -237,7 +237,7 @@ int main(int argc, char** argv)
             printStats(S);
             printf("\n");
             //printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
-            printf(numsat > 0 ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            printf(numsat > 0 || ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
         }
         if (res != NULL){
             if (ret == l_True){
