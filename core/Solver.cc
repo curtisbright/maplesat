@@ -426,6 +426,7 @@ void Solver::callbackFunction(bool complete, vec<vec<Lit> >& out_learnts) {
             clauses.push(confl_clause);
         }
         fprintf(exhaustfile, "0\n");
+        fflush(exhaustfile);
         numsols++;
     }
 }
