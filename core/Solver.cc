@@ -137,6 +137,8 @@ Solver::Solver() :
 {
     if(exhauststring != NULL)
     {   exhaustfile = fopen(exhauststring, "a");
+        if(exhaustfile == NULL)
+            fprintf(stderr, "could not open file %s\n", exhaustfile), exit(1);
     }
 }
 
