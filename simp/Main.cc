@@ -90,7 +90,7 @@ int main(int argc, char** argv)
         // Extra options:
         //
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-        BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+        BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", false);
         BoolOption   block_cubes    ("MAIN", "block-cubes",    "Add a conflict clause to block any skipped assumptions", false);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         StringOption assumptions ("MAIN", "assumptions", "If given, use the assumptions in the file.");
