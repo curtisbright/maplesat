@@ -1197,6 +1197,12 @@ lbool Solver::search(int nof_conflicts)
                     analyzeFinal(~p, conflict);
                     cancelUntil(0);
                     addClause_(conflict);
+                    if (output != NULL) {
+                      for (int i = 0; i < conflict.size(); i++)
+                        fprintf(output, "%i " , (var(conflict[i]) + 1) *
+                                          (-2 * sign(conflict[i]) + 1) );
+                      fprintf(output, "0\n");
+                    }
 #if DATABASE_REDUCTION_EVERY_CUBE
                     reduceDB();
                     reductions++;
