@@ -1234,6 +1234,12 @@ lbool Solver::search(int nof_conflicts)
                         int curlevel;
                         learnt_clause.clear();
                         analyze(callbackLearntClauses[i], learnt_clause, curlevel);
+                        if (output != NULL) {
+                          for (int j = 0; j < learnt_clause.size(); j++)
+                            fprintf(output, "%i " , (var(learnt_clause[j]) + 1) *
+                                              (-2 * sign(learnt_clause[j]) + 1) );
+                          fprintf(output, "0\n");
+                        }
                         if (curlevel == -1) {
                             return l_False;
                         } else if (curlevel < backtrack_level) {
