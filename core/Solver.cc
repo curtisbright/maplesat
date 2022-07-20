@@ -1248,16 +1248,6 @@ lbool Solver::search(int nof_conflicts)
                         if (learnt_clause.size() == 1) {
                             units.push(learnt_clause[0]);
                         } else {
-                            CRef cr = ca.alloc(learnt_clause, true);
-                            learnts.push(cr);
-                            attachClause(cr);
-#if LBD_BASED_CLAUSE_DELETION
-                            Clause& clause = ca[cr];
-                            clause.activity() = lbd(clause);
-#else
-                            claBumpActivity(ca[cr]);
-#endif
-
                             // Add the learned clause (after minimization) to the vector of original clauses if the 'keep blocking' option enabled
                             if(opt_keep_blocking==1)
                             {
@@ -1295,8 +1285,17 @@ lbool Solver::search(int nof_conflicts)
                                 CRef confl_clause = ca.alloc(clause, false);
                                 attachClause(confl_clause);
                                 clauses.push(confl_clause);
+                            } else {
+                                CRef cr = ca.alloc(learnt_clause, true);
+                                learnts.push(cr);
+                                attachClause(cr);
+#if LBD_BASED_CLAUSE_DELETION
+                                Clause& clause = ca[cr];
+                                clause.activity() = lbd(clause);
+#else
+                                claBumpActivity(ca[cr]);
+#endif
                             }
-
                         }
                     }
 
