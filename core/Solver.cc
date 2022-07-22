@@ -1236,7 +1236,7 @@ lbool Solver::search(int nof_conflicts)
                         learnt_clause.clear();
                         if (output != NULL && opt_trust_blocking) {
                           fprintf(output, "t ");
-                          for (int j = 0; j < learnt_clause.size(); j++)
+                          for (int j = 0; j < callbackLearntClauses[i].size(); j++)
                             fprintf(output, "%i " , (var(callbackLearntClauses[i][j]) + 1) *
                                               (-2 * sign(callbackLearntClauses[i][j]) + 1) );
                           fprintf(output, "0\n");
