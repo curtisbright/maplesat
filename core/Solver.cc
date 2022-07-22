@@ -61,6 +61,7 @@ static StringOption  opt_exhaustive(_cat, "exhaustive", "Output for exhaustive s
 static IntOption     opt_keep_blocking     (_cat, "keep-blocking", "Never forget the blocking clauses that are learned during the exhaustive search (0=off, 1=keep clauses after minimization, 2=keep original clauses)", 1, IntRange(0, 2));
 static IntOption     opt_max_exhaustive_var (_cat, "max-exhaustive-var", "Only perform exhaustive search over the variables up to and including this variable index (0=use all variables)", 0, IntRange(0, INT32_MAX));
 static BoolOption    opt_fixed_card     (_cat, "fixed-card", "Assume a fixed number of true variables in solution and only use negative literals in exhaustive blocking clauses", false);
+static BoolOption    opt_trust_blocking (_cat, "trust-blocking", "Write proof with trusted blocking clauses", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -1233,6 +1234,13 @@ lbool Solver::search(int nof_conflicts)
                     for (int i = 0; i < callbackLearntClauses.size(); i++) {
                         int curlevel;
                         learnt_clause.clear();
+                        if (output != NULL && opt_trust_blocking) {
+                          fprintf(output, "t ");
+                          for (int j = 0; j < learnt_clause.size(); j++)
+                            fprintf(output, "%i " , (var(callbackLearntClauses[i][j]) + 1) *
+                                              (-2 * sign(callbackLearntClauses[i][j]) + 1) );
+                          fprintf(output, "0\n");
+                        }
                         analyze(callbackLearntClauses[i], learnt_clause, curlevel);
                         if (output != NULL) {
                           for (int j = 0; j < learnt_clause.size(); j++)
