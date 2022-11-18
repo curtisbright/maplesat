@@ -1248,6 +1248,13 @@ lbool Solver::search(int nof_conflicts)
                                               (-2 * sign(learnt_clause[j]) + 1) );
                           fprintf(output, "0\n");
                         }
+                        if (output != NULL && opt_trust_blocking) {
+                          fprintf(output, "d ");
+                          for (int j = 0; j < callbackLearntClauses[i].size(); j++)
+                            fprintf(output, "%i " , (var(callbackLearntClauses[i][j]) + 1) *
+                                              (-2 * sign(callbackLearntClauses[i][j]) + 1) );
+                          fprintf(output, "0\n");
+                        }
                         if (curlevel == -1) {
                             return l_False;
                         } else if (curlevel < backtrack_level) {
