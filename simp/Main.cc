@@ -283,7 +283,7 @@ int main(int argc, char** argv)
             printf("Number of satisfiable bounds: %d\n", numsat);
             printStats(S);
             printf("\n");
-            printf(numsat > 0 ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            printf(numsat > 0 || ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
         }
         if (S.output != NULL){
             if (ret == l_True){
