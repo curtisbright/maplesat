@@ -253,7 +253,9 @@ int main(int argc, char** argv)
                        printf("%s%d ", sign(dummy[i]) ? "-" : "", var(dummy[i])+1);
                      printf("0\n");
                   }
+                  double start_time = cpuTime();
                   ret = S.solveLimited(dummy);
+                  printf("Bound %d time: %.2f sec\n", bound, cpuTime() - start_time);
                   bound++;
                   if(S.verbosity > 0)
                     printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
