@@ -1,7 +1,7 @@
 MROOT := $(shell pwd)
 export MROOT
 
-minisat:
+maplesat:
 	make -C simp rs
 
 clean:
